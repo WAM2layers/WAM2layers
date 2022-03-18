@@ -36,6 +36,9 @@ The workflow is as follows:
      and store in convenient format.
    - `Hor_Fluxes_Output_mat.py`: convert intermediate output from step 1
      preprocessing to monthly data.
+     
+Note: Data paths are hardcoded into the scripts mentioned above. You'll have
+to update them manually before running each script.
 
 ## Other versions
 
