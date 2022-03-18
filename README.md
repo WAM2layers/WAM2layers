@@ -1,14 +1,61 @@
-# moisture_tracking_mississippi
-The scripts in this folder are an adaption of the WAM-2layers model developed by Ruud van der Ent from Delft University (https://github.com/ruudvdent/WAM2layersPython).
-An explanation on the code can be found in his dissertation (Van der Ent, R. J. (2014), A new view on the hydrological cycle over continents, Ph.D. thesis, 96 pp, Delft University of Technology, Delft. 
-http://dx.doi.org/10.4233/uuid:0ab824ee-6956-4cc3-b530-3245ab4f32be.).
+# Atmospheric moisture tracking
 
-The code was originally written to work with re-analysis model data from ERA-Interim.
-I have adapted the code such that it can run with 'regular output' of global climate models, namely atmospheric output on pressure levels.
+This repository contains the source code of the WAM2layers moisture tracking
+code originally developed by Ruud van der Ent. It can be used to determine where
+precipitation originally evaporated (backtracking), or where evaporated moisture
+eventually ends up (forward tracking).
 
-I have used data from the climate model EC-Earth (Hazeleger et al., 2010, 2014), which was available at 5 pressure levels in the atmosphere,
-namely 850, 700, 500, 300 and 200 hPa.
-We use (logarithmic) surface pressure to eliminate levels which are located below the surface.
-We apply a spline interpolation on the moisture fluxes (u*q and v*q) to correct for information that we miss close to the surface (such as low level jets).
-We apply a linear interpolation on the specific humidity vertical profiles.
-The atmospheric data has a time-step of 6 hours, the surface data a time-step of 3 hours.
+## How to use
+
+The current version of the code is tailored to EC-Earth climate model output.
+It assumes an input directory with the following files:
+
+- EVAP_200201_NH.nc (evaporation at the surface)
+- LNSP_200201_NH.nc (logarithm of surface pressure)
+- Q_200201_NH.nc (specific humidity at pressure levels)
+- Q2M_200201_NH.nc (specific humidity at the surface 2m)
+- TP_200201_NH.nc (total precipitation (convective + large-scale) at the surface)
+- U_200201_NH.nc (eastward wind field at pressure levels)
+- U10_200201_NH.nc (eastward wind at the surface 10m)
+- V_200201_NH.nc (northward wind field at pressure levels)
+- V10_200201_NH.nc (northward wind at the surface 10m)
+- landseamask_ECearth_T799.nc (land-sea mask)
+- mask_Miss_ECEarth.npy (mask to designate area of interest to perform the tracking for)
+
+The workflow is as follows:
+
+1. Preprocess the input data. The script `Fluxes_and_States_mat.py` converts the
+   data to 2 layers and calculates the moisture fluxes between these layers and
+   between all grid cells. It also does time interpolation to make sure the CFL
+   criterion is not violated during the model run. Output is stored in
+   intermediate (matlab) files.
+2. Run the tracking code. The script `Backtrack_savedaily_mat.py` performs
+   backtracking from a selected region. Forward tracking is currently missing from this codebase, and is available in the original code by Ruud van der Ent.
+3. Postprocess the output data.
+   - `Con_E_Recyc_Output_monthly_mat.py`: aggregate daily data as monthly means
+     and store in convenient format.
+   - `Hor_Fluxes_Output_mat.py`: convert intermediate output (moisture fluxes over the grid cells) from step 1
+     preprocessing to monthly data.
+     
+Note: Data paths are hardcoded into the scripts mentioned above. You'll have
+to update them manually before running each script.
+
+## Other versions
+
+This is the official codebase for the WAM2Layers moisture tracking model as of
+18/03/2022, but there are still several other versions around:
+
+- [Original Python code by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython)
+- [Adapted version by Imme Benedict](https://github.com/Imme1992/moisture_tracking_mississippi)
+
+## Reuse and acknowledgement
+To be completed.
+
+We are actively developing the code at the moment, so it may be subject to
+change. We encourage anyone who is interested in re-using the code to get in
+touch. We may be able to help.
+
+If you use the code for a publication, please cite it using its DOI (TODO)
+and/or the following paper: [Contrasting roles of interception and transpiration
+in the hydrological cycle - Part 2: Moisture
+recycling](https://doi.org/10.5194/esd-5-471-2014)
