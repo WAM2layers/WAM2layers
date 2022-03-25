@@ -127,11 +127,11 @@ for year in years[:]:
         a=date.day
         yearnumber = date.year
         monthnumber = date.month
-        print i, yearnumber, monthnumber, a
+        print(i, yearnumber, monthnumber, a)
 
         datapath = data_path(yearnumber,a,monthnumber,years,timetracking)
 
-        print datapath[0]
+        print(datapath[0])
 
         if i > final_time: # a = 365 (366th index) and not a leapyear\
             pass
@@ -160,7 +160,7 @@ for year in years[:]:
             water_lost_per_day[i,:,:] = loading_ST['water_lost_per_day']
 
             end = timer()
-            print 'Runtime output for day ' + str(a) + 'in month ' + str(monthnumber) + ' in year ' + str(yearnumber) + ' is',(end - start),' seconds'
+            print('Runtime output for day ' + str(a) + 'in month ' + str(monthnumber) + ' in year ' + str(yearnumber) + ' is',(end - start),' seconds')
 
     if daily == 1:
         if timetracking == 0: # create dummy values
@@ -213,4 +213,4 @@ np.savez_compressed(datapath[3],
            water_lost_per_year_per_month=water_lost_per_year_per_month)#, water_lost_per_year_per_month=water_lost_top_per_year_per_month)
 
 end1 = timer()
-print 'The total runtime of Con_E_Recyc_Output is',(end1-start1),' seconds.'
+print('The total runtime of Con_E_Recyc_Output is',(end1-start1),' seconds.')

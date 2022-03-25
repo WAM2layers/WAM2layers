@@ -181,7 +181,7 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
         v10_first = Dataset(datapath[10], mode = 'r').variables['V10M'][begin_time*2+1:(begin_time*2+count_time*2)+1:2,latnrs,lonnrs]
         v10 = np.insert(u10_first,[len(u10_first[:,0,0])],(Dataset(datapath[11], mode = 'r').variables['V10M'][1,latnrs,lonnrs]), axis = 0) #m/s
 
-    print 'Data is loaded', dt.datetime.now().time()
+    print('Data is loaded', dt.datetime.now().time())
     time = [0,1,2,3,4]
     intervals_regular = 40 # from five pressure levels the vertical data is interpolated to 40 levels
     sp = np.exp(lnsp)  # Pa # To convert logarithmic surface pressure to surface pressure
@@ -201,7 +201,7 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
     p_maxmin[:,1:,:,:] = np.where(p_maxmin[:,:-1,:,:] == p_maxmin[:,1:,:,:], P_boundary[:,np.newaxis,:,:], p_maxmin[:,1:,:,:])
 
     del(dp,mask)
-    print 'after p_maxmin and now add surface and atmosphere together for u,q,v', dt.datetime.now().time()
+    print('after p_maxmin and now add surface and atmosphere together for u,q,v', dt.datetime.now().time())
 
     levelist = np.squeeze(Dataset(datapath[2], mode = 'r').variables['lev'])  #Pa
     p = np.zeros((time, levelist.size+2, len(latitude), len(longitude)))
@@ -232,7 +232,7 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
 
     del(u_total, v_total, q_total, p, u, v, q, u10, v10, q2m, sp)
 
-    print 'before interpolation loop', dt.datetime.now().time()
+    print('before interpolation loop', dt.datetime.now().time())
 
     uq_maxmin = np.zeros((time, intervals_regular+2, len(latitude), len(longitude)))
     vq_maxmin = np.zeros((time, intervals_regular+2, len(latitude), len(longitude)))
@@ -261,7 +261,7 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
                 q_maxmin[t,:,i,j] = f_q(p_maxmin[t,:,i,j]) # linear interpolation
 
     del(u_masked, v_masked, q_masked, p_masked, mask, f_uq, f_vq, f_q)
-    print 'after interpolation loop', dt.datetime.now().time()
+    print('after interpolation loop', dt.datetime.now().time())
 
     # pressure between full levels
     P_between = np.maximum(0, p_maxmin[:,:-1,:,:] - p_maxmin[:,1:,:,:]) # the maximum statement is necessary to avoid negative humidity values
@@ -294,7 +294,7 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
 
     # check whether the next calculation results in all zeros
     test0 = tcwv - vapor_total
-    print('check calculation water vapor, this value should be zero: ' + str(np.sum(test0)))
+    print(('check calculation water vapor, this value should be zero: ' + str(np.sum(test0))))
 
     # put A_gridcell on a 3D grid
     A_gridcell2D = np.tile(A_gridcell,[1,len(longitude)])
@@ -616,41 +616,41 @@ for date in datelist[:]:
     else: # leap
         final_time = months_length_leap[monthnumber-1]
 
-    print date, yearnumber, monthnumber, a, begin_time, final_time
+    print(date, yearnumber, monthnumber, a, begin_time, final_time)
 
-    print('0 = ' + str(timer()))
+    print(('0 = ' + str(timer())))
 #    #1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
     cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = \
         getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,density_water,latitude,longitude,g,A_gridcell)
-    print('1,2,3 = ' + str(timer()))
+    print(('1,2,3 = ' + str(timer())))
 
     #4 evaporation and precipitation
     E,P = getEP(latnrs,lonnrs,yearnumber,begin_time,count_time,latitude,longitude,A_gridcell)
-    print('4 = ' + str(timer()))
+    print(('4 = ' + str(timer())))
 
     # put data on a smaller time step
     Fa_E_top_1,Fa_N_top_1,Fa_E_down_1,Fa_N_down_1,E,P,W_top,W_down = getrefined_new(Fa_E_top,Fa_N_top,Fa_E_down,Fa_N_down,W_top,W_down,E,P,divt,count_time,latitude,longitude)
-    print('5 = ' + str(timer()))
+    print(('5 = ' + str(timer())))
 
     # change units to m3
     Fa_E_top_m3,Fa_E_down_m3,Fa_N_top_m3,Fa_N_down_m3 = change_units(Fa_E_top_1,Fa_E_down_1,Fa_N_top_1,Fa_N_down_1,
                                timestep,divt,L_EW_gridcell,density_water,L_N_gridcell,L_S_gridcell,latitude)
-    print('6a = ' + str(timer()))
+    print(('6a = ' + str(timer())))
 
     # stabilize horizontal fluxes
     Fa_E_top,Fa_E_down,Fa_N_top,Fa_N_down = get_stablefluxes(Fa_E_top_m3,Fa_E_down_m3,Fa_N_top_m3,Fa_N_down_m3,
                                timestep,divt,L_EW_gridcell,density_water,L_N_gridcell,L_S_gridcell,latitude)
-    print('6b = ' + str(timer()))
+    print(('6b = ' + str(timer())))
 
     # determine the vertical moisture flux
     Fa_Vert_raw,Fa_Vert, residual_down, residual_top = getFa_Vert(Fa_E_top,Fa_E_down,Fa_N_top,Fa_N_down,E,P,W_top,W_down,divt,count_time,latitude,longitude)
-    print('7 = ' + str(timer()))
+    print(('7 = ' + str(timer())))
 
     #np.savez_compressed(datapath[16], E=E, P=P, Fa_E_top=Fa_E_top, Fa_N_top= Fa_N_top, Fa_E_down=Fa_E_down, Fa_N_down=Fa_N_down, W_down=W_down, W_top=W_top, residual_top=residual_top, residual_down=residual_down, Fa_Vert=Fa_Vert) # save as .npy file
     sio.savemat(datapath[16], {'Fa_E_top':Fa_E_top, 'Fa_N_top':Fa_N_top, 'Fa_E_down':Fa_E_down,'Fa_N_down':Fa_N_down, 'E':E, 'P':P,
                                                                                     'W_top':W_top, 'W_down':W_down, 'Fa_Vert':Fa_Vert}, do_compression=True) # save as mat file
 
     end = timer()
-    print 'Runtime fluxes_and_storages for day ' + str(a) + ' in year ' + str(yearnumber) + ' is',(end - start),' seconds.'
+    print('Runtime fluxes_and_storages for day ' + str(a) + ' in year ' + str(yearnumber) + ' is',(end - start),' seconds.')
 end1 = timer()
-print 'The total runtime is',(end1-start1),' seconds.'
+print('The total runtime is',(end1-start1),' seconds.')
