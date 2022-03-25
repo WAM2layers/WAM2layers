@@ -106,7 +106,7 @@ for year in years[:]:
         a=date.day
         yearnumber = date.year
         monthnumber = date.month
-        print i, yearnumber, monthnumber, a
+        print(i, yearnumber, monthnumber, a)
 
         datapath = data_path(yearnumber,monthnumber, a,years)
 
@@ -131,7 +131,7 @@ for year in years[:]:
 
             # timer
             end = timer()
-            print 'Runtime output for day ' + str(a) + 'in month ' + str(monthnumber) + ' in year ' + str(yearnumber) + ' is',(end - start),' seconds.'
+            print('Runtime output for day ' + str(a) + 'in month ' + str(monthnumber) + ' in year ' + str(yearnumber) + ' is',(end - start),' seconds.')
 
     # save daily fluxes on disk
     if daily == 1:
@@ -144,7 +144,7 @@ for year in years[:]:
         first_day = int(datetime.date(year,m+1,1).strftime("%j"))
         last_day = int(datetime.date(year,m+1,calendar.monthrange(year,m+1)[1]).strftime("%j"))
         days = np.arange(first_day,last_day+1)-1 # -1 because Python is zero-based
-        print year, first_day,last_day,days, startyear
+        print(year, first_day,last_day,days, startyear)
 
         Fa_E_down_per_year_per_month[year-startyear,m,:,:] = (np.squeeze(np.sum(Fa_E_down_per_day[days,:,:], axis = 0)))
         Fa_E_top_per_year_per_month[year-startyear,m,:,:] = (np.squeeze(np.sum(Fa_E_top_per_day[days,:,:], axis = 0)))
@@ -159,4 +159,4 @@ np.savez_compressed(datapath[1],
             Fa_Vert_per_year_per_month = Fa_Vert_per_year_per_month)
 
 end1 = timer()
-print 'The total runtime is',(end1-start1),' seconds.'
+print('The total runtime is',(end1-start1),' seconds.')

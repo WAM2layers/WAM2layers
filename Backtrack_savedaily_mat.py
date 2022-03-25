@@ -393,8 +393,8 @@ for date in datelist[1:]:
     previous_data_to_load = date + dt.timedelta(days=1)
     datapath = data_path(previous_data_to_load,yearnumber,monthnumber,a)
 
-    print date, previous_data_to_load
-    print datapath[0]
+    print(date, previous_data_to_load)
+    print(datapath[0])
     #Imme: Hier laad je de getrackte data van de laatste tijdstap, als de laatste tijdstap er neit was dan is die aangemaakt met create_empty_array en zit ie vol met zeros
     loading_ST = np.load(datapath[0])
     #Sa_track_top = loading_ST['Sa_track_top'] # array with zeros #Imme moeten dit zeros zijn of al ingevulde data
@@ -461,7 +461,7 @@ for date in datelist[1:]:
 #        sio.savemat(datapath[4], {'Sa_time_top':Sa_time_top,'Sa_time_down':Sa_time_down},do_compression=True)
 
     end = timer()
-    print 'Runtime Sa_track for day ' + str(a) + ' in month ' + str(monthnumber) +  ' in year ' + str(yearnumber) + ' is',(end - start),' seconds.'
+    print('Runtime Sa_track for day ' + str(a) + ' in month ' + str(monthnumber) +  ' in year ' + str(yearnumber) + ' is',(end - start),' seconds.')
 
 end1 = timer()
-print 'The total runtime of Backtrack_Masterscript is',(end1-start1),' seconds.'
+print('The total runtime of Backtrack_Masterscript is',(end1-start1),' seconds.')
