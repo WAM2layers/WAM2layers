@@ -42,13 +42,11 @@ def get_times_daily(startdate, enddate):
     return dateList
 
 
-# BEGIN OF INPUT1 (FILL THIS IN)
-
-months = np.arange(1, 13)  # for full year, enter np.arange(1,13)
-months_length_leap = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-months_length_nonleap = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+months = np.arange(1, 2)  # for full year, enter np.arange(1, 13)
+months_length_leap = [4, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+months_length_nonleap = [4, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 years = np.arange(
-    2002, 2007
+    2002, 2003
 )  # fill in the years # If I fill in more than one year than I need to set the months to 12 (so according to python counting to 13)
 
 # create datelist
@@ -75,7 +73,9 @@ lonnrs = np.arange(0, 444)
 isglobal = 0  # fill in 1 for global computations (i.e. Earth round), fill in 0 for a local domain with boundaries
 
 # obtain the constants
-lsm_data_ECEarth_T799 = "landseamask_ECearth_T799.nc"  # insert landseamask here
+lsm_data_ECEarth_T799 = (
+    "../EC-Earth_sample_data/landseamask_ECearth_T799.nc"  # insert landseamask here
+)
 
 (
     latitude,
@@ -92,7 +92,9 @@ lsm_data_ECEarth_T799 = "landseamask_ECearth_T799.nc"  # insert landseamask here
 ) = getconstants_pressure_ECEarth(latnrs, lonnrs, lsm_data_ECEarth_T799)
 
 # BEGIN OF INPUT 2 (FILL THIS IN)
-Region = np.load("mask_Miss_ECEarth.npy")  # region to perform the tracking for
+Region = np.load(
+    "../EC-Earth_sample_data/mask_Miss_ECEarth.npy"
+)  # region to perform the tracking for
 Kvf = 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
 timetracking = 0  # 0 for not tracking time and 1 for tracking time
 veryfirstrun = 1  # type '1' if no run has been done before from which can be continued, otherwise type '0'
@@ -100,7 +102,9 @@ veryfirstrun = 1  # type '1' if no run has been done before from which can be co
 # END OF INPUT
 # Datapaths (FILL THIS IN)
 
-interdata_folder = "Interdata_ECEarth/PresentMember2_correct/"  # must be an existing folder # insert Interdata folder here
+interdata_folder = (
+    "../output_data/"  # must be an existing folder # insert Interdata folder here
+)
 
 # Check if interdata folder exists:
 assert os.path.isdir(
@@ -205,7 +209,8 @@ def get_Sa_track_backward(
 
     # make P_region matrix
     Region3D = np.tile(
-        np.reshape(Region, [1, len(latitude), len(longitude)]), [len(P[:, 0, 0]), 1, 1]
+        np.reshape(Region, [1, len(latitude), len(longitude)]),
+        [len(P[:, 0, 0]), 1, 1],
     )
     P_region = Region3D * P
 
@@ -523,7 +528,8 @@ def get_Sa_track_backward(
             np.maximum(
                 0,
                 np.reshape(
-                    Sa_track_after_Fa_P_E_down, (np.size(Sa_track_after_Fa_P_E_down))
+                    Sa_track_after_Fa_P_E_down,
+                    (np.size(Sa_track_after_Fa_P_E_down)),
                 )
                 - np.reshape(W_down[t - 1, :, :], (np.size(W_down[t - 1, :, :]))),
             ),
@@ -533,7 +539,8 @@ def get_Sa_track_backward(
             np.maximum(
                 0,
                 np.reshape(
-                    Sa_track_after_Fa_P_E_top, (np.size(Sa_track_after_Fa_P_E_top))
+                    Sa_track_after_Fa_P_E_top,
+                    (np.size(Sa_track_after_Fa_P_E_top)),
                 )
                 - np.reshape(W_top[t - 1, :, :], (np.size(W_top[t - 1, :, :]))),
             ),
@@ -607,7 +614,9 @@ start1 = timer()
 # The two lines below create empty arrays for first runs/initial values are zero.
 previous_data_to_load = datelist[1:][0] + dt.timedelta(days=1)
 datapathea = data_path_ea(
-    previous_data_to_load.year, previous_data_to_load.month, previous_data_to_load.day
+    previous_data_to_load.year,
+    previous_data_to_load.month,
+    previous_data_to_load.day,
 )  # define paths for empty arrays
 if veryfirstrun == 1:
     create_empty_array(
@@ -751,4 +760,8 @@ for date in datelist[1:]:
     )
 
 end1 = timer()
-print("The total runtime of Backtrack_Masterscript is", (end1 - start1), " seconds.")
+print(
+    "The total runtime of Backtrack_Masterscript is",
+    (end1 - start1),
+    " seconds.",
+)
