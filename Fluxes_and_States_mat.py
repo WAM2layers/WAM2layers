@@ -82,102 +82,83 @@ else:  # leap
     )
 
 # other scripts use exactly this sequence, do not change it unless you change it also in the scripts
-def data_path(yearnumber, month, a):
+def data_path(year, month, a, var)
 
-    q_f_data = os.path.join(
-        input_folder,
-        f"{name_of_run}Q_{yearnumber}{month:02d}_NH.nc",
-    )  # specific humidity #0
-    u_f_data = os.path.join(
-        input_folder,
-        f"{name_of_run}U_{yearnumber}{month:02d}_NH.nc",
-    )  # 2
-    v_f_data = os.path.join(
-        input_folder,
-        f"{name_of_run}V_{yearnumber}{month:02d}_NH.nc",
-    )  # 4
-    q2m_surface_data = os.path.join(
-        input_folder,
-        f"{name_of_run}Q2M_{yearnumber}{month:02d}_NH.nc",
-    )  # 6
-    u10_surface_data = os.path.join(
-        input_folder,
-        f"{name_of_run}U10_{yearnumber}{month:02d}_NH.nc",
-    )  # 8
-    v10_surface_data = os.path.join(
-        input_folder,
-        f"{name_of_run}V10_{yearnumber}{month:02d}_NH.nc",
-    )  # 10
-    evaporation_data = os.path.join(
-        input_folder,
-        f"{name_of_run}EVAP_{yearnumber}{month:02d}_NH.nc",
-    )  # evaporation #12
-    precipitation_data = os.path.join(
-        input_folder,
-        f"{name_of_run}TP_{yearnumber}{month:02d}_NH.nc",
-    )  #  precipitation #13
-    sp_data = os.path.join(
-        input_folder,
-        f"{name_of_run}LNSP_{yearnumber}{month:02d}_NH.nc",
-    )  # surface pressure data #14
+    pattern = (f"{name_of_run}{variable}_{year}{month:02d}_NH.nc",)
+
+    filename = f"{name_of_run}Q_{year}{month:02d}_NH.nc"
+    q_f_data = os.path.join(input_folder, filename)  # specific humidity #0
+
+    filename = f"{name_of_run}U_{year}{month:02d}_NH.nc"
+    u_f_data = os.path.join(input_folder, filename)  # 2
+
+    filename = f"{name_of_run}V_{year}{month:02d}_NH.nc"
+    v_f_data = os.path.join(input_folder, filename)  # 4
+
+    filename = f"{name_of_run}Q2M_{year}{month:02d}_NH.nc"
+    q2m_surface_data = os.path.join(input_folder, filename)  # 6
+
+    filename = f"{name_of_run}U10_{year}{month:02d}_NH.nc"
+    u10_surface_data = os.path.join(input_folder, filename)  # 8
+
+    filename = f"{name_of_run}V10_{year}{month:02d}_NH.nc"
+    v10_surface_data = os.path.join(input_folder, filename)  # 10
+
+    filename = f"{name_of_run}EVAP_{year}{month:02d}_NH.nc"
+    evaporation_data = os.path.join(input_folder, filename)  # evaporation #12
+
+    filename = f"{name_of_run}TP_{year}{month:02d}_NH.nc"
+    precipitation_data = os.path.join(input_folder, filename)  #  precipitation #13
+
+    filename = f"{name_of_run}LNSP_{year}{month:02d}_NH.nc"
+    sp_data = os.path.join(input_folder, filename)  # surface pressure data #14
 
     if month == 12:
-        q_f_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}Q_{yearnumber + 1}01_NH.nc"
-        )  # specific humidity end of the year #1
-        u_f_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}U_{yearnumber + 1}01_NH.nc"
-        )  # 3
-        v_f_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}V_{yearnumber + 1}01_NH.nc"
-        )  # 5
-        q2m_surface_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}Q2M_{yearnumber + 1}01_NH.nc"
-        )  # 7
-        u10_surface_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}U10_{yearnumber + 1}01_NH.nc"
-        )  # 9
-        v10_surface_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}V10_{yearnumber + 1}01_NH.nc"
-        )  # 11
-        sp_eoy_data = os.path.join(
-            input_folder, f"{name_of_run}LNSP_{yearnumber + 1}01_NH.nc"
-        )  # surface pressure end of the year #15
+        filename = f"{name_of_run}Q_{year + 1}01_NH.nc"
+        q_f_eoy_data = os.path.join(input_folder, filename)  # specific humidity end of the year #1
+
+        filename = f"{name_of_run}U_{year + 1}01_NH.nc"
+        u_f_eoy_data = os.path.join(input_folder, filename)  # 3
+
+        filename = f"{name_of_run}V_{year + 1}01_NH.nc"
+        v_f_eoy_data = os.path.join(input_folder, filename)  # 5
+
+        filename = f"{name_of_run}Q2M_{year + 1}01_NH.nc"
+        q2m_surface_eoy_data = os.path.join(input_folder, filename)  # 7
+
+        filename = f"{name_of_run}U10_{year + 1}01_NH.nc"
+        u10_surface_eoy_data = os.path.join(input_folder, filename)  # 9
+
+        filename = f"{name_of_run}V10_{year + 1}01_NH.nc"
+        v10_surface_eoy_data = os.path.join(input_folder, filename)  # 11
+
+        filename = f"{name_of_run}LNSP_{year + 1}01_NH.nc"
+        sp_eoy_data = os.path.join(input_folder, filename)  # surface pressure end of the year #15
 
     else:  # if month = 1 to 11
-        q_f_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}Q_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # specific humidity end of the year #1
-        u_f_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}U_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # 3
-        v_f_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}V_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # 5
-        q2m_surface_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}Q2M_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # 7
-        u10_surface_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}U10_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # 9
-        v10_surface_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}V10_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # 11
-        sp_eoy_data = os.path.join(
-            input_folder,
-            f"{name_of_run}LNSP_{yearnumber}{(month+1):02d}_NH.nc",
-        )  # surface pressure end of the year #15
+        filename = f"{name_of_run}Q_{year}{(month+1):02d}_NH.nc",
+        q_f_eoy_data = os.path.join(input_folder, filename)  # specific humidity end of the year #1
 
-    save_path = os.path.join(
-        config["interdata_folder"],
-        f"{yearnumber}-{month:02d}-{a:02d}fluxes_storages.mat",
-    )  # 16
+        filename = f"{name_of_run}U_{year}{(month+1):02d}_NH.nc",
+        u_f_eoy_data = os.path.join(input_folder, filename)  # 3
+
+        filename = f"{name_of_run}V_{year}{(month+1):02d}_NH.nc",
+        v_f_eoy_data = os.path.join(input_folder, filename)  # 5
+
+        filename = f"{name_of_run}Q2M_{year}{(month+1):02d}_NH.nc",
+        q2m_surface_eoy_data = os.path.join(input_folder, filename)  # 7
+
+        filename = f"{name_of_run}U10_{year}{(month+1):02d}_NH.nc",
+        u10_surface_eoy_data = os.path.join(input_folder, filename)  # 9
+
+        filename = f"{name_of_run}V10_{year}{(month+1):02d}_NH.nc",
+        v10_surface_eoy_data = os.path.join(input_folder, filename)  # 11
+
+        filename = f"{name_of_run}LNSP_{year}{(month+1):02d}_NH.nc",
+        sp_eoy_data = os.path.join(input_folder, filename)  # surface pressure end of the year #15
+
+    filename = f"{year}-{month:02d}-{a:02d}fluxes_storages.mat"
+    save_path = os.path.join(config["interdata_folder"], filename)  # 16
 
     return (
         q_f_data,
