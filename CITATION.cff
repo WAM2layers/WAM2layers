@@ -1,0 +1,36 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: WAM2layers
+message: >-
+  Please use the citation information if you used the
+  WAM2layers code in your (academic) work.
+type: software
+authors:
+  - given-names: Ruud
+    name-particle: Van Der
+    family-names: Ent
+    affiliation: TU Delft
+    orcid: 'https://orcid.org/0000-0001-5450-4333'
+  - given-names: Imme Bo
+    family-names: Benedict
+    affiliation: Wageningen University
+    orcid: 'https://orcid.org/0000-0002-1946-6332'
+  - given-names: Peter
+    family-names: Kalverla
+    affiliation: Netherlands eScience Center
+    orcid: 'https://orcid.org/0000-0002-5025-7862'
+repository-code: 'https://github.com/WAM2layers/WAM2layers'
+abstract: >-
+  WAM2layers is an atmospheric moisture-tracking
+  model that can be used to determine where
+  precipitation originally evaporated (backtracking),
+  or where evaporated moisture eventually ends up
+  (forward tracking).
+keywords:
+  - meteorology
+  - python
+  - moisture tracking
+  - atmospheric rivers
+license: Apache-2.0
