@@ -23,9 +23,11 @@ Created on Mon Feb 18 15:30:43 2019
 import calendar
 import datetime as dt
 import os
+from re import U
 import sys
 from datetime import timedelta
 from timeit import default_timer as timer
+from xml.etree.ElementTree import QName
 
 import matplotlib.pyplot as plt
 
@@ -81,104 +83,25 @@ else:  # leap
         dt.date(years[-1], months[-1], months_length_leap[months[-1] - 1]),
     )
 
-# other scripts use exactly this sequence, do not change it unless you change it also in the scripts
-def data_path(year, month, a, var)
 
-    pattern = (f"{name_of_run}{variable}_{year}{month:02d}_NH.nc",)
+def get_input_path(variable, year, month):
+    """Get input file for variable."""
+    return f"{name_of_run}{variable}_{year}{month:02d}_NH.nc"
 
-    filename = f"{name_of_run}Q_{year}{month:02d}_NH.nc"
-    q_f_data = os.path.join(input_folder, filename)  # specific humidity #0
 
-    filename = f"{name_of_run}U_{year}{month:02d}_NH.nc"
-    u_f_data = os.path.join(input_folder, filename)  # 2
-
-    filename = f"{name_of_run}V_{year}{month:02d}_NH.nc"
-    v_f_data = os.path.join(input_folder, filename)  # 4
-
-    filename = f"{name_of_run}Q2M_{year}{month:02d}_NH.nc"
-    q2m_surface_data = os.path.join(input_folder, filename)  # 6
-
-    filename = f"{name_of_run}U10_{year}{month:02d}_NH.nc"
-    u10_surface_data = os.path.join(input_folder, filename)  # 8
-
-    filename = f"{name_of_run}V10_{year}{month:02d}_NH.nc"
-    v10_surface_data = os.path.join(input_folder, filename)  # 10
-
-    filename = f"{name_of_run}EVAP_{year}{month:02d}_NH.nc"
-    evaporation_data = os.path.join(input_folder, filename)  # evaporation #12
-
-    filename = f"{name_of_run}TP_{year}{month:02d}_NH.nc"
-    precipitation_data = os.path.join(input_folder, filename)  #  precipitation #13
-
-    filename = f"{name_of_run}LNSP_{year}{month:02d}_NH.nc"
-    sp_data = os.path.join(input_folder, filename)  # surface pressure data #14
-
+def get_input_path_eoy(variable, year, month):
+    """Get input file for next month(?)"""
     if month == 12:
-        filename = f"{name_of_run}Q_{year + 1}01_NH.nc"
-        q_f_eoy_data = os.path.join(input_folder, filename)  # specific humidity end of the year #1
+        return get_input_path(variable, year + 1, 1)
+    else:
+        return get_input_path(variable, year, month + 1)
 
-        filename = f"{name_of_run}U_{year + 1}01_NH.nc"
-        u_f_eoy_data = os.path.join(input_folder, filename)  # 3
 
-        filename = f"{name_of_run}V_{year + 1}01_NH.nc"
-        v_f_eoy_data = os.path.join(input_folder, filename)  # 5
-
-        filename = f"{name_of_run}Q2M_{year + 1}01_NH.nc"
-        q2m_surface_eoy_data = os.path.join(input_folder, filename)  # 7
-
-        filename = f"{name_of_run}U10_{year + 1}01_NH.nc"
-        u10_surface_eoy_data = os.path.join(input_folder, filename)  # 9
-
-        filename = f"{name_of_run}V10_{year + 1}01_NH.nc"
-        v10_surface_eoy_data = os.path.join(input_folder, filename)  # 11
-
-        filename = f"{name_of_run}LNSP_{year + 1}01_NH.nc"
-        sp_eoy_data = os.path.join(input_folder, filename)  # surface pressure end of the year #15
-
-    else:  # if month = 1 to 11
-        filename = f"{name_of_run}Q_{year}{(month+1):02d}_NH.nc",
-        q_f_eoy_data = os.path.join(input_folder, filename)  # specific humidity end of the year #1
-
-        filename = f"{name_of_run}U_{year}{(month+1):02d}_NH.nc",
-        u_f_eoy_data = os.path.join(input_folder, filename)  # 3
-
-        filename = f"{name_of_run}V_{year}{(month+1):02d}_NH.nc",
-        v_f_eoy_data = os.path.join(input_folder, filename)  # 5
-
-        filename = f"{name_of_run}Q2M_{year}{(month+1):02d}_NH.nc",
-        q2m_surface_eoy_data = os.path.join(input_folder, filename)  # 7
-
-        filename = f"{name_of_run}U10_{year}{(month+1):02d}_NH.nc",
-        u10_surface_eoy_data = os.path.join(input_folder, filename)  # 9
-
-        filename = f"{name_of_run}V10_{year}{(month+1):02d}_NH.nc",
-        v10_surface_eoy_data = os.path.join(input_folder, filename)  # 11
-
-        filename = f"{name_of_run}LNSP_{year}{(month+1):02d}_NH.nc",
-        sp_eoy_data = os.path.join(input_folder, filename)  # surface pressure end of the year #15
-
+def get_output_path(year, month, a):
+    """Get path for output file."""
     filename = f"{year}-{month:02d}-{a:02d}fluxes_storages.mat"
-    save_path = os.path.join(config["interdata_folder"], filename)  # 16
-
-    return (
-        q_f_data,
-        q_f_eoy_data,
-        u_f_data,
-        u_f_eoy_data,
-        v_f_data,
-        v_f_eoy_data,
-        q2m_surface_data,
-        q2m_surface_eoy_data,
-        u10_surface_data,
-        u10_surface_eoy_data,
-        v10_surface_data,
-        v10_surface_eoy_data,
-        evaporation_data,
-        precipitation_data,
-        sp_data,
-        sp_eoy_data,
-        save_path,
-    )
+    save_path = os.path.join(config["interdata_folder"], filename)
+    return save_path
 
 
 # Code (no need to look at this for running)
@@ -202,25 +125,27 @@ def getWandFluxes(
 
     if a != final_time:  # not the end of the year
         # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
-        q = Dataset(datapath[0], mode="r").variables["Q"][
+        q = Dataset(get_input_path("Q", year, month), mode="r").variables["Q"][
             begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
         ]  # kg/kg
-        time = Dataset(datapath[0], mode="r").variables["time"][
+        time = Dataset(get_input_path("Q", year, month), mode="r").variables["time"][
             begin_time : (begin_time + count_time + 1)
         ]
-        q_levels = Dataset(datapath[0], mode="r").variables["lev"][:]
+        q_levels = Dataset(get_input_path("Q", year, month), mode="r").variables["lev"][
+            :
+        ]
         # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        q2m = Dataset(datapath[6], mode="r").variables["Q2M"][
+        q2m = Dataset(get_input_path("Q2M", year, month), mode="r").variables["Q2M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
             latnrs,
             lonnrs,
         ]  # kg/kg #:267,134:578
-        time_q2m = Dataset(datapath[6], mode="r").variables["time"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2
-        ]
+        time_q2m = Dataset(get_input_path("Q2M", year, month), mode="r").variables[
+            "time"
+        ][begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2]
 
         # surface pressure is 3-hourly data (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        lnsp = Dataset(datapath[14], mode="r").variables["LNSP"][
+        lnsp = Dataset(get_input_path("LNSP", year, month), mode="r").variables["LNSP"][
             begin_time * 2 : (begin_time * 2 + count_time * 2 + 1) : 2,
             0,
             latnrs,
@@ -228,24 +153,28 @@ def getWandFluxes(
         ]  # [Pa] #:267,134:578
 
         # read the u-wind data
-        u = Dataset(datapath[2], mode="r").variables["U"][
+        u = Dataset(get_input_path("U", year, month), mode="r").variables["U"][
             begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
         ]  # m/s
-        u_levels = Dataset(datapath[2], mode="r").variables["lev"][:]
+        u_levels = Dataset(get_input_path("U", year, month), mode="r").variables["lev"][
+            :
+        ]
         # wind at 10m, 3-hourly data
-        u10 = Dataset(datapath[8], mode="r").variables["U10M"][
+        u10 = Dataset(get_input_path("U10M", year, month), mode="r").variables["U10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
             latnrs,
             lonnrs,
         ]  # m/s
 
         # read the v-wind data
-        v = Dataset(datapath[4], mode="r").variables["V"][
+        v = Dataset(get_input_path("V", year, month), mode="r").variables["V"][
             begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
         ]  # m/s
-        v_levels = Dataset(datapath[4], mode="r").variables["lev"][:]
+        v_levels = Dataset(get_input_path("V", year, month), mode="r").variables["lev"][
+            :
+        ]
         # wind at 10m, 3-hourly data
-        v10 = Dataset(datapath[10], mode="r").variables["V10M"][
+        v10 = Dataset(get_input_path("V10M", year, month), mode="r").variables["V10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
             latnrs,
             lonnrs,
@@ -253,18 +182,24 @@ def getWandFluxes(
 
     else:  # end of the year/month
         # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
-        q_first = Dataset(datapath[0], mode="r").variables["Q"][
+        q_first = Dataset(get_input_path("Q", year, month), mode="r").variables["Q"][
             begin_time : (begin_time + count_time), :, latnrs, lonnrs
         ]
         q = np.insert(
             q_first,
             [len(q_first[:, 0, 0, 0])],
-            (Dataset(datapath[1], mode="r").variables["Q"][0, :, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("Q", year, month), mode="r").variables["Q"][
+                    0, :, latnrs, lonnrs
+                ]
+            ),
             axis=0,
         )  # kg/kg
 
         # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        q2m_first = Dataset(datapath[6], mode="r").variables["Q2M"][
+        q2m_first = Dataset(get_input_path("Q2M", year, month), mode="r").variables[
+            "Q2M"
+        ][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
             latnrs,
             lonnrs,
@@ -272,12 +207,18 @@ def getWandFluxes(
         q2m = np.insert(
             q2m_first,
             [len(q2m_first[:, 0, 0])],
-            (Dataset(datapath[7], mode="r").variables["Q2M"][1, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("Q2M", year, month), mode="r").variables[
+                    "Q2M"
+                ][1, latnrs, lonnrs]
+            ),
             axis=0,
         )  # kg/kg #:267,134:578
 
         # surface pressure 3-hourly data (00.00,03.00,06.00,09.00,12.00,15.00,18.00,21.00)
-        lnsp_first = Dataset(datapath[14], mode="r").variables["LNSP"][
+        lnsp_first = Dataset(get_input_path("LNSP", year, month), mode="r").variables[
+            "LNSP"
+        ][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
             0,
             latnrs,
@@ -286,21 +227,31 @@ def getWandFluxes(
         lnsp = np.insert(
             lnsp_first,
             [len(lnsp_first[:, 0, 0])],
-            (Dataset(datapath[15], mode="r").variables["LNSP"][0, 0, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("LNSP", year, month), mode="r").variables[
+                    "LNSP"
+                ][0, 0, latnrs, lonnrs]
+            ),
             axis=0,
         )  # [Pa] #:267,134:578
 
-        u_first = Dataset(datapath[2], mode="r").variables["u"][
+        u_first = Dataset(get_input_path("U", year, month), mode="r").variables["U"][
             begin_time : (begin_time + count_time), :, latnrs, lonnrs
         ]
         u = np.insert(
             u_first,
             [len(u_first[:, 0, 0, 0])],
-            (Dataset(datapath[3], mode="r").variables["u"][0, :, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("U", year, month), mode="r").variables["U"][
+                    0, :, latnrs, lonnrs
+                ]
+            ),
             axis=0,
         )  # m/s
 
-        u10_first = Dataset(datapath[8], mode="r").variables["U10M"][
+        u10_first = Dataset(get_input_path("U10M", year, month), mode="r").variables[
+            "U10M"
+        ][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
             latnrs,
             lonnrs,
@@ -308,22 +259,32 @@ def getWandFluxes(
         u10 = np.insert(
             u10_first,
             [len(u10_first[:, 0, 0])],
-            (Dataset(datapath[9], mode="r").variables["U10M"][1, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("U10M", year, month), mode="r").variables[
+                    "U10M"
+                ][1, latnrs, lonnrs]
+            ),
             axis=0,
         )  # m/s
 
         # read the v-wind data
-        v_first = Dataset(datapath[4], mode="r").variables["v"][
+        v_first = Dataset(get_input_path("V", year, month), mode="r").variables["V"][
             begin_time : (begin_time + count_time), :, latnrs, lonnrs
         ]
         v = np.insert(
             v_first,
             [len(v_first[:, 0, 0, 0])],
-            (Dataset(datapath[5], mode="r").variables["v"][0, :, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("V", year, month), mode="r").variables["V"][
+                    0, :, latnrs, lonnrs
+                ]
+            ),
             axis=0,
         )  # m/s
 
-        v10_first = Dataset(datapath[10], mode="r").variables["V10M"][
+        v10_first = Dataset(get_input_path("V10M", year, month), mode="r").variables[
+            "V10M"
+        ][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
             latnrs,
             lonnrs,
@@ -331,7 +292,11 @@ def getWandFluxes(
         v10 = np.insert(
             u10_first,
             [len(u10_first[:, 0, 0])],
-            (Dataset(datapath[11], mode="r").variables["V10M"][1, latnrs, lonnrs]),
+            (
+                Dataset(get_input_path_eoy("V10M", year, month), mode="r").variables[
+                    "V10M"
+                ][1, latnrs, lonnrs]
+            ),
             axis=0,
         )  # m/s
 
@@ -1036,8 +1001,6 @@ for date in datelist[:]:
     yearnumber = date.year
     monthnumber = date.month
 
-    datapath = data_path(yearnumber, monthnumber, a)
-
     begin_time = (
         a - 1
     ) * count_time  # because python starts counting at 0 (so the first timesteps start at 0)
@@ -1155,9 +1118,9 @@ for date in datelist[:]:
     )
     print(("7 = " + str(timer())))
 
-    # np.savez_compressed(datapath[16], E=E, P=P, Fa_E_top=Fa_E_top, Fa_N_top= Fa_N_top, Fa_E_down=Fa_E_down, Fa_N_down=Fa_N_down, W_down=W_down, W_top=W_top, residual_top=residual_top, residual_down=residual_down, Fa_Vert=Fa_Vert) # save as .npy file
+    # np.savez_compressed(get_output_path(year, month, a), E=E, P=P, Fa_E_top=Fa_E_top, Fa_N_top= Fa_N_top, Fa_E_down=Fa_E_down, Fa_N_down=Fa_N_down, W_down=W_down, W_top=W_top, residual_top=residual_top, residual_down=residual_down, Fa_Vert=Fa_Vert) # save as .npy file
     sio.savemat(
-        datapath[16],
+        get_output_path(year, month, a),
         {
             "Fa_E_top": Fa_E_top,
             "Fa_N_top": Fa_N_top,
