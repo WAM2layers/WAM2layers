@@ -40,10 +40,10 @@ def get_times_daily(startdate, enddate):
 
 #%% BEGIN OF INPUT1 (FILL THIS IN)
 
-months = np.arange(1,13) # for full year, enter np.arange(1,13)
-months_length_leap = [31,29,31,30,31,30,31,31,30,31,30,31]
-months_length_nonleap = [31,28,31,30,31,30,31,31,30,31,30,31]
-years = np.arange(2002,2007) #fill in the years # If I fill in more than one year than I need to set the months to 12 (so according to python counting to 13)
+months = np.arange(1,2) # for full year, enter np.arange(1,13)
+months_length_leap = [4,29,31,30,31,30,31,31,30,31,30,31]
+months_length_nonleap = [4,28,31,30,31,30,31,31,30,31,30,31]
+years = np.arange(2002,2003) #fill in the years # If I fill in more than one year than I need to set the months to 12 (so according to python counting to 13)
 
 # create datelist
 if int(calendar.isleap(years[-1])) == 0: # no leap year
@@ -61,13 +61,13 @@ lonnrs = np.arange(0,444)
 isglobal = 0 # fill in 1 for global computations (i.e. Earth round), fill in 0 for a local domain with boundaries
 
 # obtain the constants
-lsm_data_ECEarth_T799 = 'landseamask_ECearth_T799.nc' # insert landseamask here
+lsm_data_ECEarth_T799 = '../EC-Earth_sample_data/landseamask_ECearth_T799.nc' # insert landseamask here
 
 latitude,longitude,lsm,g,density_water,timestep,A_gridcell,L_N_gridcell,L_S_gridcell,L_EW_gridcell,gridcell = \
     getconstants_pressure_ECEarth(latnrs,lonnrs,lsm_data_ECEarth_T799)
     
 # BEGIN OF INPUT 2 (FILL THIS IN)
-Region = np.load('mask_Miss_ECEarth.npy') # region to perform the tracking for
+Region = np.load('../EC-Earth_sample_data/mask_Miss_ECEarth.npy') # region to perform the tracking for
 Kvf = 3 # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
 timetracking = 0 # 0 for not tracking time and 1 for tracking time
 veryfirstrun = 1 # type '1' if no run has been done before from which can be continued, otherwise type '0'
@@ -75,7 +75,7 @@ veryfirstrun = 1 # type '1' if no run has been done before from which can be con
 #END OF INPUT
 #%% Datapaths (FILL THIS IN)
 
-interdata_folder = 'Interdata_ECEarth/PresentMember2_correct/' #must be an existing folder # insert Interdata folder here
+interdata_folder = '../output_data/' #must be an existing folder # insert Interdata folder here
 
 # Check if interdata folder exists:
 assert os.path.isdir(interdata_folder), "Please create the interdata_folder before running the script"
