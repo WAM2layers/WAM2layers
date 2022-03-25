@@ -28,7 +28,7 @@ from scipy import interpolate
 from scipy.interpolate import interp1d
 import calendar
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
-from getconstants_pressure_ECEarth_T159 import interp_along_axis
+# from getconstants_pressure_ECEarth import interp_along_axis
 from timeit import default_timer as timer
 import os
 import matplotlib.pyplot as plt    
@@ -144,13 +144,13 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
         lnsp = Dataset(datapath[14], mode = 'r').variables['LNSP'][begin_time*2:(begin_time*2+count_time*2+1):2,0,latnrs,lonnrs] # [Pa] #:267,134:578
   
         # read the u-wind data
-        u = Dataset(datapath[2], mode = 'r').variables['u'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s 
+        u = Dataset(datapath[2], mode = 'r').variables['U'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s
         u_levels = Dataset(datapath[2], mode = 'r').variables['lev'][:]
         # wind at 10m, 3-hourly data
         u10 = Dataset(datapath[8], mode = 'r').variables['U10M'][begin_time*2+1:(begin_time*2+count_time*2+1)+1:2,latnrs,lonnrs] #m/s
         
         # read the v-wind data
-        v = Dataset(datapath[4], mode = 'r').variables['v'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s
+        v = Dataset(datapath[4], mode = 'r').variables['V'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s
         v_levels = Dataset(datapath[4], mode = 'r').variables['lev'][:]
         # wind at 10m, 3-hourly data
         v10 = Dataset(datapath[10], mode = 'r').variables['V10M'][begin_time*2+1:(begin_time*2+count_time*2+1)+1:2,latnrs,lonnrs] #m/s
