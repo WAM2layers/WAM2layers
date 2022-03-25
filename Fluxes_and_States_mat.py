@@ -83,9 +83,9 @@ isglobal = 0 # fill in 1 for global computations (i.e. Earth round), fill in 0 f
 #END OF INPUT
 #%% Datapaths (FILL THIS IN)
 
-lsm_data_ECEarth_T799 = 'landseamask_ECearth_T799.nc' # insert landseamask here
-interdata_folder = 'Interdata_ECEarth/PresentMember5_correct/' # insert interdata folder here
-input_folder = 'Inputdata_ECEarth/PresentT799Member5/' # insert input folder here
+lsm_data_ECEarth_T799 = '../EC-Earth_sample_data/landseamask_ECearth_T799.nc' # insert landseamask here
+interdata_folder = '../output_data' # insert interdata folder here
+input_folder = '../EC-Earth_sample_data/' # insert input folder here
 name_of_run = ''
 
 # other scripts use exactly this sequence, do not change it unless you change it also in the scripts
