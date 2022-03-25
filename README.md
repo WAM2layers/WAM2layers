@@ -13,14 +13,14 @@ It assumes an input directory with the following files:
 - EVAP_200201_NH.nc (evaporation at the surface)
 - LNSP_200201_NH.nc (logarithm of surface pressure)
 - Q_200201_NH.nc (specific humidity at pressure levels)
-- Q2M_200201_NH.nc (specific humidity at the surface)
-- TP_200201_NH.nc (convective precipitation at the surface)
+- Q2M_200201_NH.nc (specific humidity at the surface 2m)
+- TP_200201_NH.nc (total precipitation (convective + large-scale) at the surface)
 - U_200201_NH.nc (eastward wind field at pressure levels)
-- U10_200201_NH.nc (eastward wind at the surface)
+- U10_200201_NH.nc (eastward wind at the surface 10m)
 - V_200201_NH.nc (northward wind field at pressure levels)
-- V10_200201_NH.nc (northward wind at the surface)
+- V10_200201_NH.nc (northward wind at the surface 10m)
 - landseamask_ECearth_T799.nc (land-sea mask)
-- mask_Miss_ECEarth.npy (mask to designate area of interest)
+- mask_Miss_ECEarth.npy (mask to designate area of interest to perform the tracking for)
 
 The workflow is as follows:
 
@@ -28,13 +28,13 @@ The workflow is as follows:
    data to 2 layers and calculates the moisture fluxes between these layers and
    between all grid cells. It also does time interpolation to make sure the CFL
    criterion is not violated during the model run. Output is stored in
-   intermediate (matlat) files.
+   intermediate (matlab) files.
 2. Run the tracking code. The script `Backtrack_savedaily_mat.py` performs
-   backtracking. Forward tracking is currently missing from this codebase.
+   backtracking from a selected region. Forward tracking is currently missing from this codebase, and is available in the original code by Ruud van der Ent.
 3. Postprocess the output data.
    - `Con_E_Recyc_Output_monthly_mat.py`: aggregate daily data as monthly means
      and store in convenient format.
-   - `Hor_Fluxes_Output_mat.py`: convert intermediate output from step 1
+   - `Hor_Fluxes_Output_mat.py`: convert intermediate output (moisture fluxes over the grid cells) from step 1
      preprocessing to monthly data.
      
 Note: Data paths are hardcoded into the scripts mentioned above. You'll have
