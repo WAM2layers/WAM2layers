@@ -19,15 +19,18 @@ Created on Mon Feb 18 15:30:43 2019
 
 # We save daily data instead of data at every timestep to reduce storage
 
+import calendar
+import datetime as dt
+import os
+from datetime import timedelta
+from timeit import default_timer as timer
+
 # Import libraries
 import numpy as np
 import scipy.io as sio
-import calendar
+
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
-from timeit import default_timer as timer
-import os
-from datetime import timedelta
-import datetime as dt
+
 
 # to create datelist
 def get_times_daily(startdate, enddate):

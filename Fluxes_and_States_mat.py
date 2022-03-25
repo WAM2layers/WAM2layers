@@ -20,22 +20,24 @@ Created on Mon Feb 18 15:30:43 2019
 
 # My input data are monthly files with 3-hourly (surface variables) and 6-hourly data (atmospheric variables)
 
+import calendar
+import datetime as dt
+import os
+import sys
+from datetime import timedelta
+from timeit import default_timer as timer
+
+import matplotlib.pyplot as plt
 # Import libraries
 import numpy as np
-from netCDF4 import Dataset
 import scipy.io as sio
+# from getconstants_pressure_ECEarth_T159 import interp_along_axis
+from netCDF4 import Dataset
 from scipy import interpolate
 from scipy.interpolate import interp1d
-import calendar
+
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
 
-# from getconstants_pressure_ECEarth import interp_along_axis
-from timeit import default_timer as timer
-import os
-import matplotlib.pyplot as plt
-from datetime import timedelta
-import datetime as dt
-import sys
 
 # to create datelist
 def get_times_daily(startdate, enddate):
