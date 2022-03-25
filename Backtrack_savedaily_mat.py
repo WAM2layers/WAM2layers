@@ -22,6 +22,7 @@ Created on Mon Feb 18 15:30:43 2019
 import calendar
 import datetime as dt
 import os
+import yaml
 from datetime import timedelta
 from timeit import default_timer as timer
 
@@ -31,6 +32,30 @@ import scipy.io as sio
 
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
 
+
+# Read case configuration
+with open("cases/example.yaml") as f:
+    config = yaml.safe_load(f)
+
+# Parse input from config file
+# TODO: don't need to reassign all of them
+lsm_data_ECEarth_T799 = config["lsm_data_ECEarth_T799"]
+input_folder = config["input_folder"]
+interdata_folder = config["interdata_folder"]
+name_of_run = config["name_of_run"]
+start_month = config["start_month"]
+start_year = config["start_year"]
+end_year = config["end_year"]
+end_month = config["end_month"]
+divt = config["divt"]
+count_time = config["count_time"]
+latnrs = np.arange(config["latnrs"])
+lonnrs = np.arange(config["lonnrs"])
+isglobal = config["isglobal"]
+Region = config["Region"]
+Kvf = config["Kvf"]
+timetracking = config["timetracking"]
+veryfirstrun = config["veryfirstrun"]
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -44,12 +69,10 @@ def get_times_daily(startdate, enddate):
 
 # BEGIN OF INPUT1 (FILL THIS IN)
 
-months = np.arange(1, 2)  # for full year, enter np.arange(1,13)
+months = np.arange(start_month, end_month)  # for full year, enter np.arange(1,13)
 months_length_leap = [4, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 months_length_nonleap = [4, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(
-    2002, 2003
-)  # fill in the years # If I fill in more than one year than I need to set the months to 12 (so according to python counting to 13)
+years = np.arange(start_year, end_year + 1)
 
 # create datelist
 if int(calendar.isleap(years[-1])) == 0:  # no leap year
@@ -65,20 +88,6 @@ else:  # leap
         ::-1
     ]  # [::-1] to run the datelist the other way around
 
-divt = 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
-count_time = 4  # number of indices to get data from (for daily data this means everytime one day)
-
-# Manage the extent of your dataset (FILL THIS IN)
-latnrs = np.arange(0, 267)  # minimal domain
-lonnrs = np.arange(0, 444)
-
-isglobal = 0  # fill in 1 for global computations (i.e. Earth round), fill in 0 for a local domain with boundaries
-
-# obtain the constants
-lsm_data_ECEarth_T799 = (
-    "../EC-Earth_sample_data/landseamask_ECearth_T799.nc"  # insert landseamask here
-)
-
 (
     latitude,
     longitude,
@@ -93,20 +102,6 @@ lsm_data_ECEarth_T799 = (
     gridcell,
 ) = getconstants_pressure_ECEarth(latnrs, lonnrs, lsm_data_ECEarth_T799)
 
-# BEGIN OF INPUT 2 (FILL THIS IN)
-Region = np.load(
-    "../EC-Earth_sample_data/mask_Miss_ECEarth.npy"
-)  # region to perform the tracking for
-Kvf = 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
-timetracking = 0  # 0 for not tracking time and 1 for tracking time
-veryfirstrun = 1  # type '1' if no run has been done before from which can be continued, otherwise type '0'
-
-# END OF INPUT
-# Datapaths (FILL THIS IN)
-
-interdata_folder = (
-    "../output_data/"  # must be an existing folder # insert Interdata folder here
-)
 
 # Check if interdata folder exists:
 assert os.path.isdir(
