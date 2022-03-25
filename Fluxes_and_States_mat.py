@@ -28,7 +28,7 @@ from scipy import interpolate
 from scipy.interpolate import interp1d
 import calendar
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
-from getconstants_pressure_ECEarth_T159 import interp_along_axis
+# from getconstants_pressure_ECEarth import interp_along_axis
 from timeit import default_timer as timer
 import os
 import matplotlib.pyplot as plt    
@@ -83,9 +83,9 @@ isglobal = 0 # fill in 1 for global computations (i.e. Earth round), fill in 0 f
 #END OF INPUT
 #%% Datapaths (FILL THIS IN)
 
-lsm_data_ECEarth_T799 = 'landseamask_ECearth_T799.nc' # insert landseamask here
-interdata_folder = 'Interdata_ECEarth/PresentMember5_correct/' # insert interdata folder here
-input_folder = 'Inputdata_ECEarth/PresentT799Member5/' # insert input folder here
+lsm_data_ECEarth_T799 = '../EC-Earth_sample_data/landseamask_ECearth_T799.nc' # insert landseamask here
+interdata_folder = '../output_data' # insert interdata folder here
+input_folder = '../EC-Earth_sample_data/' # insert input folder here
 name_of_run = ''
 
 # other scripts use exactly this sequence, do not change it unless you change it also in the scripts
@@ -144,13 +144,13 @@ def getWandFluxes(latnrs,lonnrs,final_time,a,yearnumber,begin_time,count_time,
         lnsp = Dataset(datapath[14], mode = 'r').variables['LNSP'][begin_time*2:(begin_time*2+count_time*2+1):2,0,latnrs,lonnrs] # [Pa] #:267,134:578
   
         # read the u-wind data
-        u = Dataset(datapath[2], mode = 'r').variables['u'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s 
+        u = Dataset(datapath[2], mode = 'r').variables['U'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s
         u_levels = Dataset(datapath[2], mode = 'r').variables['lev'][:]
         # wind at 10m, 3-hourly data
         u10 = Dataset(datapath[8], mode = 'r').variables['U10M'][begin_time*2+1:(begin_time*2+count_time*2+1)+1:2,latnrs,lonnrs] #m/s
         
         # read the v-wind data
-        v = Dataset(datapath[4], mode = 'r').variables['v'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s
+        v = Dataset(datapath[4], mode = 'r').variables['V'][begin_time:(begin_time+count_time+1),:,latnrs,lonnrs] #m/s
         v_levels = Dataset(datapath[4], mode = 'r').variables['lev'][:]
         # wind at 10m, 3-hourly data
         v10 = Dataset(datapath[10], mode = 'r').variables['V10M'][begin_time*2+1:(begin_time*2+count_time*2+1)+1:2,latnrs,lonnrs] #m/s
