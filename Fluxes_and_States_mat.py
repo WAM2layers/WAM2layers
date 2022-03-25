@@ -46,25 +46,13 @@ with open("cases/example.yaml") as f:
     config = yaml.safe_load(f)
 
 # Parse input from config file
-# TODO: don't need to reassign all of them
-lsm_data_ECEarth_T799 = config["lsm_data_ECEarth_T799"]
+# Reassignment not strictly needed but improves readability for often used vars
 input_folder = config["input_folder"]
-interdata_folder = config["interdata_folder"]
 name_of_run = config["name_of_run"]
-start_month = config["start_month"]
-start_year = config["start_year"]
-end_year = config["end_year"]
-end_month = config["end_month"]
 divt = config["divt"]
 count_time = config["count_time"]
 latnrs = np.arange(config["latnrs"])
 lonnrs = np.arange(config["lonnrs"])
-isglobal = config["isglobal"]
-Region = config["Region"]
-Kvf = config["Kvf"]
-timetracking = config["timetracking"]
-veryfirstrun = config["veryfirstrun"]
-
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -76,10 +64,10 @@ def get_times_daily(startdate, enddate):
     return dateList
 
 
-months = np.arange(start_month, end_month)
+months = np.arange(config["start_month"], config["end_month"])
 months_length_leap = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 months_length_nonleap = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(start_year, end_year)
+years = np.arange(config["start_year"], config["end_year"])
 
 # create datelist
 if int(calendar.isleap(years[-1])) == 0:  # no leap year
@@ -191,7 +179,7 @@ def data_path(yearnumber, month, a):
         )  # surface pressure end of the year #15
 
     save_path = os.path.join(
-        interdata_folder,
+        config["interdata_folder"],
         str(yearnumber)
         + "-"
         + str(month).zfill(2)
@@ -1067,7 +1055,7 @@ start1 = timer()
     L_S_gridcell,
     L_EW_gridcell,
     gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, lsm_data_ECEarth_T799)
+) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
 for date in datelist[:]:
     start = timer()

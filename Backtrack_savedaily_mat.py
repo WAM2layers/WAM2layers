@@ -38,24 +38,15 @@ with open("cases/example.yaml") as f:
     config = yaml.safe_load(f)
 
 # Parse input from config file
-# TODO: don't need to reassign all of them
-lsm_data_ECEarth_T799 = config["lsm_data_ECEarth_T799"]
+# Reassignment not strictly needed but improves readability for often used vars
 input_folder = config["input_folder"]
-interdata_folder = config["interdata_folder"]
 name_of_run = config["name_of_run"]
-start_month = config["start_month"]
-start_year = config["start_year"]
-end_year = config["end_year"]
-end_month = config["end_month"]
 divt = config["divt"]
 count_time = config["count_time"]
 latnrs = np.arange(config["latnrs"])
 lonnrs = np.arange(config["lonnrs"])
-isglobal = config["isglobal"]
-Region = config["Region"]
+Region = np.load(config["region"])
 Kvf = config["Kvf"]
-timetracking = config["timetracking"]
-veryfirstrun = config["veryfirstrun"]
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -69,10 +60,12 @@ def get_times_daily(startdate, enddate):
 
 # BEGIN OF INPUT1 (FILL THIS IN)
 
-months = np.arange(start_month, end_month)  # for full year, enter np.arange(1,13)
+months = np.arange(
+    config["start_month"], config["end_month"]
+)  # for full year, enter np.arange(1,13)
 months_length_leap = [4, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 months_length_nonleap = [4, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(start_year, end_year + 1)
+years = np.arange(config["start_year"], config["end_year"] + 1)
 
 # create datelist
 if int(calendar.isleap(years[-1])) == 0:  # no leap year
@@ -100,15 +93,17 @@ else:  # leap
     L_S_gridcell,
     L_EW_gridcell,
     gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, lsm_data_ECEarth_T799)
+) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
 
 # Check if interdata folder exists:
 assert os.path.isdir(
-    interdata_folder
+    config["interdata_folder"]
 ), "Please create the interdata_folder before running the script"
 # Check if sub interdata folder exists otherwise create it:
-sub_interdata_folder = os.path.join(interdata_folder, "Regional_backward_daily")
+sub_interdata_folder = os.path.join(
+    config["interdata_folder"], "Regional_backward_daily"
+)
 
 if os.path.isdir(sub_interdata_folder):
     pass
@@ -140,7 +135,7 @@ def data_path(previous_data_to_load, yearnumber, month, a):
     )
 
     load_fluxes_and_storages = os.path.join(
-        interdata_folder,
+        config["interdata_folder"],
         str(yearnumber)
         + "-"
         + str(month).zfill(2)
@@ -236,11 +231,11 @@ def get_Sa_track_backward(
     # fluxes over the eastern boundary
     Fa_E_top_boundary = np.zeros(np.shape(Fa_E_top))
     Fa_E_top_boundary[:, :, :-1] = 0.5 * (Fa_E_top[:, :, :-1] + Fa_E_top[:, :, 1:])
-    if isglobal == 1:
+    if config["isglobal"]:
         Fa_E_top_boundary[:, :, -1] = 0.5 * (Fa_E_top[:, :, -1] + Fa_E_top[:, :, 0])
     Fa_E_down_boundary = np.zeros(np.shape(Fa_E_down))
     Fa_E_down_boundary[:, :, :-1] = 0.5 * (Fa_E_down[:, :, :-1] + Fa_E_down[:, :, 1:])
-    if isglobal == 1:
+    if config["isglobal"]:
         Fa_E_down_boundary[:, :, -1] = 0.5 * (Fa_E_down[:, :, -1] + Fa_E_down[:, :, 0])
 
     # find out where the positive and negative fluxes are
@@ -397,14 +392,14 @@ def get_Sa_track_backward(
         Sa_track_E_down[0, :, :-1] = Sa_track_down[
             t, :, 1:
         ]  # Atmospheric tracked storage of the cell to the east [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_E_down[0, :, -1] = Sa_track_down[
                 t, :, 0
             ]  # Atmospheric tracked storage of the cell to the east [m3]
         Sa_track_W_down[0, :, 1:] = Sa_track_down[
             t, :, :-1
         ]  # Atmospheric storage of the cell to the west [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_W_down[0, :, 0] = Sa_track_down[
                 t, :, -1
             ]  # Atmospheric storage of the cell to the west [m3]
@@ -447,14 +442,14 @@ def get_Sa_track_backward(
         Sa_track_E_top[0, :, :-1] = Sa_track_top[
             t, :, 1:
         ]  # Atmospheric tracked storage of the cell to the east [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_E_top[0, :, -1] = Sa_track_top[
                 t, :, 0
             ]  # Atmospheric tracked storage of the cell to the east [m3]
         Sa_track_W_top[0, :, 1:] = Sa_track_top[
             t, :, :-1
         ]  # Atmospheric tracked storage of the cell to the west [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_W_top[0, :, 0] = Sa_track_top[
                 t, :, -1
             ]  # Atmospheric tracked storage of the cell to the west [m3]
@@ -610,7 +605,7 @@ previous_data_to_load = datelist[1:][0] + dt.timedelta(days=1)
 datapathea = data_path_ea(
     previous_data_to_load.year, previous_data_to_load.month, previous_data_to_load.day
 )  # define paths for empty arrays
-if veryfirstrun == 1:
+if config["veryfirstrun"]:
     create_empty_array(
         count_time, divt, latitude, longitude, years
     )  # creates empty arrays for first day run
@@ -653,7 +648,7 @@ for date in datelist[1:]:
     Fa_Vert = loading_FS["Fa_Vert"]
 
     # call the backward tracking function
-    if timetracking == 0:  # I use timetracking = 0
+    if not config["timetracking"]:  # I use timetracking: false
         (
             Sa_track_top,
             Sa_track_down,
@@ -683,7 +678,7 @@ for date in datelist[1:]:
             Sa_track_top_last,
             Sa_track_down_last,
         )
-    #    elif timetracking == 1:
+    #    elif config["timetracking"]:
     #        loading_STT = sio.loadmat(datapath[2],verify_compressed_data_integrity=False)
     #        Sa_time_top = loading_STT['Sa_time_top'] # [seconds]
     #        Sa_time_down = loading_STT['Sa_time_down']
@@ -735,7 +730,7 @@ for date in datelist[1:]:
         water_lost_per_day=water_lost_per_day,
     )
 
-    #    if timetracking == 1:
+    #    if config["timetracking"]:
     #        sio.savemat(datapath[4], {'Sa_time_top':Sa_time_top,'Sa_time_down':Sa_time_down},do_compression=True)
 
     end = timer()
