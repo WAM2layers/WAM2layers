@@ -1,0 +1,10 @@
+name: wam2layers
+channels:
+  - defaults
+dependencies:
+  - python=3
+  - numpy
+  - scipy
+  - netcdf4
+  - matplotlib
+prefix: /home/peter/miniconda3/envs/wam2layers
