@@ -89,7 +89,7 @@ def get_input_data(variable, year, month):
     return Dataset(filepath, "r")
 
 
-def get_input_data_eoy(variable, year, month):
+def get_input_data_next_month(variable, year, month):
     """Get input data for next month(?)"""
     if month == 12:
         return get_input_data(variable, year + 1, 1)
@@ -183,7 +183,11 @@ def getWandFluxes(
         q = np.insert(
             q_first,
             [len(q_first[:, 0, 0, 0])],
-            (get_input_data_eoy("Q", year, month).variables["Q"][0, :, latnrs, lonnrs]),
+            (
+                get_input_data_next_month("Q", year, month).variables["Q"][
+                    0, :, latnrs, lonnrs
+                ]
+            ),
             axis=0,
         )  # kg/kg
 
@@ -197,7 +201,7 @@ def getWandFluxes(
             q2m_first,
             [len(q2m_first[:, 0, 0])],
             (
-                get_input_data_eoy("Q2M", year, month).variables["Q2M"][
+                get_input_data_next_month("Q2M", year, month).variables["Q2M"][
                     1, latnrs, lonnrs
                 ]
             ),
@@ -215,7 +219,7 @@ def getWandFluxes(
             lnsp_first,
             [len(lnsp_first[:, 0, 0])],
             (
-                get_input_data_eoy("LNSP", year, month).variables["LNSP"][
+                get_input_data_next_month("LNSP", year, month).variables["LNSP"][
                     0, 0, latnrs, lonnrs
                 ]
             ),
@@ -228,7 +232,11 @@ def getWandFluxes(
         u = np.insert(
             u_first,
             [len(u_first[:, 0, 0, 0])],
-            (get_input_data_eoy("U", year, month).variables["U"][0, :, latnrs, lonnrs]),
+            (
+                get_input_data_next_month("U", year, month).variables["U"][
+                    0, :, latnrs, lonnrs
+                ]
+            ),
             axis=0,
         )  # m/s
 
@@ -241,7 +249,7 @@ def getWandFluxes(
             u10_first,
             [len(u10_first[:, 0, 0])],
             (
-                get_input_data_eoy("U10", year, month).variables["U10M"][
+                get_input_data_next_month("U10", year, month).variables["U10M"][
                     1, latnrs, lonnrs
                 ]
             ),
@@ -255,7 +263,11 @@ def getWandFluxes(
         v = np.insert(
             v_first,
             [len(v_first[:, 0, 0, 0])],
-            (get_input_data_eoy("V", year, month).variables["V"][0, :, latnrs, lonnrs]),
+            (
+                get_input_data_next_month("V", year, month).variables["V"][
+                    0, :, latnrs, lonnrs
+                ]
+            ),
             axis=0,
         )  # m/s
 
@@ -268,7 +280,7 @@ def getWandFluxes(
             u10_first,
             [len(u10_first[:, 0, 0])],
             (
-                get_input_data_eoy("V10", year, month).variables["V10M"][
+                get_input_data_next_month("V10", year, month).variables["V10M"][
                     1, latnrs, lonnrs
                 ]
             ),
