@@ -1,16 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 16 13:24:45 2016
-
-@author: Ent00002
-"""
-
-"""
-Created on Mon Feb 18 15:30:43 2019
-
-@author: bened003
-"""
-
 # This script is similar as the Fluxes_and_States_Masterscript from WAM-2layers from Ruud van der Ent, except that it threads atmospheric data at five pressure levels instead of model levels
 
 # Includes a spline vertical interpolation for data on pressure levels from the EC-Earth climate model (Hazeleger et al., 2010)
