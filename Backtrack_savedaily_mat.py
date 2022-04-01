@@ -22,6 +22,7 @@ Created on Mon Feb 18 15:30:43 2019
 import calendar
 import datetime as dt
 import os
+import yaml
 from datetime import timedelta
 from timeit import default_timer as timer
 
@@ -31,6 +32,21 @@ import scipy.io as sio
 
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
 
+
+# Read case configuration
+with open("cases/example.yaml") as f:
+    config = yaml.safe_load(f)
+
+# Parse input from config file
+# Reassignment not strictly needed but improves readability for often used vars
+input_folder = config["input_folder"]
+name_of_run = config["name_of_run"]
+divt = config["divt"]
+count_time = config["count_time"]
+latnrs = np.arange(config["latnrs"])
+lonnrs = np.arange(config["lonnrs"])
+Region = np.load(config["region"])
+Kvf = config["Kvf"]
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -44,12 +60,12 @@ def get_times_daily(startdate, enddate):
 
 # BEGIN OF INPUT1 (FILL THIS IN)
 
-months = np.arange(1, 2)  # for full year, enter np.arange(1,13)
+months = np.arange(
+    config["start_month"], config["end_month"]
+)  # for full year, enter np.arange(1,13)
 months_length_leap = [4, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 months_length_nonleap = [4, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(
-    2002, 2003
-)  # fill in the years # If I fill in more than one year than I need to set the months to 12 (so according to python counting to 13)
+years = np.arange(config["start_year"], config["end_year"] + 1)
 
 # create datelist
 if int(calendar.isleap(years[-1])) == 0:  # no leap year
@@ -65,20 +81,6 @@ else:  # leap
         ::-1
     ]  # [::-1] to run the datelist the other way around
 
-divt = 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
-count_time = 4  # number of indices to get data from (for daily data this means everytime one day)
-
-# Manage the extent of your dataset (FILL THIS IN)
-latnrs = np.arange(0, 267)  # minimal domain
-lonnrs = np.arange(0, 444)
-
-isglobal = 0  # fill in 1 for global computations (i.e. Earth round), fill in 0 for a local domain with boundaries
-
-# obtain the constants
-lsm_data_ECEarth_T799 = (
-    "../EC-Earth_sample_data/landseamask_ECearth_T799.nc"  # insert landseamask here
-)
-
 (
     latitude,
     longitude,
@@ -91,29 +93,17 @@ lsm_data_ECEarth_T799 = (
     L_S_gridcell,
     L_EW_gridcell,
     gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, lsm_data_ECEarth_T799)
+) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
-# BEGIN OF INPUT 2 (FILL THIS IN)
-Region = np.load(
-    "../EC-Earth_sample_data/mask_Miss_ECEarth.npy"
-)  # region to perform the tracking for
-Kvf = 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
-timetracking = 0  # 0 for not tracking time and 1 for tracking time
-veryfirstrun = 1  # type '1' if no run has been done before from which can be continued, otherwise type '0'
-
-# END OF INPUT
-# Datapaths (FILL THIS IN)
-
-interdata_folder = (
-    "../output_data/"  # must be an existing folder # insert Interdata folder here
-)
 
 # Check if interdata folder exists:
 assert os.path.isdir(
-    interdata_folder
+    config["interdata_folder"]
 ), "Please create the interdata_folder before running the script"
 # Check if sub interdata folder exists otherwise create it:
-sub_interdata_folder = os.path.join(interdata_folder, "Regional_backward_daily")
+sub_interdata_folder = os.path.join(
+    config["interdata_folder"], "Regional_backward_daily"
+)
 
 if os.path.isdir(sub_interdata_folder):
     pass
@@ -145,7 +135,7 @@ def data_path(previous_data_to_load, yearnumber, month, a):
     )
 
     load_fluxes_and_storages = os.path.join(
-        interdata_folder,
+        config["interdata_folder"],
         str(yearnumber)
         + "-"
         + str(month).zfill(2)
@@ -241,11 +231,11 @@ def get_Sa_track_backward(
     # fluxes over the eastern boundary
     Fa_E_top_boundary = np.zeros(np.shape(Fa_E_top))
     Fa_E_top_boundary[:, :, :-1] = 0.5 * (Fa_E_top[:, :, :-1] + Fa_E_top[:, :, 1:])
-    if isglobal == 1:
+    if config["isglobal"]:
         Fa_E_top_boundary[:, :, -1] = 0.5 * (Fa_E_top[:, :, -1] + Fa_E_top[:, :, 0])
     Fa_E_down_boundary = np.zeros(np.shape(Fa_E_down))
     Fa_E_down_boundary[:, :, :-1] = 0.5 * (Fa_E_down[:, :, :-1] + Fa_E_down[:, :, 1:])
-    if isglobal == 1:
+    if config["isglobal"]:
         Fa_E_down_boundary[:, :, -1] = 0.5 * (Fa_E_down[:, :, -1] + Fa_E_down[:, :, 0])
 
     # find out where the positive and negative fluxes are
@@ -402,14 +392,14 @@ def get_Sa_track_backward(
         Sa_track_E_down[0, :, :-1] = Sa_track_down[
             t, :, 1:
         ]  # Atmospheric tracked storage of the cell to the east [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_E_down[0, :, -1] = Sa_track_down[
                 t, :, 0
             ]  # Atmospheric tracked storage of the cell to the east [m3]
         Sa_track_W_down[0, :, 1:] = Sa_track_down[
             t, :, :-1
         ]  # Atmospheric storage of the cell to the west [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_W_down[0, :, 0] = Sa_track_down[
                 t, :, -1
             ]  # Atmospheric storage of the cell to the west [m3]
@@ -452,14 +442,14 @@ def get_Sa_track_backward(
         Sa_track_E_top[0, :, :-1] = Sa_track_top[
             t, :, 1:
         ]  # Atmospheric tracked storage of the cell to the east [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_E_top[0, :, -1] = Sa_track_top[
                 t, :, 0
             ]  # Atmospheric tracked storage of the cell to the east [m3]
         Sa_track_W_top[0, :, 1:] = Sa_track_top[
             t, :, :-1
         ]  # Atmospheric tracked storage of the cell to the west [m3]
-        if isglobal == 1:
+        if config["isglobal"]:
             Sa_track_W_top[0, :, 0] = Sa_track_top[
                 t, :, -1
             ]  # Atmospheric tracked storage of the cell to the west [m3]
@@ -615,7 +605,7 @@ previous_data_to_load = datelist[1:][0] + dt.timedelta(days=1)
 datapathea = data_path_ea(
     previous_data_to_load.year, previous_data_to_load.month, previous_data_to_load.day
 )  # define paths for empty arrays
-if veryfirstrun == 1:
+if config["veryfirstrun"]:
     create_empty_array(
         count_time, divt, latitude, longitude, years
     )  # creates empty arrays for first day run
@@ -658,7 +648,7 @@ for date in datelist[1:]:
     Fa_Vert = loading_FS["Fa_Vert"]
 
     # call the backward tracking function
-    if timetracking == 0:  # I use timetracking = 0
+    if not config["timetracking"]:  # I use timetracking: false
         (
             Sa_track_top,
             Sa_track_down,
@@ -688,7 +678,7 @@ for date in datelist[1:]:
             Sa_track_top_last,
             Sa_track_down_last,
         )
-    #    elif timetracking == 1:
+    #    elif config["timetracking"]:
     #        loading_STT = sio.loadmat(datapath[2],verify_compressed_data_integrity=False)
     #        Sa_time_top = loading_STT['Sa_time_top'] # [seconds]
     #        Sa_time_down = loading_STT['Sa_time_down']
@@ -740,7 +730,7 @@ for date in datelist[1:]:
         water_lost_per_day=water_lost_per_day,
     )
 
-    #    if timetracking == 1:
+    #    if config["timetracking"]:
     #        sio.savemat(datapath[4], {'Sa_time_top':Sa_time_top,'Sa_time_down':Sa_time_down},do_compression=True)
 
     end = timer()

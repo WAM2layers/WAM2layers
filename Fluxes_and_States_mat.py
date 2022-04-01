@@ -28,9 +28,12 @@ from datetime import timedelta
 from timeit import default_timer as timer
 
 import matplotlib.pyplot as plt
+
 # Import libraries
 import numpy as np
 import scipy.io as sio
+import yaml
+
 # from getconstants_pressure_ECEarth_T159 import interp_along_axis
 from netCDF4 import Dataset
 from scipy import interpolate
@@ -38,6 +41,18 @@ from scipy.interpolate import interp1d
 
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
 
+# Read case configuration
+with open("cases/example.yaml") as f:
+    config = yaml.safe_load(f)
+
+# Parse input from config file
+# Reassignment not strictly needed but improves readability for often used vars
+input_folder = config["input_folder"]
+name_of_run = config["name_of_run"]
+divt = config["divt"]
+count_time = config["count_time"]
+latnrs = np.arange(config["latnrs"])
+lonnrs = np.arange(config["lonnrs"])
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -49,23 +64,10 @@ def get_times_daily(startdate, enddate):
     return dateList
 
 
-# BEGIN OF INPUT (FILL THIS IN)
-
-# when running this script in parallel you can use the 4 lines indicated below
-# start_month = int(sys.argv[1])
-# start_year = int(sys.argv[2])
-# end_year = start_year + 1
-# end_month = start_month + 1
-
-start_month = 1
-start_year = 2002
-end_year = start_year + 1
-end_month = start_month + 1
-
-months = np.arange(start_month, end_month)
+months = np.arange(config["start_month"], config["end_month"])
 months_length_leap = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 months_length_nonleap = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(start_year, end_year)
+years = np.arange(config["start_year"], config["end_year"])
 
 # create datelist
 if int(calendar.isleap(years[-1])) == 0:  # no leap year
@@ -78,27 +80,6 @@ else:  # leap
         dt.date(years[0], months[0], 1),
         dt.date(years[-1], months[-1], months_length_leap[months[-1] - 1]),
     )
-
-# divt & count_time
-divt = 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
-count_time = 4  # number of indices to get data from (4 timesteps a day, 6-hourly data)
-
-# Manage the extent of your dataset (FILL THIS IN)
-# Define the latitude and longitude cell numbers to consider and corresponding lakes that should be considered part of the land
-latnrs = np.arange(0, 267)  # minimal domain
-lonnrs = np.arange(0, 444)
-
-isglobal = 0  # fill in 1 for global computations (i.e. Earth round), fill in 0 for a local domain with boundaries
-
-# END OF INPUT
-# Datapaths (FILL THIS IN)
-
-lsm_data_ECEarth_T799 = (
-    "../EC-Earth_sample_data/landseamask_ECearth_T799.nc"  # insert landseamask here
-)
-interdata_folder = "../output_data"  # insert interdata folder here
-input_folder = "../EC-Earth_sample_data/"  # insert input folder here
-name_of_run = ""
 
 # other scripts use exactly this sequence, do not change it unless you change it also in the scripts
 def data_path(yearnumber, month, a):
@@ -198,7 +179,7 @@ def data_path(yearnumber, month, a):
         )  # surface pressure end of the year #15
 
     save_path = os.path.join(
-        interdata_folder,
+        config["interdata_folder"],
         str(yearnumber)
         + "-"
         + str(month).zfill(2)
@@ -1074,7 +1055,7 @@ start1 = timer()
     L_S_gridcell,
     L_EW_gridcell,
     gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, lsm_data_ECEarth_T799)
+) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
 for date in datelist[:]:
     start = timer()

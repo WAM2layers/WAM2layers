@@ -1,0 +1,28 @@
+# Data paths
+land_sea_mask: /home/peter/WAM2layers/EC-Earth_sample_data/landseamask_ECearth_T799.nc
+region: /home/peter/WAM2layers/EC-Earth_sample_data/mask_Miss_ECEarth.npy   # region to perform the tracking for
+input_folder: /home/peter/WAM2layers/EC-Earth_sample_data
+interdata_folder: /home/peter/WAM2layers/output_data
+name_of_run: ""
+
+# Time
+start_month: 1
+start_year: 2002
+end_year: 2003
+end_month: 2
+
+# divt & count_time
+divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
+count_time: 4  # number of indices to get data from (4 timesteps a day, 6-hourly data)
+
+# Manage the extent of your dataset
+# Define the latitude and longitude cell numbers to consider and corresponding lakes that should be considered part of the land
+latnrs: 267 #np.arange(0, 267)  # minimal domain
+lonnrs: 444 #np.arange(0, 444)
+
+isglobal: false  # true for global computations (i.e. Earth round), false for a local domain with boundaries
+
+# Backtracking options
+Kvf: 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
+timetracking: false  # false for not tracking time and true for tracking time
+veryfirstrun: true  # true if no run has been done before from which can be continued, otherwise false
