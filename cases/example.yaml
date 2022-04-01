@@ -1,8 +1,8 @@
 # Data paths
-land_sea_mask: /home/peter/WAM2layers/EC-Earth_sample_data/landseamask_ECearth_T799.nc
-region: /home/peter/WAM2layers/EC-Earth_sample_data/mask_Miss_ECEarth.npy   # region to perform the tracking for
-input_folder: /home/peter/WAM2layers/EC-Earth_sample_data
-interdata_folder: /home/peter/WAM2layers/output_data
+land_sea_mask: C:\Users\bened003\OneDrive - Wageningen University & Research\scripts\WAM_pressure_ECEarth\landseamask_ECearth_T799.nc
+region: C:\Users\bened003\OneDrive - Wageningen University & Research\scripts\WAM_pressure_ECEarth\mask_Miss_ECEarth.npy   # region to perform the tracking for
+input_folder: C:\Users\bened003\OneDrive - Wageningen University & Research\scripts\WAM_pressure_ECEarth\Inputdata_ECEarth\PresentMember1
+interdata_folder: M:\output_data
 name_of_run: ""
 
 # Time
