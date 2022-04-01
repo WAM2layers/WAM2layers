@@ -85,7 +85,8 @@ else:  # leap
 def get_input_data(variable, year, month):
     """Get input data for variable."""
     filename = f"{name_of_run}{variable}_{year}{month:02d}_NH.nc"
-    return Dataset(filename, "r")
+    filepath = os.path.join(config["input_folder"], filename)
+    return Dataset(filepath, "r")
 
 
 def get_input_data_eoy(variable, year, month):
@@ -112,7 +113,8 @@ def getWandFluxes(
     lonnrs,
     final_time,
     a,
-    yearnumber,
+    year,
+    month,
     begin_time,
     count_time,
     density_water,
@@ -155,7 +157,7 @@ def getWandFluxes(
         ]  # m/s
         u_levels = get_input_data("U", year, month).variables["lev"][:]
         # wind at 10m, 3-hourly data
-        u10 = get_input_data("U10M", year, month).variables["U10M"][
+        u10 = get_input_data("U10", year, month).variables["U10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
             latnrs,
             lonnrs,
@@ -167,7 +169,7 @@ def getWandFluxes(
         ]  # m/s
         v_levels = get_input_data("V", year, month).variables["lev"][:]
         # wind at 10m, 3-hourly data
-        v10 = get_input_data("V10M", year, month).variables["V10M"][
+        v10 = get_input_data("V10", year, month).variables["V10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
             latnrs,
             lonnrs,
@@ -230,7 +232,7 @@ def getWandFluxes(
             axis=0,
         )  # m/s
 
-        u10_first = get_input_data("U10M", year, month).variables["U10M"][
+        u10_first = get_input_data("U10", year, month).variables["U10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
             latnrs,
             lonnrs,
@@ -239,7 +241,7 @@ def getWandFluxes(
             u10_first,
             [len(u10_first[:, 0, 0])],
             (
-                get_input_data_eoy("U10M", year, month).variables["U10M"][
+                get_input_data_eoy("U10", year, month).variables["U10M"][
                     1, latnrs, lonnrs
                 ]
             ),
@@ -257,7 +259,7 @@ def getWandFluxes(
             axis=0,
         )  # m/s
 
-        v10_first = get_input_data("V10M", year, month).variables["V10M"][
+        v10_first = get_input_data("V10", year, month).variables["V10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
             latnrs,
             lonnrs,
@@ -266,7 +268,7 @@ def getWandFluxes(
             u10_first,
             [len(u10_first[:, 0, 0])],
             (
-                get_input_data_eoy("V10M", year, month).variables["V10M"][
+                get_input_data_eoy("V10", year, month).variables["V10M"][
                     1, latnrs, lonnrs
                 ]
             ),
@@ -313,7 +315,7 @@ def getWandFluxes(
         dt.datetime.now().time(),
     )
 
-    levelist = np.squeeze(Dataset(datapath[2], mode="r").variables["lev"])  # Pa
+    levelist = np.squeeze(get_input_data("U", year, month).variables["lev"])  # Pa
     p = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
     p[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis]
     p[:, 0, :, :] = sp
@@ -439,15 +441,15 @@ def getWandFluxes(
 
 
 def getEP(
-    latnrs, lonnrs, yearnumber, begin_time, count_time, latitude, longitude, A_gridcell
+    latnrs, lonnrs, year, month, begin_time, count_time, latitude, longitude, A_gridcell
 ):
     # 3-hourly data so 8 steps per day
 
     # (accumulated after the forecast at 00.00 and 12.00 by steps of 3 hours in time
-    evaporation = Dataset(datapath[12], mode="r").variables["E"][
+    evaporation = get_input_data("EVAP", year, month).variables["E"][
         begin_time * 2 : (begin_time * 2 + count_time * 2), latnrs, lonnrs
     ]  # m
-    precipitation = Dataset(datapath[13], mode="r").variables["TP"][
+    precipitation = get_input_data("TP", year, month).variables["TP"][
         begin_time * 2 : (begin_time * 2 + count_time * 2), latnrs, lonnrs
     ]  # m
 
@@ -993,6 +995,7 @@ for date in datelist[:]:
         final_time,
         a,
         yearnumber,
+        monthnumber,
         begin_time,
         count_time,
         density_water,
@@ -1008,6 +1011,7 @@ for date in datelist[:]:
         latnrs,
         lonnrs,
         yearnumber,
+        monthnumber,
         begin_time,
         count_time,
         latitude,
