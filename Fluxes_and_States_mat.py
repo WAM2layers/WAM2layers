@@ -23,11 +23,9 @@ Created on Mon Feb 18 15:30:43 2019
 import calendar
 import datetime as dt
 import os
-from re import U
 import sys
 from datetime import timedelta
 from timeit import default_timer as timer
-from xml.etree.ElementTree import QName
 
 import matplotlib.pyplot as plt
 
