@@ -24,13 +24,14 @@ import calendar
 import datetime as dt
 import os
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta
 from timeit import default_timer as timer
 
 import matplotlib.pyplot as plt
 
 # Import libraries
 import numpy as np
+import pandas as pd
 import scipy.io as sio
 import yaml
 
@@ -53,32 +54,11 @@ divt = config["divt"]
 count_time = config["count_time"]
 latnrs = np.arange(config["latnrs"])
 lonnrs = np.arange(config["lonnrs"])
-
-# to create datelist
-def get_times_daily(startdate, enddate):
-    """generate a dictionary with date/times"""
-    numdays = enddate - startdate
-    dateList = []
-    for x in range(0, numdays.days + 1):
-        dateList.append(startdate + dt.timedelta(days=x))
-    return dateList
-
-
-months = np.arange(config["start_month"], config["end_month"])
-months_length_leap = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-months_length_nonleap = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(config["start_year"], config["end_year"])
-
-# create datelist
-if int(calendar.isleap(years[-1])) == 0:  # no leap year
-    datelist = get_times_daily(
-        dt.date(years[0], months[0], 1),
-        dt.date(years[-1], months[-1], months_length_nonleap[months[-1] - 1]),
-    )
-else:  # leap
-    datelist = get_times_daily(
-        dt.date(years[0], months[0], 1),
-        dt.date(years[-1], months[-1], months_length_leap[months[-1] - 1]),
+datelist = pd.date_range(
+    start=config['start_date'],
+    end=config['end_date'],
+    freq="d",
+    inclusive="left"
     )
 
 
@@ -97,7 +77,7 @@ def get_input_data_next_month(variable, year, month):
         return get_input_data(variable, year, month + 1)
 
 
-def get_output_data(year, month, a):
+def get_output_path(year, month, a):
     """Get data for output file."""
     filename = f"{year}-{month:02d}-{a:02d}fluxes_storages.mat"
     save_path = os.path.join(config["interdata_folder"], filename)
@@ -124,7 +104,7 @@ def getWandFluxes(
     A_gridcell,
 ):
 
-    if a != final_time:  # not the end of the year
+    if a != final_time:  # not the end of the year/month
         # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
         q = get_input_data("Q", year, month).variables["Q"][
             begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
@@ -132,16 +112,12 @@ def getWandFluxes(
         time = get_input_data("Q", year, month).variables["time"][
             begin_time : (begin_time + count_time + 1)
         ]
-        q_levels = get_input_data("Q", year, month).variables["lev"][:]
         # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
         q2m = get_input_data("Q2M", year, month).variables["Q2M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
             latnrs,
             lonnrs,
         ]  # kg/kg #:267,134:578
-        time_q2m = get_input_data("Q2M", year, month).variables["time"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2
-        ]
 
         # surface pressure is 3-hourly data (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
         lnsp = get_input_data("LNSP", year, month).variables["LNSP"][
@@ -155,7 +131,6 @@ def getWandFluxes(
         u = get_input_data("U", year, month).variables["U"][
             begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
         ]  # m/s
-        u_levels = get_input_data("U", year, month).variables["lev"][:]
         # wind at 10m, 3-hourly data
         u10 = get_input_data("U10", year, month).variables["U10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
@@ -167,7 +142,6 @@ def getWandFluxes(
         v = get_input_data("V", year, month).variables["V"][
             begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
         ]  # m/s
-        v_levels = get_input_data("V", year, month).variables["lev"][:]
         # wind at 10m, 3-hourly data
         v10 = get_input_data("V10", year, month).variables["V10M"][
             begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
@@ -277,7 +251,7 @@ def getWandFluxes(
             lonnrs,
         ]
         v10 = np.insert(
-            u10_first,
+            v10_first,
             [len(u10_first[:, 0, 0])],
             (
                 get_input_data_next_month("V10", year, month).variables["V10M"][
@@ -964,8 +938,7 @@ def getFa_Vert(
 
 #%% Runtime & Results
 
-start1 = timer()
-
+start1 = dt.datetime.now()
 # obtain the constants
 (
     latitude,
@@ -981,33 +954,31 @@ start1 = timer()
     gridcell,
 ) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
-for date in datelist[:]:
-    start = timer()
+def time_since(start_time):
+    """Return elapsed time in a formatted string."""
+    elapsed_time = dt.datetime.now() - start_time
+    return f"{minutes:.0f}:{seconds:.02f}"
 
-    a = date.day
-    yearnumber = date.year
-    monthnumber = date.month
+for date in datelist:
+    start = dt.datetime.now()
 
-    begin_time = (
-        a - 1
-    ) * count_time  # because python starts counting at 0 (so the first timesteps start at 0)
+    day = date.day
+    year = date.year
+    month = date.month
 
-    if int(calendar.isleap(yearnumber)) == 0:  # no leap year
-        final_time = months_length_nonleap[monthnumber - 1]
-    else:  # leap
-        final_time = months_length_leap[monthnumber - 1]
+    begin_time = (day - 1) * count_time  # Python starts at 0
+    final_time = calendar.monthrange(year, month)[1]
 
-    print(date, yearnumber, monthnumber, a, begin_time, final_time)
+    print(f"Preprocessing data for {date}, {begin_time=}, {final_time=}")
 
-    print(("0 = " + str(timer())))
-    #    #1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
+    # 1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
     cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
         latnrs,
         lonnrs,
         final_time,
-        a,
-        yearnumber,
-        monthnumber,
+        day,
+        year,
+        month,
         begin_time,
         count_time,
         density_water,
@@ -1016,21 +987,21 @@ for date in datelist[:]:
         g,
         A_gridcell,
     )
-    print(("1,2,3 = " + str(timer())))
+    print(f"Step 1, 2, 3 finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # 4 evaporation and precipitation
     E, P = getEP(
         latnrs,
         lonnrs,
-        yearnumber,
-        monthnumber,
+        year,
+        month,
         begin_time,
         count_time,
         latitude,
         longitude,
         A_gridcell,
     )
-    print(("4 = " + str(timer())))
+    print(f"Step 4 finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # put data on a smaller time step
     (
@@ -1056,7 +1027,7 @@ for date in datelist[:]:
         latitude,
         longitude,
     )
-    print(("5 = " + str(timer())))
+    print(f"Step 5 finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # change units to m3
     Fa_E_top_m3, Fa_E_down_m3, Fa_N_top_m3, Fa_N_down_m3 = change_units(
@@ -1072,7 +1043,7 @@ for date in datelist[:]:
         L_S_gridcell,
         latitude,
     )
-    print(("6a = " + str(timer())))
+    print(f"Step 6a finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # stabilize horizontal fluxes
     Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down = get_stablefluxes(
@@ -1088,7 +1059,7 @@ for date in datelist[:]:
         L_S_gridcell,
         latitude,
     )
-    print(("6b = " + str(timer())))
+    print(f"Step 6b finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # determine the vertical moisture flux
     Fa_Vert_raw, Fa_Vert, residual_down, residual_top = getFa_Vert(
@@ -1105,11 +1076,10 @@ for date in datelist[:]:
         latitude,
         longitude,
     )
-    print(("7 = " + str(timer())))
+    print(f"Step 7 finished, elapsed time since start: {dt.datetime.now() - start}")
 
-    # np.savez_compressed(get_output_path(year, month, a), E=E, P=P, Fa_E_top=Fa_E_top, Fa_N_top= Fa_N_top, Fa_E_down=Fa_E_down, Fa_N_down=Fa_N_down, W_down=W_down, W_top=W_top, residual_top=residual_top, residual_down=residual_down, Fa_Vert=Fa_Vert) # save as .npy file
     sio.savemat(
-        get_output_path(year, month, a),
+        get_output_path(year, month, day),
         {
             "Fa_E_top": Fa_E_top,
             "Fa_N_top": Fa_N_top,
@@ -1124,15 +1094,8 @@ for date in datelist[:]:
         do_compression=True,
     )  # save as mat file
 
-    end = timer()
-    print(
-        "Runtime fluxes_and_storages for day "
-        + str(a)
-        + " in year "
-        + str(yearnumber)
-        + " is",
-        (end - start),
-        " seconds.",
-    )
-end1 = timer()
-print("The total runtime is", (end1 - start1), " seconds.")
+    end = dt.datetime.now()
+    print(f"Runtime fluxes_and_storages for {day=}, {year=} is {end-start}")
+
+end1 = dt.datetime.now()
+print("The total runtime is {end1 - start1}")

@@ -6,10 +6,8 @@ interdata_folder: /home/peter/WAM2layers/output_data
 name_of_run: ""
 
 # Time
-start_month: 1
-start_year: 2002
-end_year: 2003
-end_month: 2
+start_date: '20020101'
+end_date: '20020201'
 
 # divt & count_time
 divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
