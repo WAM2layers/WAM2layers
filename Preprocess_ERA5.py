@@ -13,12 +13,11 @@ import os
 import sys
 from datetime import timedelta
 from timeit import default_timer as timer
-
+import glob
 import matplotlib.pyplot as plt
 # Import libraries
 import numpy as np
 import scipy.io as sio
-import timer
 import xarray as xr
 import yaml
 from netCDF4 import Dataset
@@ -80,10 +79,10 @@ def get_3d_data(variable, year, month):
     filepath = os.path.join(config["input_folder"], filename)
     files = []
     for file in glob.glob(filepath):
-        ds = xr.open_dataset(file)
+        ds = xr.open_mfdataset(file)
         files.append(ds)
 
-    return xr.concat(files, dim='level').sortby('level')
+    return xr.concat(files, dim='level').sortby('level')[variable]
 
 def get_2d_data(variable, year, month):
     filename = f"{variable}_ERA5_{year}_{month:02d}_*NH.nc"
@@ -121,183 +120,61 @@ def getWandFluxes(
     A_gridcell,
 ):
 
-    q = get_3d_data("q", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    # Load data
+    u = get_3d_data("u", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
+    v = get_3d_data("v", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
+    q = get_3d_data("q", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
+    sp = get_2d_data("sp", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
     time = q.time
     levels = q.level
 
-    u = get_3d_data("u", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    v = get_3d_data("v", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    sp = get_2d_data("sp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-
-    print("Data is loaded", dt.datetime.now().time())
-    #time = [0, 1, 2, 3, 4] # do not hardcode this
-    # If you do not have 5 pressure levels but much more, as in our case, then calculate 
-    # intervals directly from the real data
-    #but then also take surface pressure into account and remove that
-
-    ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
-    P_boundary = 0.72878581 * sp + 7438.803223
-    #dp = (sp - 20000.0) / (intervals_regular - 1) # this has to change, here you determine the difference between the pressur levels
-
-
+    # Calculate fluxes
     uq = u*q
     vq = v*q
 
-    q_midpoints = 0.5 * (q.isel(level=slice(1, None)) + q.isel(level=slice(None, -1)))
-    uq_midpoints = 0.5 * (uq.isel(level=slice(1, None)) + uq.isel(level=slice(None, -1)))
-    vq_midpoints = 0.5 * (vq.isel(level=slice(1, None)) + vq.isel(level=slice(None, -1)))
-
+    # Integrate fluxes over original ERA5 layers
     midpoints = 0.5 * (levels.values[1:] + levels.values[:-1])
-    
+    uq_midpoints = uq.interp(level=midpoints)
+    vq_midpoints = vq.interp(level=midpoints)
+    q_midpoints = q.interp(level=midpoints)
 
-    u_lower = u.where((u.level < sp.sp/100) & (u.level > P_boundary.sp/100))
-    v_lower = v.where((v.level < sp.sp/100) & (v.level > P_boundary.sp/100))
-    q_lower = q.where((q.level < sp.sp/100) & (q.level > P_boundary.sp/100))
-    
-    u_upper = u.where((u.level < P_boundary.sp/100))
-    v_upper = v.where((v.level < P_boundary.sp/100))
-    q_upper = q.where((q.level < P_boundary.sp/100))
+    p = levels.broadcast_like(u)    # hPa
+    dp_midpoints = p.diff(dim='level')
+    dp_midpoints['level'] = midpoints
 
-    # p.diff(dim='level')
-    # levels.broadcast_like(u)
-    # p = sp.broadcast_like(u)
-
-    # eerst alles interpoleren naar de tussen levels
-    # ook p interpoleren naar tussen levels
-    # dp uitrekenen
-    # dan u en q en zo vermenidvuldigen en masken
-    levels.diff(dim='level')
-
-    dp = 
-    #TODO: how to deal with lowest layers, interpolate to take into account level below surface to have more information
-    p_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    p_maxmin[:, 1:-1, :, :] = (
-        sp[:, np.newaxis, :, :]
-        - dp[:, np.newaxis, :, :]
-        * np.arange(0, intervals_regular)[np.newaxis, :, np.newaxis, np.newaxis]
-    )
-
-    mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
-    mask[:, 0, :, :] = 1.0  # bottom value is always 1
-
-    p_maxmin[:, :-1, :, :] = (
-        mask[:, 1:, :, :] * p_maxmin[:, 1:, :, :]
-        + (1 - mask[:, 1:, :, :]) * p_maxmin[:, :-1, :, :]
-    )
-    p_maxmin[:, 1:, :, :] = np.where(
-        p_maxmin[:, :-1, :, :] == p_maxmin[:, 1:, :, :],
-        P_boundary[:, np.newaxis, :, :],
-        p_maxmin[:, 1:, :, :],
-    )
-
-    del (dp, mask)
-    print(
-        "after p_maxmin and now add surface and atmosphere together for u,q,v",
-        dt.datetime.now().time(),
-    )
-
-    levelist = np.squeeze(get_input_data("U", year, month).variables["lev"])  # Pa
-    p = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    p[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis]
-    p[:, 0, :, :] = sp
-
-    u_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    u_total[:, 1:-1, :, :] = u
-    u_total[:, 0, :, :] = u10 # do not add the 10m with ERA5 data that is not there
-    u_total[:, -1, :, :] = u[:, -1, :, :]
-
-    v_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    v_total[:, 1:-1, :, :] = v
-    v_total[:, 0, :, :] = v10 # do not add the 10m with ERA5 data that is not there
-    v_total[:, -1, :, :] = v[:, -1, :, :]
-
-    q_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    q_total[:, 1:-1, :, :] = q
-    q_total[:, 0, :, :] = q2m # do not add the 2m q with ERA5 data that is not there
-
-    mask = np.ones(u_total.shape, dtype=np.bool)
-    mask[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis] < (
-        sp[:, np.newaxis, :, :] - 1000.0
-    )  # Pa
-
-    u_masked = np.ma.masked_array(u_total, mask=~mask)
-    v_masked = np.ma.masked_array(v_total, mask=~mask)
-    q_masked = np.ma.masked_array(q_total, mask=~mask)
-    p_masked = np.ma.masked_array(p, mask=~mask)
-
-    del (u_total, v_total, q_total, p, u, v, q, u10, v10, q2m, sp)
-
-    print("before interpolation loop", dt.datetime.now().time())
-
-    uq_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    vq_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    q_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-
-    #only do this when there are not enought pressure levels available in the dataset
-    # otherwiste just a linear interpolation.
-    for t in range(time):  # loop over timesteps
-        for i in range(len(latitude)):  # loop over latitude
-            for j in range(len(longitude)):  # loop over longitude
-                pp = p_masked[t, :, i, j]
-                uu = u_masked[t, :, i, j]
-                vv = v_masked[t, :, i, j]
-                qq = q_masked[t, :, i, j]
-
-                pp = pp[~pp.mask]
-                uu = uu[~uu.mask]
-                vv = vv[~vv.mask]
-                qq = qq[~qq.mask]
-
-                f_uq = interp1d(pp, uu * qq, "cubic")  # spline interpolation
-                uq_maxmin[t, :, i, j] = f_uq(
-                    p_maxmin[t, :, i, j]
-                )  # spline interpolation
-
-                f_vq = interp1d(pp, vv * qq, "cubic")  # spline interpolation
-                vq_maxmin[t, :, i, j] = f_vq(
-                    p_maxmin[t, :, i, j]
-                )  # spline interpolation
-
-                f_q = interp1d(pp, qq)  # linear interpolation
-                q_maxmin[t, :, i, j] = f_q(p_maxmin[t, :, i, j])  # linear interpolation
-
-    del (u_masked, v_masked, q_masked, p_masked, mask, f_uq, f_vq, f_q)
-    print("after interpolation loop", dt.datetime.now().time())
-
-    # pressure between full levels
-    P_between = np.maximum(
-        0, p_maxmin[:, :-1, :, :] - p_maxmin[:, 1:, :, :]
-    )  # the maximum statement is necessary to avoid negative humidity values
-    # Imme: in P_between you do not calculate the pressure between two levels but the pressure difference between two levels!!!
-    q_between = 0.5 * (q_maxmin[:, 1:, :, :] + q_maxmin[:, :-1, :, :])
-    uq_between = 0.5 * (uq_maxmin[:, 1:, :, :] + uq_maxmin[:, :-1, :, :])
-    vq_between = 0.5 * (vq_maxmin[:, 1:, :, :] + vq_maxmin[:, :-1, :, :])
+    # alternative (old) implementation
+    # q_midpoints = 0.5 * (q.isel(level=slice(1, None)) + q.isel(level=slice(None, -1)))
+    # uq_midpoints = 0.5 * (uq.isel(level=slice(1, None)) + uq.isel(level=slice(None, -1)))
+    # vq_midpoints = 0.5 * (vq.isel(level=slice(1, None)) + vq.isel(level=slice(None, -1)))
 
     # eastward and northward fluxes
-    Fa_E_p = uq_between * P_between / g
-    Fa_N_p = vq_between * P_between / g
+    eastward_flux = uq_midpoints * dp_midpoints / g
+    northward_flux = vq_midpoints * dp_midpoints / g
 
-    # compute the column water vapor
-    cwv = (
-        q_between * P_between / g
-    )  # column water vapor = specific humidity * pressure levels length / g [kg/m2]
-    # make tcwv vector
-    tcwv = np.squeeze(
-        np.sum(cwv, 1)
-    )  # total column water vapor, cwv is summed over the vertical [kg/m2]
 
-    # use mask
-    mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
+    # compute the column water vapor = specific humidity * pressure levels length
+    cwv = q_midpoints * dp_midpoints / g
 
-    vapor_down = np.sum(mask[:, :-1, :, :] * q_between * P_between / g, axis=1)
-    vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_between * P_between / g, axis=1)
+    # total column water vapor, cwv is summed over the vertical [kg/m2]
+    tcwv = cwv.sum(dim='level')
 
-    Fa_E_down = np.sum(mask[:, :-1, :, :] * Fa_E_p, axis=1)  # kg*m-1*s-1
-    Fa_N_down = np.sum(mask[:, :-1, :, :] * Fa_N_p, axis=1)  # kg*m-1*s-1
-    Fa_E_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_E_p, axis=1)  # kg*m-1*s-1
-    Fa_N_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_N_p, axis=1)  # kg*m-1*s-1
+    #apply mask so only level in upper or lower layer are masked, based on surface pressure and pressur on boundary
+    ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
+    P_boundary = 0.72878581 * sp + 7438.803223
+    lower_layer = (p.level < sp.sp/100) & (p.level > P_boundary.sp/100)
+    upper_layer = p.level < P_boundary.sp/100
 
-    vapor_total = vapor_top + vapor_down
+    #integrate the fluxes over the upper and lower layer based on the mask
+    eastward_flux_lower = eastward_flux.where(lower_layer).sum(dim='level')
+    northward_flux_lower = northward_flux.where(lower_layer).sum(dim='level')
+
+    eastward_flux_upper = eastward_flux.where(upper_layer).sum(dim='level')
+    northward_flux_upper = northward_flux.where(upper_layer).sum(dim='level')
+
+    W_upper = cwv.where(upper_layer).sum(dim='level')
+    W_lower = cwv.where(lower_layer).sum(dim='level')
+
+    vapor_total = W_upper + W_lower
 
     # check whether the next calculation results in all zeros
     test0 = tcwv - vapor_total
@@ -308,16 +185,11 @@ def getWandFluxes(
         )
     )
 
-    # put A_gridcell on a 3D grid
-    A_gridcell2D = np.tile(A_gridcell, [1, len(longitude)])
-    A_gridcell_1_2D = np.reshape(A_gridcell2D, [1, len(latitude), len(longitude)])
-    A_gridcell_plus3D = np.tile(A_gridcell_1_2D, [count_time + 1, 1, 1])
+    # convert units to water volumes m3
+    W_top = W_upper * A_gridcell / density_water  # m3
+    W_down = W_lower * A_gridcell / density_water  # m3
 
-    # water volumes
-    W_top = vapor_top * A_gridcell_plus3D / density_water  # m3
-    W_down = vapor_down * A_gridcell_plus3D / density_water  # m3
-
-    return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
+    return cwv, W_top, W_down, eastward_flux_upper, northward_flux_upper, eastward_flux_lower, northward_flux_lower
 
 # Code
 def getEP(
