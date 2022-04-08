@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 # Import libraries
 import numpy as np
 import pandas as pd
+import xarray as xr
 import scipy.io as sio
 import yaml
 
@@ -66,11 +67,11 @@ def get_input_data(variable, year, month):
     """Get input data for variable."""
     filename = f"{name_of_run}{variable}_{year}{month:02d}_NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return Dataset(filepath, "r")
+    return xr.open_dataset(filepath)
 
 
 def get_input_data_next_month(variable, year, month):
-    """Get input data for next month(?)"""
+    """Get input data for next month."""
     if month == 12:
         return get_input_data(variable, year + 1, 1)
     else:
@@ -104,162 +105,45 @@ def getWandFluxes(
     A_gridcell,
 ):
 
-    if a != final_time:  # not the end of the year/month
-        # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
-        q = get_input_data("Q", year, month).variables["Q"][
-            begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
-        ]  # kg/kg
-        time = get_input_data("Q", year, month).variables["time"][
-            begin_time : (begin_time + count_time + 1)
-        ]
-        # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        q2m = get_input_data("Q2M", year, month).variables["Q2M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  # kg/kg #:267,134:578
+    times_6hourly = slice(begin_time, begin_time+count_time+1)
+    times_3hourly = slice(begin_time*2+1, (begin_time*2+count_time*2+1), 2)
 
-        # surface pressure is 3-hourly data (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        lnsp = get_input_data("LNSP", year, month).variables["LNSP"][
-            begin_time * 2 : (begin_time * 2 + count_time * 2 + 1) : 2,
-            0,
-            latnrs,
-            lonnrs,
-        ]  # [Pa] #:267,134:578
+    q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    v = get_input_data("V", year, month).V.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    q2m = get_input_data("Q2M", year, month).Q2M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    lnsp = get_input_data("LNSP", year, month).LNSP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    u10 = get_input_data("U10", year, month).U10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    v10 = get_input_data("V10", year, month).V10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
 
-        # read the u-wind data
-        u = get_input_data("U", year, month).variables["U"][
-            begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
-        ]  # m/s
-        # wind at 10m, 3-hourly data
-        u10 = get_input_data("U10", year, month).variables["U10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  # m/s
+    if a == final_time:
+        q_next = get_input_data_next_month("Q", year, month).Q.isel(time=0, lat=latnrs, lon=lonnrs)
+        u_next = get_input_data_next_month("U", year, month).U.isel(time=0, lat=latnrs, lon=lonnrs)
+        v_next = get_input_data_next_month("V", year, month).V.isel(time=0, lat=latnrs, lon=lonnrs)
+        q2m_next = get_input_data_next_month("Q2M", year, month).Q2M.isel(time=0, lat=latnrs, lon=lonnrs)
+        lnsp_next = get_input_data_next_month("LNSP", year, month).LNSP.isel(time=0, lat=latnrs, lon=lonnrs)
+        u10_next = get_input_data_next_month("U10", year, month).U10M.isel(time=0, lat=latnrs, lon=lonnrs)
+        v10_next = get_input_data_next_month("V10", year, month).V10M.isel(time=0, lat=latnrs, lon=lonnrs)
 
-        # read the v-wind data
-        v = get_input_data("V", year, month).variables["V"][
-            begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
-        ]  # m/s
-        # wind at 10m, 3-hourly data
-        v10 = get_input_data("V10", year, month).variables["V10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  # m/s
+        q = xr.concat([q, q_next], dim='time')
+        u = xr.concat([u, u_next], dim='time')
+        v = xr.concat([v, v_next], dim='time')
+        q2m = xr.concat([q2m, q2m_next], dim='time')
+        lnsp = xr.concat([lnsp, lnsp_next], dim='time')
+        u10 = xr.concat([u10, u10_next], dim='time')
+        v10 = xr.concat([v10, v10_next], dim='time')
 
-    else:  # end of the year/month
-        # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
-        q_first = get_input_data("Q", year, month).variables["Q"][
-            begin_time : (begin_time + count_time), :, latnrs, lonnrs
-        ]
-        q = np.insert(
-            q_first,
-            [len(q_first[:, 0, 0, 0])],
-            (
-                get_input_data_next_month("Q", year, month).variables["Q"][
-                    0, :, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # kg/kg
+    time = q.time
+    breakpoint()
 
-        # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        q2m_first = get_input_data("Q2M", year, month).variables["Q2M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  #:267,134:578
-        q2m = np.insert(
-            q2m_first,
-            [len(q2m_first[:, 0, 0])],
-            (
-                get_input_data_next_month("Q2M", year, month).variables["Q2M"][
-                    1, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # kg/kg #:267,134:578
-
-        # surface pressure 3-hourly data (00.00,03.00,06.00,09.00,12.00,15.00,18.00,21.00)
-        lnsp_first = get_input_data("LNSP", year, month).variables["LNSP"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            0,
-            latnrs,
-            lonnrs,
-        ]  # [Pa] #:267,134:578
-        lnsp = np.insert(
-            lnsp_first,
-            [len(lnsp_first[:, 0, 0])],
-            (
-                get_input_data_next_month("LNSP", year, month).variables["LNSP"][
-                    0, 0, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # [Pa] #:267,134:578
-
-        u_first = get_input_data("U", year, month).variables["U"][
-            begin_time : (begin_time + count_time), :, latnrs, lonnrs
-        ]
-        u = np.insert(
-            u_first,
-            [len(u_first[:, 0, 0, 0])],
-            (
-                get_input_data_next_month("U", year, month).variables["U"][
-                    0, :, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-        u10_first = get_input_data("U10", year, month).variables["U10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]
-        u10 = np.insert(
-            u10_first,
-            [len(u10_first[:, 0, 0])],
-            (
-                get_input_data_next_month("U10", year, month).variables["U10M"][
-                    1, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-        # read the v-wind data
-        v_first = get_input_data("V", year, month).variables["V"][
-            begin_time : (begin_time + count_time), :, latnrs, lonnrs
-        ]
-        v = np.insert(
-            v_first,
-            [len(v_first[:, 0, 0, 0])],
-            (
-                get_input_data_next_month("V", year, month).variables["V"][
-                    0, :, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-        v10_first = get_input_data("V10", year, month).variables["V10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]
-        v10 = np.insert(
-            v10_first,
-            [len(u10_first[:, 0, 0])],
-            (
-                get_input_data_next_month("V10", year, month).variables["V10M"][
-                    1, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
+    # For now extract bare numpy arrays from the data
+    q = q.values
+    u = u.values
+    v = v.values
+    q2m = q2m.values
+    lnsp = lnsp.values.squeeze() # drop len(1) dimension 'lev'
+    u10 = u10.values
+    v10 = v10.values
 
     print("Data is loaded", dt.datetime.now().time())
     time = [0, 1, 2, 3, 4]
@@ -275,12 +159,9 @@ def getWandFluxes(
     dp = (sp - 20000.0) / (intervals_regular - 1)
     time = q.shape[0]
 
+    breakpoint()
     p_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    p_maxmin[:, 1:-1, :, :] = (
-        sp[:, np.newaxis, :, :]
-        - dp[:, np.newaxis, :, :]
-        * np.arange(0, intervals_regular)[np.newaxis, :, np.newaxis, np.newaxis]
-    )
+    p_maxmin[:, 1:-1, :, :] = (sp[:, np.newaxis, :, :] - dp[:, np.newaxis, :, :] * np.arange(0, intervals_regular)[np.newaxis, :, np.newaxis, np.newaxis])
 
     mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
     mask[:, 0, :, :] = 1.0  # bottom value is always 1
