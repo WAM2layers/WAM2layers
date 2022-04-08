@@ -15,6 +15,7 @@ from datetime import timedelta
 from timeit import default_timer as timer
 import glob
 import matplotlib.pyplot as plt
+
 # Import libraries
 import numpy as np
 import scipy.io as sio
@@ -82,7 +83,8 @@ def get_3d_data(variable, year, month):
         ds = xr.open_mfdataset(file)
         files.append(ds)
 
-    return xr.concat(files, dim='level').sortby('level')[variable]
+    return xr.concat(files, dim="level").sortby("level")[variable]
+
 
 def get_2d_data(variable, year, month):
     filename = f"{variable}_ERA5_{year}_{month:02d}_*NH.nc"
@@ -110,27 +112,31 @@ def get_output_data(year, month, a):
 # Determine the fluxes and states
 # In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
 def getWandFluxes(
-    latnrs,
-    lonnrs,
     date,
     density_water,
-    latitude,
-    longitude,
     g,
     A_gridcell,
 ):
 
     # Load data
-    u = get_3d_data("u", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
-    v = get_3d_data("v", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
-    q = get_3d_data("q", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
-    sp = get_2d_data("sp", date.year, date.month).isel(time=0)#.sel(time=date.strftime('%Y%m%d'))
+    u = get_3d_data("u", date.year, date.month).isel(
+        time=0
+    )  # .sel(time=date.strftime('%Y%m%d'))
+    v = get_3d_data("v", date.year, date.month).isel(
+        time=0
+    )  # .sel(time=date.strftime('%Y%m%d'))
+    q = get_3d_data("q", date.year, date.month).isel(
+        time=0
+    )  # .sel(time=date.strftime('%Y%m%d'))
+    sp = get_2d_data("sp", date.year, date.month).isel(
+        time=0
+    )  # .sel(time=date.strftime('%Y%m%d'))
     time = q.time
     levels = q.level
 
     # Calculate fluxes
-    uq = u*q
-    vq = v*q
+    uq = u * q
+    vq = v * q
 
     # Integrate fluxes over original ERA5 layers
     midpoints = 0.5 * (levels.values[1:] + levels.values[:-1])
@@ -138,9 +144,9 @@ def getWandFluxes(
     vq_midpoints = vq.interp(level=midpoints)
     q_midpoints = q.interp(level=midpoints)
 
-    p = levels.broadcast_like(u)    # hPa
-    dp_midpoints = p.diff(dim='level')
-    dp_midpoints['level'] = midpoints
+    p = levels.broadcast_like(u)  # hPa
+    dp_midpoints = p.diff(dim="level")
+    dp_midpoints["level"] = midpoints
 
     # alternative (old) implementation
     # q_midpoints = 0.5 * (q.isel(level=slice(1, None)) + q.isel(level=slice(None, -1)))
@@ -151,28 +157,27 @@ def getWandFluxes(
     eastward_flux = uq_midpoints * dp_midpoints / g
     northward_flux = vq_midpoints * dp_midpoints / g
 
-
     # compute the column water vapor = specific humidity * pressure levels length
     cwv = q_midpoints * dp_midpoints / g
 
     # total column water vapor, cwv is summed over the vertical [kg/m2]
-    tcwv = cwv.sum(dim='level')
+    tcwv = cwv.sum(dim="level")
 
-    #apply mask so only level in upper or lower layer are masked, based on surface pressure and pressur on boundary
+    # apply mask so only level in upper or lower layer are masked, based on surface pressure and pressur on boundary
     ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
     P_boundary = 0.72878581 * sp + 7438.803223
-    lower_layer = (p.level < sp.sp/100) & (p.level > P_boundary.sp/100)
-    upper_layer = p.level < P_boundary.sp/100
+    lower_layer = (p.level < sp.sp / 100) & (p.level > P_boundary.sp / 100)
+    upper_layer = p.level < P_boundary.sp / 100
 
-    #integrate the fluxes over the upper and lower layer based on the mask
-    eastward_flux_lower = eastward_flux.where(lower_layer).sum(dim='level')
-    northward_flux_lower = northward_flux.where(lower_layer).sum(dim='level')
+    # integrate the fluxes over the upper and lower layer based on the mask
+    eastward_flux_lower = eastward_flux.where(lower_layer).sum(dim="level")
+    northward_flux_lower = northward_flux.where(lower_layer).sum(dim="level")
 
-    eastward_flux_upper = eastward_flux.where(upper_layer).sum(dim='level')
-    northward_flux_upper = northward_flux.where(upper_layer).sum(dim='level')
+    eastward_flux_upper = eastward_flux.where(upper_layer).sum(dim="level")
+    northward_flux_upper = northward_flux.where(upper_layer).sum(dim="level")
 
-    W_upper = cwv.where(upper_layer).sum(dim='level')
-    W_lower = cwv.where(lower_layer).sum(dim='level')
+    W_upper = cwv.where(upper_layer).sum(dim="level")
+    W_lower = cwv.where(lower_layer).sum(dim="level")
 
     vapor_total = W_upper + W_lower
 
@@ -189,48 +194,30 @@ def getWandFluxes(
     W_top = W_upper * A_gridcell / density_water  # m3
     W_down = W_lower * A_gridcell / density_water  # m3
 
-    return cwv, W_top, W_down, eastward_flux_upper, northward_flux_upper, eastward_flux_lower, northward_flux_lower
+    return (
+        cwv,
+        W_top,
+        W_down,
+        eastward_flux_upper,
+        northward_flux_upper,
+        eastward_flux_lower,
+        northward_flux_lower,
+    )
+
 
 # Code
-def getEP(
-    latnrs, lonnrs, year, month, begin_time, count_time, latitude, longitude, A_gridcell
-):
-    # hourly data so 24 steps per day
-
-    print(begin_time,count_time)
-    evaporation = get_input_data("e", year, month).variables["e"][
-        begin_time: (begin_time + count_time ), latnrs, lonnrs
-    ]  # m
-    precipitation = get_input_data("tp", year, month).variables["tp"][
-        begin_time : (begin_time + count_time ), latnrs, lonnrs
-    ]  # m
-
-    # delete and transfer negative values, change sign convention to all positive
-    precipitation = np.reshape(
-        np.maximum(
-            np.reshape(precipitation, (np.size(precipitation)))
-            + np.maximum(np.reshape(evaporation, (np.size(evaporation))), 0.0),
-            0.0,
-        ),
-        (np.int(count_time), len(latitude), len(longitude)),
-    )
-    evaporation = np.reshape(
-        np.abs(np.minimum(np.reshape(evaporation, (np.size(evaporation))), 0.0)),
-        (np.int(count_time), len(latitude), len(longitude)),
-    )
+def getEP(date, A_gridcell):
+    """Load precipitation and evaporation data with units of m3."""
+    # TODO get all times, but for now this takes too long
+    evap = get_2d_data("e", date.year, date.month).isel(time=0)
+    precip = get_2d_data("tp", date.year, date.month).isel(time=0)
 
     # calculate volumes
-    A_gridcell2D = np.tile(A_gridcell, [1, len(longitude)])
-    A_gridcell_1_2D = np.reshape(A_gridcell2D, [1, len(latitude), len(longitude)])
-    A_gridcell_max3D = np.tile(A_gridcell_1_2D, [count_time, 1, 1])
+    evap *= A_gridcell  # m3
+    precip *= A_gridcell  # m3
 
-    E = evaporation * A_gridcell_max3D
-    P = precipitation * A_gridcell_max3D
+    return evap, precip
 
-    return E, P
-
-
-# Code
 
 # within this new definition of refined I do a linear interpolation over time of my fluxes
 def getrefined_new(
@@ -722,34 +709,19 @@ start1 = timer()
 ) = getconstants_pressure_ERA5(latnrs, lonnrs, config["land_sea_mask"])
 
 for date in datelist[:2]:
-    #start = timer()
+    # start = timer()
     print(("0 = " + str(timer())))
     #    #1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
     cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
-        latnrs,
-        lonnrs,
         date,
         density_water,
-        latitude,
-        longitude,
         g,
         A_gridcell,
     )
     print(("1,2,3 = " + str(timer())))
 
     # 4 evaporation and precipitation
-    # daily loop
-    E, P = getEP(
-        latnrs,
-        lonnrs,
-        yearnumber,
-        monthnumber,
-        begin_time,
-        count_time,
-        latitude,
-        longitude,
-        A_gridcell,
-    ) # uses hourly data
+    E, P = getEP(date, A_gridcell)
     print(("4 = " + str(timer())))
 
     # put data on a smaller time step
