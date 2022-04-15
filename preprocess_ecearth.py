@@ -81,10 +81,7 @@ def get_new_target_levels(surface_pressure, n_levels=40):
     pressure_top = 20000
     dp = (surface_pressure - pressure_top) / (n_levels - 1)
 
-    dp = dp[:, None, :, :]
-    surface_pressure = surface_pressure[:, None, :, :]
     levels = np.arange(0, n_levels)[None, :, None, None]
-
     ntime, _, nlat, nlon = surface_pressure.shape
 
     # Note the extra layer of zeros at the bottom and top of the array
@@ -160,8 +157,6 @@ def getWandFluxes(
 
     sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
 
-    levelist = u.lev.values
-    time = q.shape[0]
 
     u = join_levels(u, u10)  # bottom pressure will be set to 100000 hPa
     v = join_levels(v, v10)
@@ -178,41 +173,42 @@ def getWandFluxes(
     p = p.where(p != 10000, 0)  # set top pressure to 0
 
     # For now extract bare numpy arrays from the data
+
+    # Mask data where the pressure level is high than sp - 1000
+    # as there is no valid data at those points
+    # and we don't need a second layer that is very close to the surface
+    mask = p > sp.values - 1000
+    mask[:, 0, :, :] = True  # don't mask the bottom layer
+
+    # TODO convert to nan instead of numpy masked array?
+    # u_masked = u.where(mask)
+
+    u_masked = np.ma.masked_array(u, mask=mask)
+    v_masked = np.ma.masked_array(v, mask=mask)
+    q_masked = np.ma.masked_array(q, mask=mask)
+    p_masked = np.ma.masked_array(p, mask=mask)
+
     q = q.values
     u = u.values
     v = v.values
-    q2m = q2m.values
-    sp = sp.values.squeeze()  # drop len(1) dimension 'lev'
-    u10 = u10.values
-    v10 = v10.values
+    sp = sp.values
     p = p.values
+    print("Data is loaded", dt.datetime.now().time())
 
-    # import IPython; IPython.embed(); quit()
-
+    # Get new level definitions on which to interpolate to
     n_levels = 40
     p_maxmin = get_new_target_levels(sp, n_levels=40)
-    print("after p_maxmin and now", dt.datetime.now().time())
 
-    breakpoint()
+    # import IPython; IPython.embed(); quit()
+    # breakpoint()
 
-    # Mask data where the pressure level is smaller than sp - 1000 (a margin of 10 hPa)
-    mask = np.ones(u.shape, dtype=np.bool)
-    mask[:, 1:-1, :, :] = levelist[None, :, None, None] < (
-        sp[:, None, :, :] - 1000.0
-    )  # Pa
-
-    u_masked = np.ma.masked_array(u, mask=~mask)
-    v_masked = np.ma.masked_array(v, mask=~mask)
-    q_masked = np.ma.masked_array(q, mask=~mask)
-    p_masked = np.ma.masked_array(p, mask=~mask)
-
-    print("Data is loaded", dt.datetime.now().time())
     print("before interpolation loop", dt.datetime.now().time())
 
+    time = q.shape[0]
+    # allocate arrays
     uq_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
     vq_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
     q_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
-
     for t in range(time):  # loop over timesteps
         for i in range(len(latitude)):  # loop over latitude
             for j in range(len(longitude)):  # loop over longitude
