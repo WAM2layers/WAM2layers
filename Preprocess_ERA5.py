@@ -1,20 +1,8 @@
-# This script is similar as the Fluxes_and_States_Masterscript from WAM-2layers from Ruud van der Ent, except that it threads atmospheric data at five pressure levels instead of model levels
-
-# Includes a spline vertical interpolation for data on pressure levels from the EC-Earth climate model (Hazeleger et al., 2010)
-# In this case the atmospheric data is provided on the following five pressure levels: 850 hPa, 700 hPa, 500 hPa, 300 hPa, 200 hPa
-# Includes a linear interpolation of the moisture fluxes over time (in def getrefined_new)
-# We have implemented a datelist function so the model can run for multiple years without having problems with leap years
-
-# My input data are monthly files with hourly (surface variables) and hourly data (atmospheric variables)
-
 import calendar
 import datetime as dt
-import os
-import sys
-from datetime import timedelta
-from timeit import default_timer as timer
 import glob
-import matplotlib.pyplot as plt
+import os
+from timeit import default_timer as timer
 
 # Import libraries
 import numpy as np
@@ -22,8 +10,6 @@ import scipy.io as sio
 import xarray as xr
 import yaml
 from netCDF4 import Dataset
-from scipy import interpolate
-from scipy.interpolate import interp1d
 
 from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
 
@@ -39,6 +25,7 @@ divt = config["divt"]
 count_time = config["count_time"]
 latnrs = np.arange(config["latnrs"])
 lonnrs = np.arange(config["lonnrs"])
+
 
 # to create datelist
 def get_times_daily(startdate, enddate):
