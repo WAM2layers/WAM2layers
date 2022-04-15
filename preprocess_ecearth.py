@@ -2,13 +2,11 @@ import calendar
 import datetime as dt
 import os
 
-# Import libraries
 import numpy as np
 import pandas as pd
-import xarray as xr
 import scipy.io as sio
+import xarray as xr
 import yaml
-
 from scipy.interpolate import interp1d
 
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
@@ -55,6 +53,29 @@ def get_output_path(year, month, a):
     return save_path
 
 
+def join_levels(plevs, surface):
+    """Combine 3d pressure level and 2d surface level data.
+
+    A dummy value of 1000 hPa is inserted for the surface pressure
+    """
+    bottom = plevs.isel(lev=0).copy()
+    bottom.values = surface.values
+    bottom["lev"] = 100000.  # dummy value
+
+    # NB: plevs needs to come first to preserve dimension order
+    return xr.concat([plevs, bottom], dim='lev').sortby("lev", ascending=False)
+
+
+def repeat_top_level(plevs):
+    """Add one more level with the same value as the upper level.
+
+    A dummy value of 100 hPa is inserted for the top level pressure
+    """
+    top = top = plevs.isel(lev=-1).copy()
+    top["lev"] = 10000.
+    return xr.concat([plevs, top], dim='lev')
+
+
 # Determine the fluxes and states
 # In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
 def getWandFluxes(
@@ -73,7 +94,7 @@ def getWandFluxes(
 ):
 
     times_6hourly = slice(0, 5)
-    times_3hourly = slice(0, 10, 2)
+    times_3hourly = slice(1, 10, 2)
 
     q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
     u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
@@ -102,31 +123,24 @@ def getWandFluxes(
 
     sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
 
-    # Add surface and atmosphere together for u,q,v
-    u_top = u.isel(lev = -1)
-    u_top["lev"] = 10000
-    u_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    u_total[:, 1:-1, :, :] = u
-    u_total[:, 0, :, :] = u10
-    u_total[:, -1, :, :] = u[:, -1, :, :]
+    levelist = u.lev.values
+    time = q.shape[0]
 
-    v_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    v_total[:, 1:-1, :, :] = v
-    v_total[:, 0, :, :] = v10
-    v_total[:, -1, :, :] = v[:, -1, :, :]
+    u = join_levels(u, u10)  # bottom pressure will be set to 100000 hPa
+    v = join_levels(v, v10)
+    q = join_levels(q, q2m)
 
-    q_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    q_total[:, 1:-1, :, :] = q
-    q_total[:, 0, :, :] = q2m
+    u = repeat_top_level(u)  # top level will be set to 10000 hPa
+    v = repeat_top_level(v)
+    q = repeat_top_level(q)
 
-    # Make pressure array
-    p = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    p[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis]
-    p[:, 0, :, :] = sp
-
+    # Create pressure array with the same dimensions as u, q, and v
+    # Use the values of the "lev" coordinate to fill the array initally
+    p = u.lev.broadcast_like(u)
+    p = p.where(p != 100000, sp.values)  # replace bottom pressure with sp
+    p = p.where(p != 10000, 0)  # set top pressure to 0
 
     # For now extract bare numpy arrays from the data
-    levelist = u.lev.values
     q = q.values
     u = u.values
     v = v.values
@@ -134,6 +148,7 @@ def getWandFluxes(
     sp = sp.values.squeeze()  # drop len(1) dimension 'lev'
     u10 = u10.values
     v10 = v10.values
+    p = p.values
 
     # Interpolation prepping
     n_levels = 40  # from five pressure levels the vertical data is interpolated to 40 levels
@@ -141,7 +156,6 @@ def getWandFluxes(
     ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
     P_boundary = 0.72878581 * sp + 7438.803223
     dp = (sp - 20000.0) / (n_levels - 1)
-    time = q.shape[0]
 
     p_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
     p_maxmin[:, 1:-1, :, :] = (sp[:, np.newaxis, :, :] - dp[:, np.newaxis, :, :] * np.arange(0, n_levels)[np.newaxis, :, np.newaxis, np.newaxis])
@@ -165,17 +179,16 @@ def getWandFluxes(
         dt.datetime.now().time(),
     )
 
-    mask = np.ones(u_total.shape, dtype=np.bool)
+    # Mask data where the pressure level is smaller than sp - 1000 (a margin of 10 hPa)
+    mask = np.ones(u.shape, dtype=np.bool)
     mask[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis] < (
         sp[:, np.newaxis, :, :] - 1000.0
     )  # Pa
 
-    u_masked = np.ma.masked_array(u_total, mask=~mask)
-    v_masked = np.ma.masked_array(v_total, mask=~mask)
-    q_masked = np.ma.masked_array(q_total, mask=~mask)
+    u_masked = np.ma.masked_array(u, mask=~mask)
+    v_masked = np.ma.masked_array(v, mask=~mask)
+    q_masked = np.ma.masked_array(q, mask=~mask)
     p_masked = np.ma.masked_array(p, mask=~mask)
-
-    del (u_total, v_total, q_total, p, u, v, q, u10, v10, q2m, sp)
 
     print("Data is loaded", dt.datetime.now().time())
     print("before interpolation loop", dt.datetime.now().time())
@@ -795,22 +808,22 @@ for date in datelist:
 
     print(f"Preprocessing data for {date}, {begin_time=}, {final_time=}")
 
-    # # 1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
-    # cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
-    #     latnrs,
-    #     lonnrs,
-    #     final_time,
-    #     day,
-    #     year,
-    #     month,
-    #     count_time,
-    #     density_water,
-    #     latitude,
-    #     longitude,
-    #     g,
-    #     A_gridcell,
-    # )
-    # print(f"Step 1, 2, 3 finished, elapsed time since start: {dt.datetime.now() - start}")
+    # 1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
+    cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
+        latnrs,
+        lonnrs,
+        final_time,
+        day,
+        year,
+        month,
+        count_time,
+        density_water,
+        latitude,
+        longitude,
+        g,
+        A_gridcell,
+    )
+    print(f"Step 1, 2, 3 finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # 4 evaporation and precipitation
     E, P = getEP(
