@@ -9,7 +9,6 @@ import numpy as np
 import scipy.io as sio
 import xarray as xr
 import yaml
-from netCDF4 import Dataset
 
 from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
 
@@ -55,36 +54,21 @@ else:  # leap
     )
 
 
-def get_input_data(variable, year, month):
-    """Get input data for variable."""
-    filename = f"{name_of_run}{variable}_ERA5_{year}_{month:02d}_trop_NH.nc"
-    filepath = os.path.join(config["input_folder"], filename)
-    return Dataset(filepath, "r")
-
-
 def get_3d_data(variable, year, month):
     filename = f"{variable}_ERA5_{year}_{month:02d}_*NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
     files = []
     for file in glob.glob(filepath):
-        ds = xr.open_mfdataset(file)
+        ds = xr.open_dataset(file, chunks='auto')
         files.append(ds)
 
     return xr.concat(files, dim="level").sortby("level")[variable]
 
 
 def get_2d_data(variable, year, month):
-    filename = f"{variable}_ERA5_{year}_{month:02d}_*NH.nc"
+    filename = f"{variable}_ERA5_{year}_{month:02d}_NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return xr.open_mfdataset(filepath)
-
-
-def get_input_data_next_month(variable, year, month):
-    """Get input data for next month(?)"""
-    if month == 12:
-        return get_input_data(variable, year + 1, 1)
-    else:
-        return get_input_data(variable, year, month + 1)
+    return xr.open_dataset(filepath, chunks='auto')
 
 
 def get_output_data(year, month, a):
@@ -94,31 +78,14 @@ def get_output_data(year, month, a):
     return save_path
 
 
-# Code (no need to look at this for running)
-
-# Determine the fluxes and states
-# In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
-def getWandFluxes(
-    date,
-    density_water,
-    g,
-    A_gridcell,
-):
+def getWandFluxes(date, density_water, g, A_gridcell):
+    """Determine the fluxes and states."""
 
     # Load data
-    u = get_3d_data("u", date.year, date.month).isel(
-        time=0
-    )  # .sel(time=date.strftime('%Y%m%d'))
-    v = get_3d_data("v", date.year, date.month).isel(
-        time=0
-    )  # .sel(time=date.strftime('%Y%m%d'))
-    q = get_3d_data("q", date.year, date.month).isel(
-        time=0
-    )  # .sel(time=date.strftime('%Y%m%d'))
-    sp = get_2d_data("sp", date.year, date.month).isel(
-        time=0
-    )  # .sel(time=date.strftime('%Y%m%d'))
-    time = q.time
+    u = get_3d_data("u", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    v = get_3d_data("v", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    q = get_3d_data("q", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    sp = get_2d_data("sp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
     levels = q.level
 
     # Calculate fluxes
@@ -134,11 +101,6 @@ def getWandFluxes(
     p = levels.broadcast_like(u)  # hPa
     dp_midpoints = p.diff(dim="level")
     dp_midpoints["level"] = midpoints
-
-    # alternative (old) implementation
-    # q_midpoints = 0.5 * (q.isel(level=slice(1, None)) + q.isel(level=slice(None, -1)))
-    # uq_midpoints = 0.5 * (uq.isel(level=slice(1, None)) + uq.isel(level=slice(None, -1)))
-    # vq_midpoints = 0.5 * (vq.isel(level=slice(1, None)) + vq.isel(level=slice(None, -1)))
 
     # eastward and northward fluxes
     eastward_flux = uq_midpoints * dp_midpoints / g
@@ -168,42 +130,37 @@ def getWandFluxes(
 
     vapor_total = W_upper + W_lower
 
-    # check whether the next calculation results in all zeros
-    test0 = tcwv - vapor_total
-    print(
-        (
-            "check calculation water vapor, this value should be zero: "
-            + str(np.sum(test0))
-        )
-    )
+    test0 = (tcwv - vapor_total).sum().values
+    print(f"Check calculation water vapor, this value should be zero: {test0}")
 
     # convert units to water volumes m3
     W_top = W_upper * A_gridcell / density_water  # m3
     W_down = W_lower * A_gridcell / density_water  # m3
 
     return (
-        cwv,
-        W_top,
-        W_down,
-        eastward_flux_upper,
-        northward_flux_upper,
-        eastward_flux_lower,
-        northward_flux_lower,
+        # TODO: don't load everything in memory here
+        cwv.values,
+        W_top.values,
+        W_down.values,
+        eastward_flux_upper.values,
+        northward_flux_upper.values,
+        eastward_flux_lower.values,
+        northward_flux_lower.values,
     )
 
 
 # Code
 def getEP(date, A_gridcell):
     """Load precipitation and evaporation data with units of m3."""
-    # TODO get all times, but for now this takes too long
-    evap = get_2d_data("e", date.year, date.month).isel(time=0)
-    precip = get_2d_data("tp", date.year, date.month).isel(time=0)
+    evap = get_2d_data("e", date.year, date.month)
+    precip = get_2d_data("tp", date.year, date.month)
 
     # calculate volumes
     evap *= A_gridcell  # m3
     precip *= A_gridcell  # m3
 
-    return evap, precip
+    # TODO: don't load everything in memory here
+    return evap.values, precip.values
 
 
 # within this new definition of refined I do a linear interpolation over time of my fluxes
