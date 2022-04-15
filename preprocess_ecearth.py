@@ -1,33 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 16 13:24:45 2016
-
-@author: Ent00002
-"""
-
-"""
-Created on Mon Feb 18 15:30:43 2019
-
-@author: bened003
-"""
-
-# This script is similar as the Fluxes_and_States_Masterscript from WAM-2layers from Ruud van der Ent, except that it threads atmospheric data at five pressure levels instead of model levels
-
-# Includes a spline vertical interpolation for data on pressure levels from the EC-Earth climate model (Hazeleger et al., 2010)
-# In this case the atmospheric data is provided on the following five pressure levels: 850 hPa, 700 hPa, 500 hPa, 300 hPa, 200 hPa
-# Includes a linear interpolation of the moisture fluxes over time (in def getrefined_new)
-# We have implemented a datelist function so the model can run for multiple years without having problems with leap years
-
-# My input data are monthly files with 3-hourly (surface variables) and 6-hourly data (atmospheric variables)
-
 import calendar
 import datetime as dt
 import os
-import sys
-from datetime import datetime, timedelta
-from timeit import default_timer as timer
-
-import matplotlib.pyplot as plt
 
 # Import libraries
 import numpy as np
@@ -36,15 +9,12 @@ import xarray as xr
 import scipy.io as sio
 import yaml
 
-# from getconstants_pressure_ECEarth_T159 import interp_along_axis
-from netCDF4 import Dataset
-from scipy import interpolate
 from scipy.interpolate import interp1d
 
 from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
 
 # Read case configuration
-with open("cases/example.yaml") as f:
+with open("cases/ec-earth.yaml") as f:
     config = yaml.safe_load(f)
 
 # Parse input from config file
@@ -85,8 +55,6 @@ def get_output_path(year, month, a):
     return save_path
 
 
-# Code (no need to look at this for running)
-
 # Determine the fluxes and states
 # In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
 def getWandFluxes(
@@ -105,8 +73,8 @@ def getWandFluxes(
     A_gridcell,
 ):
 
-    times_6hourly = slice(begin_time, begin_time+count_time+1)
-    times_3hourly = slice(begin_time*2+1, (begin_time*2+count_time*2+1), 2)
+    times_6hourly = slice(0, 5)
+    times_3hourly = slice(0, 10, 2)
 
     q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
     u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
@@ -133,35 +101,27 @@ def getWandFluxes(
         u10 = xr.concat([u10, u10_next], dim='time')
         v10 = xr.concat([v10, v10_next], dim='time')
 
-    time = q.time
-    breakpoint()
+    sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
 
     # For now extract bare numpy arrays from the data
+    levelist = u.lev.values
     q = q.values
     u = u.values
     v = v.values
     q2m = q2m.values
-    lnsp = lnsp.values.squeeze() # drop len(1) dimension 'lev'
+    sp = sp.values.squeeze() # drop len(1) dimension 'lev'
     u10 = u10.values
     v10 = v10.values
 
-    print("Data is loaded", dt.datetime.now().time())
-    time = [0, 1, 2, 3, 4]
-    intervals_regular = (
-        40  # from five pressure levels the vertical data is interpolated to 40 levels
-    )
-    sp = np.exp(
-        lnsp
-    )  # Pa # To convert logarithmic surface pressure to surface pressure
-    del lnsp
+    n_levels = 40  # from five pressure levels the vertical data is interpolated to 40 levels
+
     ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
     P_boundary = 0.72878581 * sp + 7438.803223
-    dp = (sp - 20000.0) / (intervals_regular - 1)
+    dp = (sp - 20000.0) / (n_levels - 1)
     time = q.shape[0]
 
-    breakpoint()
-    p_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    p_maxmin[:, 1:-1, :, :] = (sp[:, np.newaxis, :, :] - dp[:, np.newaxis, :, :] * np.arange(0, intervals_regular)[np.newaxis, :, np.newaxis, np.newaxis])
+    p_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
+    p_maxmin[:, 1:-1, :, :] = (sp[:, np.newaxis, :, :] - dp[:, np.newaxis, :, :] * np.arange(0, n_levels)[np.newaxis, :, np.newaxis, np.newaxis])
 
     mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
     mask[:, 0, :, :] = 1.0  # bottom value is always 1
@@ -178,11 +138,11 @@ def getWandFluxes(
 
     del (dp, mask)
     print(
-        "after p_maxmin and now add surface and atmosphere together for u,q,v",
+        "after p_maxmin and now",
         dt.datetime.now().time(),
     )
 
-    levelist = np.squeeze(get_input_data("U", year, month).variables["lev"])  # Pa
+    # Add surface and atmosphere together for u,q,v
     p = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
     p[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis]
     p[:, 0, :, :] = sp
@@ -213,11 +173,12 @@ def getWandFluxes(
 
     del (u_total, v_total, q_total, p, u, v, q, u10, v10, q2m, sp)
 
+    print("Data is loaded", dt.datetime.now().time())
     print("before interpolation loop", dt.datetime.now().time())
 
-    uq_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    vq_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    q_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
+    uq_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
+    vq_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
+    q_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
 
     for t in range(time):  # loop over timesteps
         for i in range(len(latitude)):  # loop over latitude
@@ -302,9 +263,6 @@ def getWandFluxes(
     W_down = vapor_down * A_gridcell_plus3D / density_water  # m3
 
     return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
-
-
-# Code
 
 
 def getEP(
