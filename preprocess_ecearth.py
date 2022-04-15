@@ -76,6 +76,43 @@ def repeat_top_level(plevs):
     return xr.concat([plevs, top], dim='lev')
 
 
+def get_new_target_levels(surface_pressure, n_levels=40):
+    """Build a numpy array with equally spaced new pressure levels."""
+    pressure_top = 20000
+    dp = (surface_pressure - pressure_top) / (n_levels - 1)
+
+    dp = dp[:, None, :, :]
+    surface_pressure = surface_pressure[:, None, :, :]
+    levels = np.arange(0, n_levels)[None, :, None, None]
+
+    ntime, _, nlat, nlon = surface_pressure.shape
+
+    # Note the extra layer of zeros at the bottom and top of the array
+    new_p = np.zeros((ntime, n_levels + 2, nlat, nlon))
+    new_p[:, 1:-1, :, :] = (surface_pressure - dp * levels)
+
+    # Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
+    p_boundary = 0.72878581 * surface_pressure + 7438.803223
+
+    mask = np.where(new_p > p_boundary, 1, 0)
+    mask[:, 0, :, :] = 1  # bottom value is always 1
+
+    # Insert the boundary in the new levels, pushing higher layers one index up
+    # e.g. with the boundary at 850 hPa:
+    # [0, 1000, 900, 800, 700, 600, 0] --> [0, 1000, 900, 850, 800, 700, 600]
+    new_p[:, :-1, :, :] = (
+        mask[:, 1:, :, :] * new_p[:, 1:, :, :]
+        + (1 - mask[:, 1:, :, :]) * new_p[:, :-1, :, :]
+    )
+
+    new_p[:, 1:, :, :] = np.where(
+        new_p[:, :-1, :, :] == new_p[:, 1:, :, :],
+        p_boundary,
+        new_p[:, 1:, :, :],
+    )
+    return new_p
+
+
 # Determine the fluxes and states
 # In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
 def getWandFluxes(
@@ -150,39 +187,18 @@ def getWandFluxes(
     v10 = v10.values
     p = p.values
 
-    # Interpolation prepping
-    n_levels = 40  # from five pressure levels the vertical data is interpolated to 40 levels
+    # import IPython; IPython.embed(); quit()
 
-    ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
-    P_boundary = 0.72878581 * sp + 7438.803223
-    dp = (sp - 20000.0) / (n_levels - 1)
+    n_levels = 40
+    p_maxmin = get_new_target_levels(sp, n_levels=40)
+    print("after p_maxmin and now", dt.datetime.now().time())
 
-    p_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
-    p_maxmin[:, 1:-1, :, :] = (sp[:, np.newaxis, :, :] - dp[:, np.newaxis, :, :] * np.arange(0, n_levels)[np.newaxis, :, np.newaxis, np.newaxis])
-
-    mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
-    mask[:, 0, :, :] = 1.0  # bottom value is always 1
-
-    p_maxmin[:, :-1, :, :] = (
-        mask[:, 1:, :, :] * p_maxmin[:, 1:, :, :]
-        + (1 - mask[:, 1:, :, :]) * p_maxmin[:, :-1, :, :]
-    )
-    p_maxmin[:, 1:, :, :] = np.where(
-        p_maxmin[:, :-1, :, :] == p_maxmin[:, 1:, :, :],
-        P_boundary[:, np.newaxis, :, :],
-        p_maxmin[:, 1:, :, :],
-    )
-
-    del (dp, mask)
-    print(
-        "after p_maxmin and now",
-        dt.datetime.now().time(),
-    )
+    breakpoint()
 
     # Mask data where the pressure level is smaller than sp - 1000 (a margin of 10 hPa)
     mask = np.ones(u.shape, dtype=np.bool)
-    mask[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis] < (
-        sp[:, np.newaxis, :, :] - 1000.0
+    mask[:, 1:-1, :, :] = levelist[None, :, None, None] < (
+        sp[:, None, :, :] - 1000.0
     )  # Pa
 
     u_masked = np.ma.masked_array(u, mask=~mask)
@@ -249,7 +265,7 @@ def getWandFluxes(
     )  # total column water vapor, cwv is summed over the vertical [kg/m2]
 
     # use mask
-    mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
+    mask = np.where(p_maxmin > p_boundary, 1.0, 0.0)
 
     vapor_down = np.sum(mask[:, :-1, :, :] * q_between * P_between / g, axis=1)
     vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_between * P_between / g, axis=1)
