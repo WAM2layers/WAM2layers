@@ -53,31 +53,35 @@ def get_output_path(year, month, a):
     return save_path
 
 
-def join_levels(plevs, surface):
+def join_levels(pressure_level_data, surface_level_data):
     """Combine 3d pressure level and 2d surface level data.
 
     A dummy value of 1000 hPa is inserted for the surface pressure
     """
-    bottom = plevs.isel(lev=0).copy()
-    bottom.values = surface.values
+    bottom = pressure_level_data.isel(lev=0).copy()
+    bottom.values = surface_level_data.values
     bottom["lev"] = 100000.  # dummy value
 
     # NB: plevs needs to come first to preserve dimension order
-    return xr.concat([plevs, bottom], dim='lev').sortby("lev", ascending=False)
+    return xr.concat([pressure_level_data, bottom], dim='lev').sortby("lev", ascending=False)
 
 
-def repeat_top_level(plevs):
+def repeat_top_level(pressure_level_data):
     """Add one more level with the same value as the upper level.
 
     A dummy value of 100 hPa is inserted for the top level pressure
     """
-    top = top = plevs.isel(lev=-1).copy()
-    top["lev"] = 10000.
-    return xr.concat([plevs, top], dim='lev')
+    top_level_data = pressure_level_data.isel(lev=-1).copy()
+    top_level_data["lev"] = 10000.
+
+    return xr.concat([pressure_level_data, top_level_data], dim='lev')
 
 
 def get_new_target_levels(surface_pressure, n_levels=40):
     """Build a numpy array with equally spaced new pressure levels."""
+    # remove xarray labels if present
+    surface_pressure = np.array(surface_pressure)
+
     pressure_top = 20000
     dp = (surface_pressure - pressure_top) / (n_levels - 1)
 
@@ -157,23 +161,24 @@ def getWandFluxes(
 
     sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
 
-    u = join_levels(u, u10)  # bottom pressure will be set to 100000 hPa
-    v = join_levels(v, v10)
-    q = join_levels(q, q2m)
-
-    u = repeat_top_level(u)  # top level will be set to 10000 hPa
-    v = repeat_top_level(v)
-    q = repeat_top_level(q)
-
     # Create pressure array with the same dimensions as u, q, and v
     # Use the values of the "lev" coordinate to fill the array initally
     p = u.lev.broadcast_like(u)
-    p = p.where(p != 100000, sp.values)  # replace bottom pressure with sp
-    p = p.where(p != 10000, 0)  # set top pressure to 0
 
-    # For now extract bare numpy arrays from the data
+    u = join_levels(u, u10)  # bottom level will be set to 1000 00 Pa
+    v = join_levels(v, v10)
+    q = join_levels(q, q2m)
+    p = join_levels(p, sp.squeeze())
 
-    # Mask data where the pressure level is high than sp - 1000
+    u = repeat_top_level(u)  # top level will be set to 100 00 Pa
+    v = repeat_top_level(v)
+    q = repeat_top_level(q)
+    p = repeat_top_level(p)
+    p = p.where(p.lev != 10000, 0)  # set top level values to 0
+
+    print("Data is loaded", dt.datetime.now().time())
+
+    # Mask data where the pressure level is higher than sp - 1000
     # as there is no valid data at those points
     # and we don't need a second layer that is very close to the surface
     mask = p > sp.values - 1000
@@ -182,25 +187,15 @@ def getWandFluxes(
 
     # TODO convert to nan instead of numpy masked array?
     # u_masked = u.where(mask)
-
     u_masked = np.ma.masked_array(u, mask=mask)
     v_masked = np.ma.masked_array(v, mask=mask)
     q_masked = np.ma.masked_array(q, mask=mask)
     p_masked = np.ma.masked_array(p, mask=mask)
 
-    q = q.values
-    u = u.values
-    v = v.values
-    sp = sp.values
-    p = p.values
-    print("Data is loaded", dt.datetime.now().time())
 
-    # Get new level definitions on which to interpolate to
+    # Get new level definitions on which to interpolate
     n_levels = 40
-    p_maxmin = get_new_target_levels(sp, n_levels=40)
-
-    # import IPython; IPython.embed(); quit()
-    # breakpoint()
+    new_pressure_levels = get_new_target_levels(sp, n_levels=40)
 
     print("before interpolation loop", dt.datetime.now().time())
 
@@ -224,23 +219,29 @@ def getWandFluxes(
 
                 f_uq = interp1d(pp, uu * qq, "cubic")  # spline interpolation
                 uq_maxmin[t, :, i, j] = f_uq(
-                    p_maxmin[t, :, i, j]
+                    new_pressure_levels[t, :, i, j]
                 )  # spline interpolation
 
                 f_vq = interp1d(pp, vv * qq, "cubic")  # spline interpolation
                 vq_maxmin[t, :, i, j] = f_vq(
-                    p_maxmin[t, :, i, j]
+                    new_pressure_levels[t, :, i, j]
                 )  # spline interpolation
 
                 f_q = interp1d(pp, qq)  # linear interpolation
-                q_maxmin[t, :, i, j] = f_q(p_maxmin[t, :, i, j])  # linear interpolation
+                q_maxmin[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])  # linear interpolation
 
     del (u_masked, v_masked, q_masked, p_masked, mask, f_uq, f_vq, f_q)
     print("after interpolation loop", dt.datetime.now().time())
 
+    # q = q.values
+    # u = u.values
+    # v = v.values
+    # sp = sp.values
+    # p = p.values
+
     # pressure between full levels
     P_between = np.maximum(
-        0, p_maxmin[:, :-1, :, :] - p_maxmin[:, 1:, :, :]
+        0, new_pressure_levels[:, :-1, :, :] - new_pressure_levels[:, 1:, :, :]
     )  # the maximum statement is necessary to avoid negative humidity values
     # Imme: in P_between you do not calculate the pressure between two levels but the pressure difference between two levels!!!
     q_between = 0.5 * (q_maxmin[:, 1:, :, :] + q_maxmin[:, :-1, :, :])
@@ -261,7 +262,7 @@ def getWandFluxes(
     )  # total column water vapor, cwv is summed over the vertical [kg/m2]
 
     # use mask
-    mask = np.where(p_maxmin > p_boundary, 1.0, 0.0)
+    mask = np.where(new_pressure_levels > p_boundary, 1.0, 0.0)
 
     vapor_down = np.sum(mask[:, :-1, :, :] * q_between * P_between / g, axis=1)
     vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_between * P_between / g, axis=1)
