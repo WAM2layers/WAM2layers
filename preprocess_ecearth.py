@@ -131,42 +131,11 @@ def getWandFluxes(
     A_gridcell,
 ):
     q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, final_time, a, year, month)
-
-    n_levels = 40
     new_pressure_levels = get_new_target_levels(sp, n_levels=40)
 
     print("before interpolation loop", dt.datetime.now().time())
 
-    time = q.shape[0]
-    # allocate arrays
-    uq_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
-    vq_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
-    q_maxmin = np.zeros((time, n_levels + 2, len(latitude), len(longitude)))
-    for t in range(time):  # loop over timesteps
-        for i in range(len(latitude)):  # loop over latitude
-            for j in range(len(longitude)):  # loop over longitude
-                pp = p[t, :, i, j]
-                uu = u[t, :, i, j]
-                vv = v[t, :, i, j]
-                qq = q[t, :, i, j]
-
-                pp = pp[~pp.mask]
-                uu = uu[~uu.mask]
-                vv = vv[~vv.mask]
-                qq = qq[~qq.mask]
-
-                f_uq = interp1d(pp, uu * qq, "cubic")  # spline interpolation
-                uq_maxmin[t, :, i, j] = f_uq(
-                    new_pressure_levels[t, :, i, j]
-                )  # spline interpolation
-
-                f_vq = interp1d(pp, vv * qq, "cubic")  # spline interpolation
-                vq_maxmin[t, :, i, j] = f_vq(
-                    new_pressure_levels[t, :, i, j]
-                )  # spline interpolation
-
-                f_q = interp1d(pp, qq)  # linear interpolation
-                q_maxmin[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])  # linear interpolation
+    uq_maxmin, vq_maxmin, q_maxmin = interpolate(q, u, v, p, new_pressure_levels)
 
     print("after interpolation loop", dt.datetime.now().time())
 
@@ -224,6 +193,40 @@ def getWandFluxes(
     W_down = vapor_down * A_gridcell_plus3D / density_water  # m3
 
     return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
+
+
+def interpolate(q, u, v, p, new_pressure_levels):
+    # allocate arrays
+    uq_maxmin = np.zeros_like(u)
+    vq_maxmin = np.zeros_like(v)
+    q_maxmin = np.zeros_like(q)
+    nt, _, nlat, nlon = u.shape
+    for t in range(nt):  # loop over timesteps
+        for i in range(nlat):  # loop over latitude
+            for j in range(nlon):  # loop over longitude
+                pp = p[t, :, i, j]
+                uu = u[t, :, i, j]
+                vv = v[t, :, i, j]
+                qq = q[t, :, i, j]
+
+                pp = pp[~pp.mask]
+                uu = uu[~uu.mask]
+                vv = vv[~vv.mask]
+                qq = qq[~qq.mask]
+
+                f_uq = interp1d(pp, uu * qq, "cubic")  # spline interpolation
+                uq_maxmin[t, :, i, j] = f_uq(
+                    new_pressure_levels[t, :, i, j]
+                )  # spline interpolation
+
+                f_vq = interp1d(pp, vv * qq, "cubic")  # spline interpolation
+                vq_maxmin[t, :, i, j] = f_vq(
+                    new_pressure_levels[t, :, i, j]
+                )  # spline interpolation
+
+                f_q = interp1d(pp, qq)  # linear interpolation
+                q_maxmin[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])  # linear interpolation
+    return uq_maxmin,vq_maxmin,q_maxmin
 
 
 def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
