@@ -157,7 +157,6 @@ def getWandFluxes(
 
     sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
 
-
     u = join_levels(u, u10)  # bottom pressure will be set to 100000 hPa
     v = join_levels(v, v10)
     q = join_levels(q, q2m)
@@ -178,7 +177,8 @@ def getWandFluxes(
     # as there is no valid data at those points
     # and we don't need a second layer that is very close to the surface
     mask = p > sp.values - 1000
-    mask[:, 0, :, :] = True  # don't mask the bottom layer
+    mask[:, 0, :, :] = False  # don't mask bottom (surface pressure values)
+    mask[:, -1, :, :] = False  # don't mask top ("ghost cells"?)
 
     # TODO convert to nan instead of numpy masked array?
     # u_masked = u.where(mask)
