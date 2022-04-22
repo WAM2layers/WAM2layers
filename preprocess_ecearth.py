@@ -24,25 +24,22 @@ count_time = config["count_time"]
 latnrs = np.arange(config["latnrs"])
 lonnrs = np.arange(config["lonnrs"])
 datelist = pd.date_range(
-    start=config['start_date'],
-    end=config['end_date'],
-    freq="d",
-    inclusive="left"
-    )
+    start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
+)
 
 
 def _get_input_data(variable, date):
     """Get input data for variable."""
     filename = f"{name_of_run}{variable}_{date.year}{date.month:02d}_NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return xr.open_dataset(filepath).sel(time=date.strftime('%Y%m%d'))
+    return xr.open_dataset(filepath).sel(time=date.strftime("%Y%m%d"))
 
 
 def get_input_data(variable, date):
-    """Workaround for keeping original timestamps."""
+    """Workaround for keeping original timestamps crossing midnight."""
     day1 = _get_input_data(variable, date)
-    day2 = _get_input_data(variable, date+dt.timedelta(days=1))
-    days = xr.concat([day1, day2], dim='time')
+    day2 = _get_input_data(variable, date + dt.timedelta(days=1))
+    days = xr.concat([day1, day2], dim="time")
     if len(days.time) < 9:
         return days.isel(time=slice(0, 5))
     else:
@@ -63,10 +60,12 @@ def join_levels(pressure_level_data, surface_level_data):
     """
     bottom = pressure_level_data.isel(lev=0).copy()
     bottom.values = surface_level_data.values
-    bottom["lev"] = 100000.  # dummy value
+    bottom["lev"] = 100000.0  # dummy value
 
     # NB: plevs needs to come first to preserve dimension order
-    return xr.concat([pressure_level_data, bottom], dim='lev').sortby("lev", ascending=False)
+    return xr.concat([pressure_level_data, bottom], dim="lev").sortby(
+        "lev", ascending=False
+    )
 
 
 def repeat_top_level(pressure_level_data):
@@ -75,9 +74,61 @@ def repeat_top_level(pressure_level_data):
     A dummy value of 100 hPa is inserted for the top level pressure
     """
     top_level_data = pressure_level_data.isel(lev=-1).copy()
-    top_level_data["lev"] = 10000.
+    top_level_data["lev"] = 10000.0
 
-    return xr.concat([pressure_level_data, top_level_data], dim='lev')
+    return xr.concat([pressure_level_data, top_level_data], dim="lev")
+
+
+def load_uvqpsp(latnrs, lonnrs, date):
+    times_3hourly = slice(None, None, 2)  # TODO should be slice(1, None, 2) ??
+
+    q = get_input_data("Q", date).Q.isel(lat=latnrs, lon=lonnrs)
+    u = get_input_data("U", date).U.isel(lat=latnrs, lon=lonnrs)
+    v = get_input_data("V", date).V.isel(lat=latnrs, lon=lonnrs)
+    q2m = get_input_data("Q2M", date).Q2M.isel(
+        time=times_3hourly, lat=latnrs, lon=lonnrs
+    )
+    lnsp = get_input_data("LNSP", date).LNSP.isel(
+        time=times_3hourly, lat=latnrs, lon=lonnrs
+    )
+    u10 = get_input_data("U10", date).U10M.isel(
+        time=times_3hourly, lat=latnrs, lon=lonnrs
+    )
+    v10 = get_input_data("V10", date).V10M.isel(
+        time=times_3hourly, lat=latnrs, lon=lonnrs
+    )
+
+    sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
+
+    # Create pressure array with the same dimensions as u, q, and v
+    # Use the values of the "lev" coordinate to fill the array initally
+    p = u.lev.broadcast_like(u)
+
+    u = join_levels(u, u10)  # bottom level will be set to 1000 00 Pa
+    v = join_levels(v, v10)
+    q = join_levels(q, q2m)
+    p = join_levels(p, sp.squeeze())
+
+    u = repeat_top_level(u)  # top level will be set to 100 00 Pa
+    v = repeat_top_level(v)
+    q = repeat_top_level(q)
+    p = repeat_top_level(p)
+    p = p.where(p.lev != 10000, 0)  # set top level values to 0
+
+    # Mask data where the pressure level is higher than sp - 1000
+    # as there is no valid data at those points
+    # and we don't need a second layer that is very close to the surface
+    mask = p > sp.values - 1000
+    mask[:, 0, :, :] = False  # don't mask bottom (surface pressure values)
+    mask[:, -1, :, :] = False  # don't mask top ("ghost cells"?)
+
+    # TODO convert to nan instead of numpy masked array?
+    # u_masked = u.where(mask)
+    u = np.ma.masked_array(u, mask=mask)
+    v = np.ma.masked_array(v, mask=mask)
+    q = np.ma.masked_array(q, mask=mask)
+    p = np.ma.masked_array(p, mask=mask)
+    return q, u, v, sp, p
 
 
 def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
@@ -92,8 +143,9 @@ def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
     ntime, _, nlat, nlon = surface_pressure.shape
 
     # Note the extra layer of zeros at the bottom and top of the array
+    # TODO: find out why
     new_p = np.zeros((ntime, n_levels + 2, nlat, nlon))
-    new_p[:, 1:-1, :, :] = (surface_pressure - dp * levels)
+    new_p[:, 1:-1, :, :] = surface_pressure - dp * levels
 
     mask = np.where(new_p > p_boundary, 1, 0)
     mask[:, 0, :, :] = 1  # bottom value is always 1
@@ -112,81 +164,6 @@ def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
         new_p[:, 1:, :, :],
     )
     return new_p
-
-
-# Determine the fluxes and states
-# In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
-def getWandFluxes(
-    latnrs,
-    lonnrs,
-    date,
-    density_water,
-    g,
-    A_gridcell,
-):
-    q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, date)
-
-    # Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
-
-    p_boundary = 0.72878581 * sp.values + 7438.803223
-    new_pressure_levels = get_new_target_levels(sp, p_boundary, n_levels=40)
-
-    print("before interpolation loop", dt.datetime.now().time())
-    uq = u * q
-    vq = v * q
-    uq_boundaries, vq_boundaries, q_boundaries = interpolate(q, uq, vq, p, new_pressure_levels)
-
-    print("after interpolation loop", dt.datetime.now().time())
-
-    # pressure between full levels
-    p_diff = np.maximum(
-        0, new_pressure_levels[:, :-1, :, :] - new_pressure_levels[:, 1:, :, :]
-    )  # the maximum statement is necessary to avoid negative humidity values
-    # Imme: in P_midpoints you do not calculate the pressure between two levels but the pressure difference between two levels!!!
-    q_midpoints = 0.5 * (q_boundaries[:, 1:, :, :] + q_boundaries[:, :-1, :, :])
-    uq_midpoints = 0.5 * (uq_boundaries[:, 1:, :, :] + uq_boundaries[:, :-1, :, :])
-    vq_midpoints = 0.5 * (vq_boundaries[:, 1:, :, :] + vq_boundaries[:, :-1, :, :])
-
-    # eastward and northward fluxes
-    Fa_E_p = uq_midpoints * p_diff / g
-    Fa_N_p = vq_midpoints * p_diff / g
-
-    # compute the column water vapor
-    cwv = (
-        q_midpoints * p_diff / g
-    )  # column water vapor = specific humidity * pressure levels length / g [kg/m2]
-    # make tcwv vector
-    tcwv = np.squeeze(
-        np.sum(cwv, 1)
-    )  # total column water vapor, cwv is summed over the vertical [kg/m2]
-
-    # use mask
-    mask = np.where(new_pressure_levels > p_boundary, 1.0, 0.0)
-
-    vapor_down = np.sum(mask[:, :-1, :, :] * q_midpoints * p_diff / g, axis=1)
-    vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_midpoints * p_diff / g, axis=1)
-
-    Fa_E_down = np.sum(mask[:, :-1, :, :] * Fa_E_p, axis=1)  # kg*m-1*s-1
-    Fa_N_down = np.sum(mask[:, :-1, :, :] * Fa_N_p, axis=1)  # kg*m-1*s-1
-    Fa_E_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_E_p, axis=1)  # kg*m-1*s-1
-    Fa_N_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_N_p, axis=1)  # kg*m-1*s-1
-
-    vapor_total = vapor_top + vapor_down
-
-    # check whether the next calculation results in all zeros
-    test0 = tcwv - vapor_total
-    print(
-        (
-            "check calculation water vapor, this value should be zero: "
-            + str(np.sum(test0))
-        )
-    )
-
-    # water volumes
-    W_top = vapor_top * A_gridcell[None, ...] / density_water  # m3
-    W_down = vapor_down * A_gridcell[None, ...] / density_water  # m3
-
-    return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
 
 
 def interpolate(q, uq, vq, p, new_pressure_levels):
@@ -223,48 +200,52 @@ def interpolate(q, uq, vq, p, new_pressure_levels):
     return uq_new, vq_new, q_new
 
 
-def load_uvqpsp(latnrs, lonnrs, date):
-    times_3hourly = slice(None, None, 2)  # TODO should be slice(1, None, 2) ??
+def getWandFluxes(
+    uq_boundaries,
+    vq_boundaries,
+    q_boundaries,
+    g,
+    A_gridcell,
+    p_boundary,
+    new_pressure_levels,
+):
+    """Determine the fluxes and states."""
+    q_midpoints = 0.5 * (q_boundaries[:, 1:, :, :] + q_boundaries[:, :-1, :, :])
+    uq_midpoints = 0.5 * (uq_boundaries[:, 1:, :, :] + uq_boundaries[:, :-1, :, :])
+    vq_midpoints = 0.5 * (vq_boundaries[:, 1:, :, :] + vq_boundaries[:, :-1, :, :])
+    # for p we do not calculate the mean pressure but the pressure difference between two levels!
+    p_diff = np.maximum(
+        0, new_pressure_levels[:, :-1, :, :] - new_pressure_levels[:, 1:, :, :]
+    )  # the maximum statement is necessary to avoid negative humidity values
 
-    q = get_input_data("Q", date).Q.isel(lat=latnrs, lon=lonnrs)
-    u = get_input_data("U", date).U.isel(lat=latnrs, lon=lonnrs)
-    v = get_input_data("V", date).V.isel(lat=latnrs, lon=lonnrs)
-    q2m = get_input_data("Q2M", date).Q2M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    lnsp = get_input_data("LNSP", date).LNSP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    u10 = get_input_data("U10", date).U10M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    v10 = get_input_data("V10", date).V10M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    # eastward and northward fluxes
+    Fa_E_p = uq_midpoints * p_diff / g
+    Fa_N_p = vq_midpoints * p_diff / g
 
-    sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
+    column_water_vapor = q_midpoints * p_diff / g  # [kg/m2]
+    # summed over the vertical
+    total_column_water_vapor = np.squeeze(np.sum(column_water_vapor, 1))
 
-    # Create pressure array with the same dimensions as u, q, and v
-    # Use the values of the "lev" coordinate to fill the array initally
-    p = u.lev.broadcast_like(u)
+    mask = np.where(new_pressure_levels > p_boundary, 1.0, 0.0)
 
-    u = join_levels(u, u10)  # bottom level will be set to 1000 00 Pa
-    v = join_levels(v, v10)
-    q = join_levels(q, q2m)
-    p = join_levels(p, sp.squeeze())
+    vapor_down = np.sum(mask[:, :-1, :, :] * q_midpoints * p_diff / g, axis=1)
+    vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_midpoints * p_diff / g, axis=1)
 
-    u = repeat_top_level(u)  # top level will be set to 100 00 Pa
-    v = repeat_top_level(v)
-    q = repeat_top_level(q)
-    p = repeat_top_level(p)
-    p = p.where(p.lev != 10000, 0)  # set top level values to 0
+    Fa_E_down = np.sum(mask[:, :-1, :, :] * Fa_E_p, axis=1)  # kg*m-1*s-1
+    Fa_N_down = np.sum(mask[:, :-1, :, :] * Fa_N_p, axis=1)  # kg*m-1*s-1
+    Fa_E_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_E_p, axis=1)  # kg*m-1*s-1
+    Fa_N_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_N_p, axis=1)  # kg*m-1*s-1
 
-    # Mask data where the pressure level is higher than sp - 1000
-    # as there is no valid data at those points
-    # and we don't need a second layer that is very close to the surface
-    mask = p > sp.values - 1000
-    mask[:, 0, :, :] = False  # don't mask bottom (surface pressure values)
-    mask[:, -1, :, :] = False  # don't mask top ("ghost cells"?)
+    vapor_total = vapor_top + vapor_down
 
-    # TODO convert to nan instead of numpy masked array?
-    # u_masked = u.where(mask)
-    u = np.ma.masked_array(u, mask=mask)
-    v = np.ma.masked_array(v, mask=mask)
-    q = np.ma.masked_array(q, mask=mask)
-    p = np.ma.masked_array(p, mask=mask)
-    return q, u, v, sp, p
+    check = np.sum(total_column_water_vapor - vapor_total)
+    print(f"Check calculation water vapor, this value should be zero: {check}")
+
+    # water volumes
+    W_top = vapor_top * A_gridcell[None, ...] / density_water  # m3
+    W_down = vapor_down * A_gridcell[None, ...] / density_water  # m3
+
+    return column_water_vapor, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
 
 
 def getEP(latnrs, lonnrs, date, A_gridcell):
@@ -285,7 +266,6 @@ def getEP(latnrs, lonnrs, date, A_gridcell):
     # For now extract bare numpy arrays from the data
     return E.values, P.values
 
-
 # within this new definition of refined I do a linear interpolation over time of my fluxes
 def getrefined_new(
     Fa_E_top,
@@ -301,7 +281,6 @@ def getrefined_new(
     latitude,
     longitude,
 ):
-
     # This definition refines the timestep of the data
     # Imme: change the timesteps from 6-hourly and 3-hourly to 96 timesteps a day
 
@@ -756,8 +735,7 @@ def getFa_Vert(
     return Fa_Vert_raw, Fa_Vert, residual_down, residual_top
 
 
-#%% Runtime & Results
-
+# Runtime & Results
 start1 = dt.datetime.now()
 # obtain the constants
 (
@@ -786,17 +764,33 @@ for date in datelist:
     final_time = calendar.monthrange(year, month)[1]
 
     print(f"Preprocessing data for {date}, {begin_time=}, {final_time=}")
+    q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, date)
+
+    # Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
+    p_boundary = 0.72878581 * sp.values + 7438.803223
+    new_pressure_levels = get_new_target_levels(sp, p_boundary, n_levels=40)
+
+    print("before interpolation loop", dt.datetime.now().time())
+    uq = u * q
+    vq = v * q
+    uq_boundaries, vq_boundaries, q_boundaries = interpolate(
+        q, uq, vq, p, new_pressure_levels
+    )
+    print("after interpolation loop", dt.datetime.now().time())
 
     # 1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
     cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
-        latnrs,
-        lonnrs,
-        date,
-        density_water,
+        uq_boundaries,
+        vq_boundaries,
+        q_boundaries,
         g,
         A_gridcell,
+        p_boundary,
+        new_pressure_levels,
     )
-    print(f"Step 1, 2, 3 finished, elapsed time since start: {dt.datetime.now() - start}")
+    print(
+        f"Step 1, 2, 3 finished, elapsed time since start: {dt.datetime.now() - start}"
+    )
 
     # 4 evaporation and precipitation
     E, P = getEP(

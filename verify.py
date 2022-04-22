@@ -6,11 +6,21 @@ the output of the original code.
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
 
-original_data = loadmat('../original_output_data/2002-01-01fluxes_storages.mat')
-new_data = loadmat('../output_data/2002-01-01fluxes_storages.mat')
+original_data = loadmat("../original_output_data/2002-01-01fluxes_storages.mat")
+new_data = loadmat("../output_data/2002-01-01fluxes_storages.mat")
 
 t = 0
-for variable in ["Fa_E_top", "Fa_N_top", "Fa_E_down", "Fa_N_down", "E", "P", "W_top", "W_down", "Fa_Vert"]:
+for variable in [
+    "Fa_E_top",
+    "Fa_N_top",
+    "Fa_E_down",
+    "Fa_N_down",
+    "E",
+    "P",
+    "W_top",
+    "W_down",
+    "Fa_Vert",
+]:
 
     original = original_data[variable][t, ::-1, :]
     new = new_data[variable][t, ::-1, :]
@@ -30,4 +40,4 @@ for variable in ["Fa_E_top", "Fa_N_top", "Fa_E_down", "Fa_N_down", "E", "P", "W_
     fig.colorbar(pcm3, ax=ax3)
 
     fig.suptitle(variable)
-    fig.savefig(f'validation/{variable}.png')
+    fig.savefig(f"validation/{variable}.png")
