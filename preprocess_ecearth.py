@@ -232,8 +232,12 @@ def interpolate(q, uq, vq, p, new_pressure_levels):
 
 
 def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
-    times_6hourly = slice(0, 5)
-    times_3hourly = slice(1, 10, 2)
+    times_6hourly = slice(0, 5)  # [0, 1, 2, 3, 4] (06.00,12.00,18.00, 00.00, ...)
+    times_3hourly = slice(0, 9, 2)  # [0, 2, 4, 6, 8] (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
+    # TODO this looks like a bug, but I'm changing it back to the original for comparison purposes.
+    # to get 06:00, 12:00 etc. it should be:
+    # times_3hourly = slice(1, 10, 2)
+    # TODO: load daily data instead of monthly, otherwise this always starts at the same day.
 
     q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
     u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
@@ -296,7 +300,7 @@ def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
 def getEP(latnrs, lonnrs, year, month, A_gridcell):
     """Load and clean up precip and evap data."""
 
-    times_3hourly = slice(0, 8)
+    times_3hourly = slice(0, 8)  # TODO: load daily data otherwise this reloads the same day every time.
 
     # (accumulated after the forecast at 00.00 and 12.00 by steps of 3 hours in time
     evaporation = get_input_data("EVAP", year, month).E.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)  # m
@@ -802,10 +806,6 @@ start1 = dt.datetime.now()
     gridcell,
 ) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
-def time_since(start_time):
-    """Return elapsed time in a formatted string."""
-    elapsed_time = dt.datetime.now() - start_time
-    return f"{minutes:.0f}:{seconds:.02f}"
 
 for date in datelist:
     start = dt.datetime.now()
