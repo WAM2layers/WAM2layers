@@ -31,19 +31,22 @@ datelist = pd.date_range(
     )
 
 
-def get_input_data(variable, year, month):
+def _get_input_data(variable, date):
     """Get input data for variable."""
-    filename = f"{name_of_run}{variable}_{year}{month:02d}_NH.nc"
+    filename = f"{name_of_run}{variable}_{date.year}{date.month:02d}_NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return xr.open_dataset(filepath)
+    return xr.open_dataset(filepath).sel(time=date.strftime('%Y%m%d'))
 
 
-def get_input_data_next_month(variable, year, month):
-    """Get input data for next month."""
-    if month == 12:
-        return get_input_data(variable, year + 1, 1)
+def get_input_data(variable, date):
+    """Workaround for keeping original timestamps."""
+    day1 = _get_input_data(variable, date)
+    day2 = _get_input_data(variable, date+dt.timedelta(days=1))
+    days = xr.concat([day1, day2], dim='time')
+    if len(days.time) < 9:
+        return days.isel(time=slice(0, 5))
     else:
-        return get_input_data(variable, year, month + 1)
+        return days.isel(time=slice(0, 10))
 
 
 def get_output_path(year, month, a):
@@ -116,18 +119,12 @@ def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
 def getWandFluxes(
     latnrs,
     lonnrs,
-    final_time,
-    a,
-    year,
-    month,
-    count_time,
+    date,
     density_water,
-    latitude,
-    longitude,
     g,
     A_gridcell,
 ):
-    q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, final_time, a, year, month)
+    q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, date)
 
     # Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
 
@@ -185,14 +182,9 @@ def getWandFluxes(
         )
     )
 
-    # put A_gridcell on a 3D grid
-    A_gridcell2D = np.tile(A_gridcell, [1, len(longitude)])
-    A_gridcell_1_2D = np.reshape(A_gridcell2D, [1, len(latitude), len(longitude)])
-    A_gridcell_plus3D = np.tile(A_gridcell_1_2D, [count_time + 1, 1, 1])
-
     # water volumes
-    W_top = vapor_top * A_gridcell_plus3D / density_water  # m3
-    W_down = vapor_down * A_gridcell_plus3D / density_water  # m3
+    W_top = vapor_top * A_gridcell[None, ...] / density_water  # m3
+    W_down = vapor_down * A_gridcell[None, ...] / density_water  # m3
 
     return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
 
@@ -231,38 +223,16 @@ def interpolate(q, uq, vq, p, new_pressure_levels):
     return uq_new, vq_new, q_new
 
 
-def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
-    times_6hourly = slice(0, 5)  # [0, 1, 2, 3, 4] (06.00,12.00,18.00, 00.00, ...)
-    times_3hourly = slice(0, 9, 2)  # [0, 2, 4, 6, 8] (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-    # TODO this looks like a bug, but I'm changing it back to the original for comparison purposes.
-    # to get 06:00, 12:00 etc. it should be:
-    # times_3hourly = slice(1, 10, 2)
-    # TODO: load daily data instead of monthly, otherwise this always starts at the same day.
+def load_uvqpsp(latnrs, lonnrs, date):
+    times_3hourly = slice(None, None, 2)  # TODO should be slice(1, None, 2) ??
 
-    q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    v = get_input_data("V", year, month).V.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    q2m = get_input_data("Q2M", year, month).Q2M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    lnsp = get_input_data("LNSP", year, month).LNSP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    u10 = get_input_data("U10", year, month).U10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    v10 = get_input_data("V10", year, month).V10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-
-    if a == final_time:
-        q_next = get_input_data_next_month("Q", year, month).Q.isel(time=0, lat=latnrs, lon=lonnrs)
-        u_next = get_input_data_next_month("U", year, month).U.isel(time=0, lat=latnrs, lon=lonnrs)
-        v_next = get_input_data_next_month("V", year, month).V.isel(time=0, lat=latnrs, lon=lonnrs)
-        q2m_next = get_input_data_next_month("Q2M", year, month).Q2M.isel(time=0, lat=latnrs, lon=lonnrs)
-        lnsp_next = get_input_data_next_month("LNSP", year, month).LNSP.isel(time=0, lat=latnrs, lon=lonnrs)
-        u10_next = get_input_data_next_month("U10", year, month).U10M.isel(time=0, lat=latnrs, lon=lonnrs)
-        v10_next = get_input_data_next_month("V10", year, month).V10M.isel(time=0, lat=latnrs, lon=lonnrs)
-
-        q = xr.concat([q, q_next], dim='time')
-        u = xr.concat([u, u_next], dim='time')
-        v = xr.concat([v, v_next], dim='time')
-        q2m = xr.concat([q2m, q2m_next], dim='time')
-        lnsp = xr.concat([lnsp, lnsp_next], dim='time')
-        u10 = xr.concat([u10, u10_next], dim='time')
-        v10 = xr.concat([v10, v10_next], dim='time')
+    q = get_input_data("Q", date).Q.isel(lat=latnrs, lon=lonnrs)
+    u = get_input_data("U", date).U.isel(lat=latnrs, lon=lonnrs)
+    v = get_input_data("V", date).V.isel(lat=latnrs, lon=lonnrs)
+    q2m = get_input_data("Q2M", date).Q2M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    lnsp = get_input_data("LNSP", date).LNSP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    u10 = get_input_data("U10", date).U10M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    v10 = get_input_data("V10", date).V10M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
 
     sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
 
@@ -297,14 +267,12 @@ def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
     return q, u, v, sp, p
 
 
-def getEP(latnrs, lonnrs, year, month, A_gridcell):
+def getEP(latnrs, lonnrs, date, A_gridcell):
     """Load and clean up precip and evap data."""
 
-    times_3hourly = slice(0, 8)  # TODO: load daily data otherwise this reloads the same day every time.
-
     # (accumulated after the forecast at 00.00 and 12.00 by steps of 3 hours in time
-    evaporation = get_input_data("EVAP", year, month).E.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)  # m
-    precipitation = get_input_data("TP", year, month).TP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)  # m
+    evaporation = get_input_data("EVAP", date).E.isel(lat=latnrs, lon=lonnrs)  # m
+    precipitation = get_input_data("TP", date).TP.isel(lat=latnrs, lon=lonnrs)  # m
 
     # change sign convention to all positive, transfer negative (originally positive) values of evap to precip
     precipitation = np.maximum(precipitation + np.maximum(evaporation, 0), 0)
@@ -823,14 +791,8 @@ for date in datelist:
     cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
         latnrs,
         lonnrs,
-        final_time,
-        day,
-        year,
-        month,
-        count_time,
+        date,
         density_water,
-        latitude,
-        longitude,
         g,
         A_gridcell,
     )
@@ -840,8 +802,7 @@ for date in datelist:
     E, P = getEP(
         latnrs,
         lonnrs,
-        year,
-        month,
+        date,
         A_gridcell,
     )
     print(f"Step 4 finished, elapsed time since start: {dt.datetime.now() - start}")
