@@ -77,8 +77,8 @@ def repeat_top_level(pressure_level_data):
     return xr.concat([pressure_level_data, top_level_data], dim='lev')
 
 
-def get_new_target_levels(surface_pressure, n_levels=40):
-    """Build a numpy array with equally spaced new pressure levels."""
+def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
+    """Build a numpy array with new pressure levels including the boundary."""
     # remove xarray labels if present
     surface_pressure = np.array(surface_pressure)
 
@@ -91,9 +91,6 @@ def get_new_target_levels(surface_pressure, n_levels=40):
     # Note the extra layer of zeros at the bottom and top of the array
     new_p = np.zeros((ntime, n_levels + 2, nlat, nlon))
     new_p[:, 1:-1, :, :] = (surface_pressure - dp * levels)
-
-    # Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
-    p_boundary = 0.72878581 * surface_pressure + 7438.803223
 
     mask = np.where(new_p > p_boundary, 1, 0)
     mask[:, 0, :, :] = 1  # bottom value is always 1
@@ -131,30 +128,35 @@ def getWandFluxes(
     A_gridcell,
 ):
     q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, final_time, a, year, month)
-    new_pressure_levels = get_new_target_levels(sp, n_levels=40)
+
+    # Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
+
+    p_boundary = 0.72878581 * sp.values + 7438.803223
+    new_pressure_levels = get_new_target_levels(sp, p_boundary, n_levels=40)
 
     print("before interpolation loop", dt.datetime.now().time())
-
-    uq_maxmin, vq_maxmin, q_maxmin = interpolate(q, u, v, p, new_pressure_levels)
+    uq = u * q
+    vq = v * q
+    uq_boundaries, vq_boundaries, q_boundaries = interpolate(q, uq, vq, p, new_pressure_levels)
 
     print("after interpolation loop", dt.datetime.now().time())
 
     # pressure between full levels
-    P_between = np.maximum(
+    p_diff = np.maximum(
         0, new_pressure_levels[:, :-1, :, :] - new_pressure_levels[:, 1:, :, :]
     )  # the maximum statement is necessary to avoid negative humidity values
-    # Imme: in P_between you do not calculate the pressure between two levels but the pressure difference between two levels!!!
-    q_between = 0.5 * (q_maxmin[:, 1:, :, :] + q_maxmin[:, :-1, :, :])
-    uq_between = 0.5 * (uq_maxmin[:, 1:, :, :] + uq_maxmin[:, :-1, :, :])
-    vq_between = 0.5 * (vq_maxmin[:, 1:, :, :] + vq_maxmin[:, :-1, :, :])
+    # Imme: in P_midpoints you do not calculate the pressure between two levels but the pressure difference between two levels!!!
+    q_midpoints = 0.5 * (q_boundaries[:, 1:, :, :] + q_boundaries[:, :-1, :, :])
+    uq_midpoints = 0.5 * (uq_boundaries[:, 1:, :, :] + uq_boundaries[:, :-1, :, :])
+    vq_midpoints = 0.5 * (vq_boundaries[:, 1:, :, :] + vq_boundaries[:, :-1, :, :])
 
     # eastward and northward fluxes
-    Fa_E_p = uq_between * P_between / g
-    Fa_N_p = vq_between * P_between / g
+    Fa_E_p = uq_midpoints * p_diff / g
+    Fa_N_p = vq_midpoints * p_diff / g
 
     # compute the column water vapor
     cwv = (
-        q_between * P_between / g
+        q_midpoints * p_diff / g
     )  # column water vapor = specific humidity * pressure levels length / g [kg/m2]
     # make tcwv vector
     tcwv = np.squeeze(
@@ -164,8 +166,8 @@ def getWandFluxes(
     # use mask
     mask = np.where(new_pressure_levels > p_boundary, 1.0, 0.0)
 
-    vapor_down = np.sum(mask[:, :-1, :, :] * q_between * P_between / g, axis=1)
-    vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_between * P_between / g, axis=1)
+    vapor_down = np.sum(mask[:, :-1, :, :] * q_midpoints * p_diff / g, axis=1)
+    vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_midpoints * p_diff / g, axis=1)
 
     Fa_E_down = np.sum(mask[:, :-1, :, :] * Fa_E_p, axis=1)  # kg*m-1*s-1
     Fa_N_down = np.sum(mask[:, :-1, :, :] * Fa_N_p, axis=1)  # kg*m-1*s-1
@@ -195,38 +197,38 @@ def getWandFluxes(
     return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
 
 
-def interpolate(q, u, v, p, new_pressure_levels):
+def interpolate(q, uq, vq, p, new_pressure_levels):
+
     # allocate arrays
-    uq_maxmin = np.zeros_like(u)
-    vq_maxmin = np.zeros_like(v)
-    q_maxmin = np.zeros_like(q)
-    nt, _, nlat, nlon = u.shape
-    for t in range(nt):  # loop over timesteps
-        for i in range(nlat):  # loop over latitude
-            for j in range(nlon):  # loop over longitude
-                pp = p[t, :, i, j]
-                uu = u[t, :, i, j]
-                vv = v[t, :, i, j]
-                qq = q[t, :, i, j]
+    uq_new = np.zeros_like(new_pressure_levels)
+    vq_new = np.zeros_like(new_pressure_levels)
+    q_new = np.zeros_like(new_pressure_levels)
 
-                pp = pp[~pp.mask]
-                uu = uu[~uu.mask]
-                vv = vv[~vv.mask]
-                qq = qq[~qq.mask]
+    ntime, _, nlat, nlon = uq.shape
+    for t in range(ntime):
+        for i in range(nlat):
+            for j in range(nlon):
 
-                f_uq = interp1d(pp, uu * qq, "cubic")  # spline interpolation
-                uq_maxmin[t, :, i, j] = f_uq(
-                    new_pressure_levels[t, :, i, j]
-                )  # spline interpolation
+                p_1d = p[t, :, i, j]
+                uq_1d = uq[t, :, i, j]
+                vq_1d = vq[t, :, i, j]
+                q_1d = q[t, :, i, j]
 
-                f_vq = interp1d(pp, vv * qq, "cubic")  # spline interpolation
-                vq_maxmin[t, :, i, j] = f_vq(
-                    new_pressure_levels[t, :, i, j]
-                )  # spline interpolation
+                p_1d = p_1d[~p_1d.mask]
+                uq_1d = uq_1d[~uq_1d.mask]
+                vq_1d = vq_1d[~vq_1d.mask]
+                q_1d = q_1d[~q_1d.mask]
 
-                f_q = interp1d(pp, qq)  # linear interpolation
-                q_maxmin[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])  # linear interpolation
-    return uq_maxmin,vq_maxmin,q_maxmin
+                f_uq = interp1d(p_1d, uq_1d, "cubic")  # spline interpolation
+                uq_new[t, :, i, j] = f_uq(new_pressure_levels[t, :, i, j])
+
+                f_vq = interp1d(p_1d, vq_1d, "cubic")  # spline interpolation
+                vq_new[t, :, i, j] = f_vq(new_pressure_levels[t, :, i, j])
+
+                f_q = interp1d(p_1d, q_1d)  # linear interpolation
+                q_new[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])
+
+    return uq_new, vq_new, q_new
 
 
 def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
