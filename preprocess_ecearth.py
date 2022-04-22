@@ -130,70 +130,8 @@ def getWandFluxes(
     g,
     A_gridcell,
 ):
+    q, u, v, sp, p = load_uvqpsp(latnrs, lonnrs, final_time, a, year, month)
 
-    times_6hourly = slice(0, 5)
-    times_3hourly = slice(1, 10, 2)
-
-    q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    v = get_input_data("V", year, month).V.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    q2m = get_input_data("Q2M", year, month).Q2M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    lnsp = get_input_data("LNSP", year, month).LNSP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
-    u10 = get_input_data("U10", year, month).U10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-    v10 = get_input_data("V10", year, month).V10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
-
-    if a == final_time:
-        q_next = get_input_data_next_month("Q", year, month).Q.isel(time=0, lat=latnrs, lon=lonnrs)
-        u_next = get_input_data_next_month("U", year, month).U.isel(time=0, lat=latnrs, lon=lonnrs)
-        v_next = get_input_data_next_month("V", year, month).V.isel(time=0, lat=latnrs, lon=lonnrs)
-        q2m_next = get_input_data_next_month("Q2M", year, month).Q2M.isel(time=0, lat=latnrs, lon=lonnrs)
-        lnsp_next = get_input_data_next_month("LNSP", year, month).LNSP.isel(time=0, lat=latnrs, lon=lonnrs)
-        u10_next = get_input_data_next_month("U10", year, month).U10M.isel(time=0, lat=latnrs, lon=lonnrs)
-        v10_next = get_input_data_next_month("V10", year, month).V10M.isel(time=0, lat=latnrs, lon=lonnrs)
-
-        q = xr.concat([q, q_next], dim='time')
-        u = xr.concat([u, u_next], dim='time')
-        v = xr.concat([v, v_next], dim='time')
-        q2m = xr.concat([q2m, q2m_next], dim='time')
-        lnsp = xr.concat([lnsp, lnsp_next], dim='time')
-        u10 = xr.concat([u10, u10_next], dim='time')
-        v10 = xr.concat([v10, v10_next], dim='time')
-
-    sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
-
-    # Create pressure array with the same dimensions as u, q, and v
-    # Use the values of the "lev" coordinate to fill the array initally
-    p = u.lev.broadcast_like(u)
-
-    u = join_levels(u, u10)  # bottom level will be set to 1000 00 Pa
-    v = join_levels(v, v10)
-    q = join_levels(q, q2m)
-    p = join_levels(p, sp.squeeze())
-
-    u = repeat_top_level(u)  # top level will be set to 100 00 Pa
-    v = repeat_top_level(v)
-    q = repeat_top_level(q)
-    p = repeat_top_level(p)
-    p = p.where(p.lev != 10000, 0)  # set top level values to 0
-
-    print("Data is loaded", dt.datetime.now().time())
-
-    # Mask data where the pressure level is higher than sp - 1000
-    # as there is no valid data at those points
-    # and we don't need a second layer that is very close to the surface
-    mask = p > sp.values - 1000
-    mask[:, 0, :, :] = False  # don't mask bottom (surface pressure values)
-    mask[:, -1, :, :] = False  # don't mask top ("ghost cells"?)
-
-    # TODO convert to nan instead of numpy masked array?
-    # u_masked = u.where(mask)
-    u_masked = np.ma.masked_array(u, mask=mask)
-    v_masked = np.ma.masked_array(v, mask=mask)
-    q_masked = np.ma.masked_array(q, mask=mask)
-    p_masked = np.ma.masked_array(p, mask=mask)
-
-
-    # Get new level definitions on which to interpolate
     n_levels = 40
     new_pressure_levels = get_new_target_levels(sp, n_levels=40)
 
@@ -207,10 +145,10 @@ def getWandFluxes(
     for t in range(time):  # loop over timesteps
         for i in range(len(latitude)):  # loop over latitude
             for j in range(len(longitude)):  # loop over longitude
-                pp = p_masked[t, :, i, j]
-                uu = u_masked[t, :, i, j]
-                vv = v_masked[t, :, i, j]
-                qq = q_masked[t, :, i, j]
+                pp = p[t, :, i, j]
+                uu = u[t, :, i, j]
+                vv = v[t, :, i, j]
+                qq = q[t, :, i, j]
 
                 pp = pp[~pp.mask]
                 uu = uu[~uu.mask]
@@ -230,14 +168,7 @@ def getWandFluxes(
                 f_q = interp1d(pp, qq)  # linear interpolation
                 q_maxmin[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])  # linear interpolation
 
-    del (u_masked, v_masked, q_masked, p_masked, mask, f_uq, f_vq, f_q)
     print("after interpolation loop", dt.datetime.now().time())
-
-    # q = q.values
-    # u = u.values
-    # v = v.values
-    # sp = sp.values
-    # p = p.values
 
     # pressure between full levels
     P_between = np.maximum(
@@ -293,6 +224,68 @@ def getWandFluxes(
     W_down = vapor_down * A_gridcell_plus3D / density_water  # m3
 
     return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
+
+
+def load_uvqpsp(latnrs, lonnrs, final_time, a, year, month):
+    times_6hourly = slice(0, 5)
+    times_3hourly = slice(1, 10, 2)
+
+    q = get_input_data("Q", year, month).Q.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    u = get_input_data("U", year, month).U.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    v = get_input_data("V", year, month).V.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    q2m = get_input_data("Q2M", year, month).Q2M.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    lnsp = get_input_data("LNSP", year, month).LNSP.isel(time=times_3hourly, lat=latnrs, lon=lonnrs)
+    u10 = get_input_data("U10", year, month).U10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+    v10 = get_input_data("V10", year, month).V10M.isel(time=times_6hourly, lat=latnrs, lon=lonnrs)
+
+    if a == final_time:
+        q_next = get_input_data_next_month("Q", year, month).Q.isel(time=0, lat=latnrs, lon=lonnrs)
+        u_next = get_input_data_next_month("U", year, month).U.isel(time=0, lat=latnrs, lon=lonnrs)
+        v_next = get_input_data_next_month("V", year, month).V.isel(time=0, lat=latnrs, lon=lonnrs)
+        q2m_next = get_input_data_next_month("Q2M", year, month).Q2M.isel(time=0, lat=latnrs, lon=lonnrs)
+        lnsp_next = get_input_data_next_month("LNSP", year, month).LNSP.isel(time=0, lat=latnrs, lon=lonnrs)
+        u10_next = get_input_data_next_month("U10", year, month).U10M.isel(time=0, lat=latnrs, lon=lonnrs)
+        v10_next = get_input_data_next_month("V10", year, month).V10M.isel(time=0, lat=latnrs, lon=lonnrs)
+
+        q = xr.concat([q, q_next], dim='time')
+        u = xr.concat([u, u_next], dim='time')
+        v = xr.concat([v, v_next], dim='time')
+        q2m = xr.concat([q2m, q2m_next], dim='time')
+        lnsp = xr.concat([lnsp, lnsp_next], dim='time')
+        u10 = xr.concat([u10, u10_next], dim='time')
+        v10 = xr.concat([v10, v10_next], dim='time')
+
+    sp = np.exp(lnsp)  # log(sp) --> sp (Pa)
+
+    # Create pressure array with the same dimensions as u, q, and v
+    # Use the values of the "lev" coordinate to fill the array initally
+    p = u.lev.broadcast_like(u)
+
+    u = join_levels(u, u10)  # bottom level will be set to 1000 00 Pa
+    v = join_levels(v, v10)
+    q = join_levels(q, q2m)
+    p = join_levels(p, sp.squeeze())
+
+    u = repeat_top_level(u)  # top level will be set to 100 00 Pa
+    v = repeat_top_level(v)
+    q = repeat_top_level(q)
+    p = repeat_top_level(p)
+    p = p.where(p.lev != 10000, 0)  # set top level values to 0
+
+    # Mask data where the pressure level is higher than sp - 1000
+    # as there is no valid data at those points
+    # and we don't need a second layer that is very close to the surface
+    mask = p > sp.values - 1000
+    mask[:, 0, :, :] = False  # don't mask bottom (surface pressure values)
+    mask[:, -1, :, :] = False  # don't mask top ("ghost cells"?)
+
+    # TODO convert to nan instead of numpy masked array?
+    # u_masked = u.where(mask)
+    u = np.ma.masked_array(u, mask=mask)
+    v = np.ma.masked_array(v, mask=mask)
+    q = np.ma.masked_array(q, mask=mask)
+    p = np.ma.masked_array(p, mask=mask)
+    return q, u, v, sp, p
 
 
 def getEP(latnrs, lonnrs, year, month, A_gridcell):
