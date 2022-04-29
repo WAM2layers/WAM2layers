@@ -74,12 +74,12 @@ def repeat_top_level(pressure_level_data, fill_value=None):
     A dummy value of 100 hPa is inserted for the top level pressure
     """
     top_level_data = pressure_level_data.isel(lev=-1).copy()
-    top_level_data["lev"] = 10000.
+    top_level_data["lev"] = 10000.0
 
     if fill_value is not None:
         top_level_data.values = np.ones_like(top_level_data) * fill_value
 
-    return xr.concat([pressure_level_data, top_level_data], dim='lev')
+    return xr.concat([pressure_level_data, top_level_data], dim="lev")
 
 
 def load_uvqpsp(latnrs, lonnrs, date):
@@ -169,38 +169,26 @@ def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
     return new_p
 
 
-def interpolate(q, uq, vq, p, new_pressure_levels):
+def interpolate(old_var, old_pressure_levels, new_pressure_levels, type="linear"):
 
-    # allocate arrays
-    uq_new = np.zeros_like(new_pressure_levels)
-    vq_new = np.zeros_like(new_pressure_levels)
-    q_new = np.zeros_like(new_pressure_levels)
+    # allocate array
+    new_var = np.zeros_like(new_pressure_levels)
 
-    ntime, _, nlat, nlon = uq.shape
+    ntime, _, nlat, nlon = old_var.shape
     for t in range(ntime):
         for i in range(nlat):
             for j in range(nlon):
 
-                p_1d = p[t, :, i, j]
-                uq_1d = uq[t, :, i, j]
-                vq_1d = vq[t, :, i, j]
-                q_1d = q[t, :, i, j]
+                pressure_1d = old_pressure_levels[t, :, i, j]
+                var_1d = old_var[t, :, i, j]
 
-                p_1d = p_1d[~p_1d.mask]
-                uq_1d = uq_1d[~uq_1d.mask]
-                vq_1d = vq_1d[~vq_1d.mask]
-                q_1d = q_1d[~q_1d.mask]
+                pressure_1d = pressure_1d[~pressure_1d.mask]
+                var_1d = var_1d[~var_1d.mask]
 
-                f_uq = interp1d(p_1d, uq_1d, "cubic")  # spline interpolation
-                uq_new[t, :, i, j] = f_uq(new_pressure_levels[t, :, i, j])
+                f_q = interp1d(pressure_1d, var_1d, type)
+                new_var[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])
 
-                f_vq = interp1d(p_1d, vq_1d, "cubic")  # spline interpolation
-                vq_new[t, :, i, j] = f_vq(new_pressure_levels[t, :, i, j])
-
-                f_q = interp1d(p_1d, q_1d)  # linear interpolation
-                q_new[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])
-
-    return uq_new, vq_new, q_new
+    return new_var
 
 
 def getWandFluxes(
@@ -268,6 +256,7 @@ def getEP(latnrs, lonnrs, date, A_gridcell):
 
     # For now extract bare numpy arrays from the data
     return E.values, P.values
+
 
 # within this new definition of refined I do a linear interpolation over time of my fluxes
 def getrefined_new(
@@ -774,11 +763,9 @@ for date in datelist:
     new_pressure_levels = get_new_target_levels(sp, p_boundary, n_levels=40)
 
     print("before interpolation loop", dt.datetime.now().time())
-    uq = u * q
-    vq = v * q
-    uq_boundaries, vq_boundaries, q_boundaries = interpolate(
-        q, uq, vq, p, new_pressure_levels
-    )
+    uq_boundaries = interpolate(u * q, p, new_pressure_levels, type="cubic")
+    vq_boundaries = interpolate(v * q, p, new_pressure_levels, type="cubic")
+    q_boundaries = interpolate(q, p, new_pressure_levels, type="linear")
     print("after interpolation loop", dt.datetime.now().time())
 
     # 1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
