@@ -80,7 +80,8 @@ def repeat_top_level(pressure_level_data):
 
 
 def load_uvqpsp(latnrs, lonnrs, date):
-    times_3hourly = slice(None, None, 2)  # TODO should be slice(1, None, 2) ??
+    times_3hourly = slice(1, None, 2)
+    times_lnsp = slice(None, None, 2)  # TODO should be slice(1, None, 2) ??
 
     q = get_input_data("Q", date).Q.isel(lat=latnrs, lon=lonnrs)
     u = get_input_data("U", date).U.isel(lat=latnrs, lon=lonnrs)
@@ -89,7 +90,7 @@ def load_uvqpsp(latnrs, lonnrs, date):
         time=times_3hourly, lat=latnrs, lon=lonnrs
     )
     lnsp = get_input_data("LNSP", date).LNSP.isel(
-        time=times_3hourly, lat=latnrs, lon=lonnrs
+        time=times_lnsp, lat=latnrs, lon=lonnrs
     )
     u10 = get_input_data("U10", date).U10M.isel(
         time=times_3hourly, lat=latnrs, lon=lonnrs
