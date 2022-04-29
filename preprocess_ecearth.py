@@ -68,15 +68,18 @@ def join_levels(pressure_level_data, surface_level_data):
     )
 
 
-def repeat_top_level(pressure_level_data):
+def repeat_top_level(pressure_level_data, fill_value=None):
     """Add one more level with the same value as the upper level.
 
     A dummy value of 100 hPa is inserted for the top level pressure
     """
     top_level_data = pressure_level_data.isel(lev=-1).copy()
-    top_level_data["lev"] = 10000.0
+    top_level_data["lev"] = 10000.
 
-    return xr.concat([pressure_level_data, top_level_data], dim="lev")
+    if fill_value is not None:
+        top_level_data.values = np.ones_like(top_level_data) * fill_value
+
+    return xr.concat([pressure_level_data, top_level_data], dim='lev')
 
 
 def load_uvqpsp(latnrs, lonnrs, date):
@@ -112,9 +115,8 @@ def load_uvqpsp(latnrs, lonnrs, date):
 
     u = repeat_top_level(u)  # top level will be set to 100 00 Pa
     v = repeat_top_level(v)
-    q = repeat_top_level(q)
-    p = repeat_top_level(p)
-    p = p.where(p.lev != 10000, 0)  # set top level values to 0
+    q = repeat_top_level(q, fill_value=0)
+    p = repeat_top_level(p, fill_value=0)
 
     # Mask data where the pressure level is higher than sp - 1000
     # as there is no valid data at those points
