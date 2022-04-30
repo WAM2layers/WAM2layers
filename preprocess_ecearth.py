@@ -491,78 +491,61 @@ def getFa_Vert(
     # total moisture in the column
     W = W_top + W_down
 
-    # define the horizontal fluxes over the boundaries
-    # fluxes over the eastern boundary
-    Fa_E_top_boundary = np.zeros(np.shape(Fa_E_top))
-    Fa_E_top_boundary[:, :, :-1] = 0.5 * (Fa_E_top[:, :, :-1] + Fa_E_top[:, :, 1:])
-    Fa_E_down_boundary = np.zeros(np.shape(Fa_E_down))
-    Fa_E_down_boundary[:, :, :-1] = 0.5 * (Fa_E_down[:, :, :-1] + Fa_E_down[:, :, 1:])
+    def stagger_E(Fa_E):
+        """Define the horizontal fluxes over the boundaries."""
 
-    # find out where the positive and negative fluxes are
-    Fa_E_top_pos = np.ones(np.shape(Fa_E_top))
-    Fa_E_down_pos = np.ones(np.shape(Fa_E_down))
-    Fa_E_top_pos[Fa_E_top_boundary < 0] = 0
-    Fa_E_down_pos[Fa_E_down_boundary < 0] = 0
-    Fa_E_top_neg = Fa_E_top_pos - 1
-    Fa_E_down_neg = Fa_E_down_pos - 1
+        # fluxes over the eastern boundary
+        Fa_E_boundary = np.zeros_like(Fa_E)
+        Fa_E_boundary[:, :, :-1] = 0.5 * (Fa_E[:, :, :-1] + Fa_E[:, :, 1:])
 
-    # separate directions west-east (all positive numbers)
-    Fa_E_top_WE = Fa_E_top_boundary * Fa_E_top_pos
-    Fa_E_top_EW = Fa_E_top_boundary * Fa_E_top_neg
-    Fa_E_down_WE = Fa_E_down_boundary * Fa_E_down_pos
-    Fa_E_down_EW = Fa_E_down_boundary * Fa_E_down_neg
+        # find out where the positive and negative fluxes are
+        Fa_E_pos = np.where(Fa_E_boundary < 0, 0, 1)
+        Fa_E_neg = Fa_E_pos - 1
 
-    # fluxes over the western boundary
-    Fa_W_top_WE = np.nan * np.zeros(np.shape(P))
-    Fa_W_top_WE[:, :, 1:] = Fa_E_top_WE[:, :, :-1]
-    Fa_W_top_WE[:, :, 0] = Fa_E_top_WE[:, :, -1]
-    Fa_W_top_EW = np.nan * np.zeros(np.shape(P))
-    Fa_W_top_EW[:, :, 1:] = Fa_E_top_EW[:, :, :-1]
-    Fa_W_top_EW[:, :, 0] = Fa_E_top_EW[:, :, -1]
-    Fa_W_down_WE = np.nan * np.zeros(np.shape(P))
-    Fa_W_down_WE[:, :, 1:] = Fa_E_down_WE[:, :, :-1]
-    Fa_W_down_WE[:, :, 0] = Fa_E_down_WE[:, :, -1]
-    Fa_W_down_EW = np.nan * np.zeros(np.shape(P))
-    Fa_W_down_EW[:, :, 1:] = Fa_E_down_EW[:, :, :-1]
-    Fa_W_down_EW[:, :, 0] = Fa_E_down_EW[:, :, -1]
+        # separate directions west-east (all positive numbers)
+        Fa_E_WE = Fa_E_boundary * Fa_E_pos
+        Fa_E_EW = Fa_E_boundary * Fa_E_neg
 
-    # fluxes over the northern boundary
-    Fa_N_top_boundary = np.nan * np.zeros(np.shape(Fa_N_top))
-    Fa_N_top_boundary[:, 1:, :] = 0.5 * (Fa_N_top[:, :-1, :] + Fa_N_top[:, 1:, :])
-    Fa_N_down_boundary = np.nan * np.zeros(np.shape(Fa_N_down))
-    Fa_N_down_boundary[:, 1:, :] = 0.5 * (Fa_N_down[:, :-1, :] + Fa_N_down[:, 1:, :])
+        # fluxes over the western boundary
+        Fa_W_WE = np.nan * np.zeros_like(P)
+        Fa_W_WE[:, :, 1:] = Fa_E_WE[:, :, :-1]
+        Fa_W_WE[:, :, 0] = Fa_E_WE[:, :, -1]
 
-    # find out where the positive and negative fluxes are
-    Fa_N_top_pos = np.ones(np.shape(Fa_N_top))
-    Fa_N_down_pos = np.ones(np.shape(Fa_N_down))
-    Fa_N_top_pos[Fa_N_top_boundary < 0] = 0
-    Fa_N_down_pos[Fa_N_down_boundary < 0] = 0
-    Fa_N_top_neg = Fa_N_top_pos - 1
-    Fa_N_down_neg = Fa_N_down_pos - 1
+        Fa_W_EW = np.nan * np.zeros_like(P)
+        Fa_W_EW[:, :, 1:] = Fa_E_EW[:, :, :-1]
+        Fa_W_EW[:, :, 0] = Fa_E_EW[:, :, -1]
 
-    # separate directions south-north (all positive numbers)
-    Fa_N_top_SN = Fa_N_top_boundary * Fa_N_top_pos
-    Fa_N_top_NS = Fa_N_top_boundary * Fa_N_top_neg
-    Fa_N_down_SN = Fa_N_down_boundary * Fa_N_down_pos
-    Fa_N_down_NS = Fa_N_down_boundary * Fa_N_down_neg
+        return Fa_E_WE, Fa_E_EW, Fa_W_WE, Fa_W_EW
 
-    # fluxes over the southern boundary
-    Fa_S_top_SN = np.nan * np.zeros(np.shape(P))
-    Fa_S_top_SN[:, :-1, :] = Fa_N_top_SN[:, 1:, :]
-    Fa_S_top_NS = np.nan * np.zeros(np.shape(P))
-    Fa_S_top_NS[:, :-1, :] = Fa_N_top_NS[:, 1:, :]
-    Fa_S_down_SN = np.nan * np.zeros(np.shape(P))
-    Fa_S_down_SN[:, :-1, :] = Fa_N_down_SN[:, 1:, :]
-    Fa_S_down_NS = np.nan * np.zeros(np.shape(P))
-    Fa_S_down_NS[:, :-1, :] = Fa_N_down_NS[:, 1:, :]
+
+    def stagger_N(Fa_N):
+        """Define the horizontal fluxes over the boundaries."""
+        Fa_N_boundary = np.nan * np.zeros_like(Fa_N)
+        Fa_N_boundary[:, 1:, :] = 0.5 * (Fa_N[:, :-1, :] + Fa_N[:, 1:, :])
+        Fa_N_pos = np.where(Fa_N_boundary < 0, 0, 1)
+        Fa_N_neg = Fa_N_pos - 1
+        Fa_N_SN = Fa_N_boundary * Fa_N_pos
+        Fa_N_NS = Fa_N_boundary * Fa_N_neg
+        Fa_S_SN = np.nan * np.zeros_like(P)
+        Fa_S_SN[:, :-1, :] = Fa_N_SN[:, 1:, :]
+        Fa_S_NS = np.nan * np.zeros_like(P)
+        Fa_S_NS[:, :-1, :] = Fa_N_NS[:, 1:, :]
+
+        return Fa_N_SN, Fa_N_NS, Fa_S_SN, Fa_S_NS
+
+    Fa_E_top_WE, Fa_E_top_EW, Fa_W_top_WE, Fa_W_top_EW = stagger_E(Fa_E_top)
+    Fa_E_down_WE, Fa_E_down_EW, Fa_W_down_WE, Fa_W_down_EW = stagger_E(Fa_E_down)
+    Fa_N_top_SN, Fa_N_top_NS, Fa_S_top_SN, Fa_S_top_NS = stagger_N(Fa_N_top)
+    Fa_N_down_SN, Fa_N_down_NS, Fa_S_down_SN, Fa_S_down_NS = stagger_N(Fa_N_down)
+
 
     # check the water balance
     Sa_after_Fa_down = np.zeros([1, len(latitude), len(longitude)])
     Sa_after_Fa_top = np.zeros([1, len(latitude), len(longitude)])
     Sa_after_all_down = np.zeros([1, len(latitude), len(longitude)])
     Sa_after_all_top = np.zeros([1, len(latitude), len(longitude)])
-    residual_down = np.zeros(np.shape(P))  # residual factor [m3]
-    residual_top = np.zeros(np.shape(P))  # residual factor [m3]
+    residual_down = np.zeros_like(P)  # residual factor [m3]
+    residual_top = np.zeros_like(P)  # residual factor [m3]
 
     for t in range(int(count_time * divt)):
         # down: calculate with moisture fluxes:
@@ -616,31 +599,13 @@ def getFa_Vert(
         W_down[1:, :, :] / W[1:, :, :] * (residual_down + residual_top) - residual_down
     )  # the vertical velocity so that the new residual_down/W_down =  residual_top/W_top (positive downward)
 
-    # find out where the negative vertical flux is
-    Fa_Vert_posneg = np.ones(np.shape(Fa_Vert_raw))
-    Fa_Vert_posneg[Fa_Vert_raw < 0] = -1
-
-    # make the vertical flux absolute
-    Fa_Vert_abs = np.abs(Fa_Vert_raw)
-
     # stabilize the outfluxes / influxes
-    stab = (
-        1.0 / 4.0
-    )  # during the reduced timestep the vertical flux can maximally empty/fill 1/x of the top or down storage
-
-    Fa_Vert_stable = np.reshape(
-        np.minimum(
-            np.reshape(Fa_Vert_abs, (np.size(Fa_Vert_abs))),
-            np.minimum(
-                stab * np.reshape(W_top[1:, :, :], (np.size(W_top[1:, :, :]))),
-                stab * np.reshape(W_down[1:, :, :], (np.size(W_down[1:, :, :]))),
-            ),
-        ),
-        (int(count_time * float(divt)), len(latitude), len(longitude)),
-    )
+    # during the reduced timestep the vertical flux can maximally empty/fill 1/x of the top or down storage
+    stab = 1.0 / 4.0
+    Fa_Vert_stable = np.minimum(np.abs(Fa_Vert_raw), np.minimum(stab * W_top[1:, :, :], stab * W_down[1:, :, :]))
 
     # redefine the vertical flux
-    Fa_Vert = Fa_Vert_stable * Fa_Vert_posneg
+    Fa_Vert = np.sign(Fa_Vert_raw) * Fa_Vert_stable
 
     return Fa_Vert_raw, Fa_Vert, residual_down, residual_top
 
@@ -701,12 +666,7 @@ for date in datelist:
     )
 
     # 4 evaporation and precipitation
-    E, P = getEP(
-        latnrs,
-        lonnrs,
-        date,
-        A_gridcell,
-    )
+    E, P = getEP(latnrs, lonnrs, date, A_gridcell)
     print(f"Step 4 finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # put data on a smaller time step
