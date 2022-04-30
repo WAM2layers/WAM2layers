@@ -507,37 +507,34 @@ def getFa_Vert(
         Fa_E_EW = Fa_E_boundary * Fa_E_neg
 
         # fluxes over the western boundary
-        Fa_W_WE = np.nan * np.zeros_like(P)
+        Fa_W_WE = np.zeros_like(P)
         Fa_W_WE[:, :, 1:] = Fa_E_WE[:, :, :-1]
         Fa_W_WE[:, :, 0] = Fa_E_WE[:, :, -1]
 
-        Fa_W_EW = np.nan * np.zeros_like(P)
+        Fa_W_EW = np.zeros_like(P)
         Fa_W_EW[:, :, 1:] = Fa_E_EW[:, :, :-1]
         Fa_W_EW[:, :, 0] = Fa_E_EW[:, :, -1]
 
-        return Fa_E_WE, Fa_E_EW, Fa_W_WE, Fa_W_EW
-
+        return - Fa_E_WE + Fa_E_EW + Fa_W_WE - Fa_W_EW
 
     def stagger_N(Fa_N):
         """Define the horizontal fluxes over the boundaries."""
-        Fa_N_boundary = np.nan * np.zeros_like(Fa_N)
+        Fa_N_boundary = np.zeros_like(Fa_N)
         Fa_N_boundary[:, 1:, :] = 0.5 * (Fa_N[:, :-1, :] + Fa_N[:, 1:, :])
         Fa_N_pos = np.where(Fa_N_boundary < 0, 0, 1)
         Fa_N_neg = Fa_N_pos - 1
         Fa_N_SN = Fa_N_boundary * Fa_N_pos
         Fa_N_NS = Fa_N_boundary * Fa_N_neg
-        Fa_S_SN = np.nan * np.zeros_like(P)
+        Fa_S_SN = np.zeros_like(P)
         Fa_S_SN[:, :-1, :] = Fa_N_SN[:, 1:, :]
-        Fa_S_NS = np.nan * np.zeros_like(P)
+        Fa_S_NS = np.zeros_like(P)
         Fa_S_NS[:, :-1, :] = Fa_N_NS[:, 1:, :]
+        return - Fa_N_SN + Fa_N_NS + Fa_S_SN - Fa_S_NS
 
-        return Fa_N_SN, Fa_N_NS, Fa_S_SN, Fa_S_NS
-
-    Fa_E_top_WE, Fa_E_top_EW, Fa_W_top_WE, Fa_W_top_EW = stagger_E(Fa_E_top)
-    Fa_E_down_WE, Fa_E_down_EW, Fa_W_down_WE, Fa_W_down_EW = stagger_E(Fa_E_down)
-    Fa_N_top_SN, Fa_N_top_NS, Fa_S_top_SN, Fa_S_top_NS = stagger_N(Fa_N_top)
-    Fa_N_down_SN, Fa_N_down_NS, Fa_S_down_SN, Fa_S_down_NS = stagger_N(Fa_N_down)
-
+    Fa_EW_top_total = stagger_E(Fa_E_top)
+    Fa_EW_down_total = stagger_E(Fa_E_down)
+    Fa_SN_top_total = stagger_N(Fa_N_top)
+    Fa_SN_down_total = stagger_N(Fa_N_down)
 
     # check the water balance
     Sa_after_Fa_down = np.zeros([1, len(latitude), len(longitude)])
@@ -551,27 +548,15 @@ def getFa_Vert(
         # down: calculate with moisture fluxes:
         Sa_after_Fa_down[0, 1:-1, :] = (
             W_down[t, 1:-1, :]
-            - Fa_E_down_WE[t, 1:-1, :]
-            + Fa_E_down_EW[t, 1:-1, :]
-            + Fa_W_down_WE[t, 1:-1, :]
-            - Fa_W_down_EW[t, 1:-1, :]
-            - Fa_N_down_SN[t, 1:-1, :]
-            + Fa_N_down_NS[t, 1:-1, :]
-            + Fa_S_down_SN[t, 1:-1, :]
-            - Fa_S_down_NS[t, 1:-1, :]
+            + Fa_EW_down_total[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
+            + Fa_SN_down_total[t, 1:-1, :]
         )
 
         # top: calculate with moisture fluxes:
         Sa_after_Fa_top[0, 1:-1, :] = (
             W_top[t, 1:-1, :]
-            - Fa_E_top_WE[t, 1:-1, :]
-            + Fa_E_top_EW[t, 1:-1, :]
-            + Fa_W_top_WE[t, 1:-1, :]
-            - Fa_W_top_EW[t, 1:-1, :]
-            - Fa_N_top_SN[t, 1:-1, :]
-            + Fa_N_top_NS[t, 1:-1, :]
-            + Fa_S_top_SN[t, 1:-1, :]
-            - Fa_S_top_NS[t, 1:-1, :]
+            + Fa_EW_top_total[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
+            + Fa_SN_top_total[t, 1:-1, :]
         )
 
         # down: substract precipitation and add evaporation
