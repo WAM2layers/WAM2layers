@@ -443,41 +443,33 @@ def change_units(
     return Fa_E_top_m3, Fa_E_down_m3, Fa_N_top_m3, Fa_N_down_m3
 
 
-def get_stablefluxes(
-    Fa_E_top,
-    Fa_E_down,
-    Fa_N_top,
-    Fa_N_down,
-):
+def get_stablefluxes(Fa_E, Fa_N, W):
+    """Stabilize the outfluxes / influxes.
 
-    # make everything absolute
-    Fa_E_top_abs = np.abs(Fa_E_top)
-    Fa_E_down_abs = np.abs(Fa_E_down)
-    Fa_N_top_abs = np.abs(Fa_N_top)
-    Fa_N_down_abs = np.abs(Fa_N_down)
+    During the reduced timestep the water cannot move further than 1/x * the
+    gridcell, In other words at least x * the reduced timestep is needed to
+    cross a gridcell.
+    """
+    Fa_E_abs = np.abs(Fa_E)
+    Fa_N_abs = np.abs(Fa_N)
 
-    # stabilize the outfluxes / influxes
     stab = 1.0 / 2.0
-    # during the reduced timestep the water cannot move further than 1/x * the gridcell,
-    # in other words at least x * the reduced timestep is needed to cross a gridcell
-    Fa_E_top_stable = np.minimum(Fa_E_top_abs, (Fa_E_top_abs / (Fa_E_top_abs + Fa_N_top_abs)) * stab * W_top[:-1, :, :])
-    Fa_N_top_stable = np.minimum(Fa_N_top_abs, (Fa_N_top_abs / (Fa_E_top_abs + Fa_N_top_abs)) * stab * W_top[:-1, :, :])
-    Fa_E_down_stable = np.minimum(Fa_E_down_abs, (Fa_E_down_abs / (Fa_E_down_abs + Fa_N_down_abs)) * stab * W_down[:-1, :, :])
-    Fa_N_down_stable = np.minimum(Fa_N_down_abs, (Fa_N_down_abs / (Fa_E_down_abs + Fa_N_down_abs)) * stab * W_down[:-1, :, :])
+
+    Fa_E_corrected = (Fa_E_abs / (Fa_E_abs + Fa_N_abs)) * stab * W[:-1, :, :]
+    Fa_E_stable = np.minimum(Fa_E_abs, Fa_E_corrected)
+
+    Fa_N_corrected = (Fa_N_abs / (Fa_E_abs + Fa_N_abs)) * stab * W[:-1, :, :]
+    Fa_N_stable = np.minimum(Fa_N_abs, Fa_N_corrected)
 
     # get rid of the nan values
-    Fa_E_top_stable[np.isnan(Fa_E_top_stable)] = 0
-    Fa_N_top_stable[np.isnan(Fa_N_top_stable)] = 0
-    Fa_E_down_stable[np.isnan(Fa_E_down_stable)] = 0
-    Fa_N_down_stable[np.isnan(Fa_N_down_stable)] = 0
+    Fa_E_stable[np.isnan(Fa_E_stable)] = 0
+    Fa_N_stable[np.isnan(Fa_N_stable)] = 0
 
     # redefine
-    Fa_E_top = np.sign(Fa_E_top) * Fa_E_top_stable
-    Fa_N_top = np.sign(Fa_N_top) * Fa_N_top_stable
-    Fa_E_down = np.sign(Fa_E_down) * Fa_E_down_stable
-    Fa_N_down = np.sign(Fa_N_down) * Fa_N_down_stable
+    Fa_E = np.sign(Fa_E) * Fa_E_stable
+    Fa_N = np.sign(Fa_N) * Fa_N_stable
 
-    return Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down
+    return Fa_E, Fa_N
 
 
 # Code
@@ -760,12 +752,8 @@ for date in datelist:
     print(f"Step 6a finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # stabilize horizontal fluxes
-    Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down = get_stablefluxes(
-        Fa_E_top_m3,
-        Fa_E_down_m3,
-        Fa_N_top_m3,
-        Fa_N_down_m3,
-    )
+    Fa_E_top, Fa_N_top = get_stablefluxes(Fa_E_top_m3, Fa_N_top_m3, W_top)
+    Fa_E_down, Fa_N_down = get_stablefluxes(Fa_E_down_m3, Fa_N_down_m3, W_down)
     print(f"Step 6b finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # determine the vertical moisture flux
