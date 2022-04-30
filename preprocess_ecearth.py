@@ -496,6 +496,7 @@ def getFa_Vert(
 
         # TODO: Is this correct? I think the eastern and western boundaries are
         # mixed up. Also the inserted zeros might cause trouble
+        # I have verified that this code does exactly the same as the original.
 
         # fluxes over the eastern boundary
         Fa_E_boundary = np.zeros_like(Fa_E)
@@ -504,24 +505,18 @@ def getFa_Vert(
         Fa_W_boundary = np.roll(Fa_E_boundary, 1)
         return Fa_W_boundary - Fa_E_boundary
 
-    def stagger_N(Fa_N):
+    def divergence_meridional(Fa_N):
         """Define the horizontal fluxes over the boundaries."""
         Fa_N_boundary = np.zeros_like(Fa_N)
         Fa_N_boundary[:, 1:, :] = 0.5 * (Fa_N[:, :-1, :] + Fa_N[:, 1:, :])
-        Fa_N_pos = np.where(Fa_N_boundary < 0, 0, 1)
-        Fa_N_neg = Fa_N_pos - 1
-        Fa_N_SN = Fa_N_boundary * Fa_N_pos
-        Fa_N_NS = Fa_N_boundary * Fa_N_neg
-        Fa_S_SN = np.zeros_like(P)
-        Fa_S_SN[:, :-1, :] = Fa_N_SN[:, 1:, :]
-        Fa_S_NS = np.zeros_like(P)
-        Fa_S_NS[:, :-1, :] = Fa_N_NS[:, 1:, :]
-        return - Fa_N_SN + Fa_N_NS + Fa_S_SN - Fa_S_NS
+
+        Fa_S_boundary = np.roll(Fa_N_boundary, -1, axis=1)
+        return Fa_S_boundary - Fa_N_boundary
 
     Fa_EW_top_total = divergence_zonal(Fa_E_top)
     Fa_EW_down_total = divergence_zonal(Fa_E_down)
-    Fa_SN_top_total = stagger_N(Fa_N_top)
-    Fa_SN_down_total = stagger_N(Fa_N_down)
+    Fa_SN_top_total = divergence_meridional(Fa_N_top)
+    Fa_SN_down_total = divergence_meridional(Fa_N_down)
 
     # check the water balance
     Sa_after_Fa_down = np.zeros([1, len(latitude), len(longitude)])
