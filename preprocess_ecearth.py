@@ -448,24 +448,7 @@ def get_stablefluxes(
     Fa_E_down,
     Fa_N_top,
     Fa_N_down,
-    timestep,
-    divt,
-    L_EW_gridcell,
-    density_water,
-    L_N_gridcell,
-    L_S_gridcell,
-    latitude,
 ):
-
-    # find out where the negative fluxes are
-    Fa_E_top_posneg = np.ones(np.shape(Fa_E_top))
-    Fa_E_top_posneg[Fa_E_top < 0] = -1
-    Fa_N_top_posneg = np.ones(np.shape(Fa_E_top))
-    Fa_N_top_posneg[Fa_N_top < 0] = -1
-    Fa_E_down_posneg = np.ones(np.shape(Fa_E_top))
-    Fa_E_down_posneg[Fa_E_down < 0] = -1
-    Fa_N_down_posneg = np.ones(np.shape(Fa_E_top))
-    Fa_N_down_posneg[Fa_N_down < 0] = -1
 
     # make everything absolute
     Fa_E_top_abs = np.abs(Fa_E_top)
@@ -474,70 +457,13 @@ def get_stablefluxes(
     Fa_N_down_abs = np.abs(Fa_N_down)
 
     # stabilize the outfluxes / influxes
-    stab = (
-        1.0 / 2.0
-    )  # during the reduced timestep the water cannot move further than 1/x * the gridcell,
+    stab = 1.0 / 2.0
+    # during the reduced timestep the water cannot move further than 1/x * the gridcell,
     # in other words at least x * the reduced timestep is needed to cross a gridcell
-    Fa_E_top_stable = np.reshape(
-        np.minimum(
-            np.reshape(Fa_E_top_abs, (np.size(Fa_E_top_abs))),
-            (
-                np.reshape(Fa_E_top_abs, (np.size(Fa_E_top_abs)))
-                / (
-                    np.reshape(Fa_E_top_abs, (np.size(Fa_E_top_abs)))
-                    + np.reshape(Fa_N_top_abs, (np.size(Fa_N_top_abs)))
-                )
-            )
-            * stab
-            * np.reshape(W_top[:-1, :, :], (np.size(W_top[:-1, :, :]))),
-        ),
-        (int(count_time * float(divt)), len(latitude), len(longitude)),
-    )
-    Fa_N_top_stable = np.reshape(
-        np.minimum(
-            np.reshape(Fa_N_top_abs, (np.size(Fa_N_top_abs))),
-            (
-                np.reshape(Fa_N_top_abs, (np.size(Fa_N_top_abs)))
-                / (
-                    np.reshape(Fa_E_top_abs, (np.size(Fa_E_top_abs)))
-                    + np.reshape(Fa_N_top_abs, (np.size(Fa_N_top_abs)))
-                )
-            )
-            * stab
-            * np.reshape(W_top[:-1, :, :], (np.size(W_top[:-1, :, :]))),
-        ),
-        (int(count_time * float(divt)), len(latitude), len(longitude)),
-    )
-    Fa_E_down_stable = np.reshape(
-        np.minimum(
-            np.reshape(Fa_E_down_abs, (np.size(Fa_E_down_abs))),
-            (
-                np.reshape(Fa_E_down_abs, (np.size(Fa_E_down_abs)))
-                / (
-                    np.reshape(Fa_E_down_abs, (np.size(Fa_E_down_abs)))
-                    + np.reshape(Fa_N_down_abs, (np.size(Fa_N_down_abs)))
-                )
-            )
-            * stab
-            * np.reshape(W_down[:-1, :, :], (np.size(W_down[:-1, :, :]))),
-        ),
-        (int(count_time * float(divt)), len(latitude), len(longitude)),
-    )
-    Fa_N_down_stable = np.reshape(
-        np.minimum(
-            np.reshape(Fa_N_down_abs, (np.size(Fa_N_down_abs))),
-            (
-                np.reshape(Fa_N_down_abs, (np.size(Fa_N_down_abs)))
-                / (
-                    np.reshape(Fa_E_down_abs, (np.size(Fa_E_down_abs)))
-                    + np.reshape(Fa_N_down_abs, (np.size(Fa_N_down_abs)))
-                )
-            )
-            * stab
-            * np.reshape(W_down[:-1, :, :], (np.size(W_down[:-1, :, :]))),
-        ),
-        (int(count_time * float(divt)), len(latitude), len(longitude)),
-    )
+    Fa_E_top_stable = np.minimum(Fa_E_top_abs, (Fa_E_top_abs / (Fa_E_top_abs + Fa_N_top_abs)) * stab * W_top[:-1, :, :])
+    Fa_N_top_stable = np.minimum(Fa_N_top_abs, (Fa_N_top_abs / (Fa_E_top_abs + Fa_N_top_abs)) * stab * W_top[:-1, :, :])
+    Fa_E_down_stable = np.minimum(Fa_E_down_abs, (Fa_E_down_abs / (Fa_E_down_abs + Fa_N_down_abs)) * stab * W_down[:-1, :, :])
+    Fa_N_down_stable = np.minimum(Fa_N_down_abs, (Fa_N_down_abs / (Fa_E_down_abs + Fa_N_down_abs)) * stab * W_down[:-1, :, :])
 
     # get rid of the nan values
     Fa_E_top_stable[np.isnan(Fa_E_top_stable)] = 0
@@ -546,10 +472,10 @@ def get_stablefluxes(
     Fa_N_down_stable[np.isnan(Fa_N_down_stable)] = 0
 
     # redefine
-    Fa_E_top = Fa_E_top_stable * Fa_E_top_posneg
-    Fa_N_top = Fa_N_top_stable * Fa_N_top_posneg
-    Fa_E_down = Fa_E_down_stable * Fa_E_down_posneg
-    Fa_N_down = Fa_N_down_stable * Fa_N_down_posneg
+    Fa_E_top = np.sign(Fa_E_top) * Fa_E_top_stable
+    Fa_N_top = np.sign(Fa_N_top) * Fa_N_top_stable
+    Fa_E_down = np.sign(Fa_E_down) * Fa_E_down_stable
+    Fa_N_down = np.sign(Fa_N_down) * Fa_N_down_stable
 
     return Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down
 
@@ -839,13 +765,6 @@ for date in datelist:
         Fa_E_down_m3,
         Fa_N_top_m3,
         Fa_N_down_m3,
-        timestep,
-        divt,
-        L_EW_gridcell,
-        density_water,
-        L_N_gridcell,
-        L_S_gridcell,
-        latitude,
     )
     print(f"Step 6b finished, elapsed time since start: {dt.datetime.now() - start}")
 
