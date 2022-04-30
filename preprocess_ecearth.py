@@ -278,98 +278,98 @@ def getrefined_new(
 
     # for 3 hourly information
     divt2 = divt / 2.0
-    oddvector2 = np.zeros((1, np.int(count_time * 2 * divt2)))
-    partvector2 = np.zeros((1, np.int(count_time * 2 * divt2)))
+    oddvector2 = np.zeros((1, int(count_time * 2 * divt2)))
+    partvector2 = np.zeros((1, int(count_time * 2 * divt2)))
     da = np.arange(1, divt2)
 
-    for o in np.arange(0, np.int(count_time * 2 * divt2), np.int(divt2)):
+    for o in np.arange(0, int(count_time * 2 * divt2), int(divt2)):
         for i in range(len(da)):
             oddvector2[0, o + i] = (divt2 - da[i]) / divt2
             partvector2[0, o + i + 1] = da[i] / divt2
 
     E_small = np.nan * np.zeros(
-        (np.int(count_time * 2 * divt2), len(latitude), len(longitude))
+        (int(count_time * 2 * divt2), len(latitude), len(longitude))
     )
-    for t in range(1, np.int(count_time * 2 * divt2) + 1):
-        E_small[t - 1] = (1.0 / divt2) * E[np.int(t / divt2 + oddvector2[0, t - 1] - 1)]
+    for t in range(1, int(count_time * 2 * divt2) + 1):
+        E_small[t - 1] = (1.0 / divt2) * E[int(t / divt2 + oddvector2[0, t - 1] - 1)]
     E = E_small
 
     P_small = np.nan * np.zeros(
-        (np.int(count_time * 2 * divt2), len(latitude), len(longitude))
+        (int(count_time * 2 * divt2), len(latitude), len(longitude))
     )
-    for t in range(1, np.int(count_time * 2 * divt2) + 1):
-        P_small[t - 1] = (1.0 / divt2) * P[np.int(t / divt2 + oddvector2[0, t - 1] - 1)]
+    for t in range(1, int(count_time * 2 * divt2) + 1):
+        P_small[t - 1] = (1.0 / divt2) * P[int(t / divt2 + oddvector2[0, t - 1] - 1)]
     P = P_small
 
     # for 6 hourly info
-    oddvector = np.zeros((1, np.int(count_time * divt)))
-    partvector = np.zeros((1, np.int(count_time * divt)))
+    oddvector = np.zeros((1, int(count_time * divt)))
+    partvector = np.zeros((1, int(count_time * divt)))
     da = np.arange(1, divt)
-    divt = np.float(divt)
-    for o in np.arange(0, np.int(count_time * divt), np.int(divt)):
+    divt = float(divt)
+    for o in np.arange(0, int(count_time * divt), int(divt)):
         for i in range(len(da)):
             oddvector[0, o + i] = (divt - da[i]) / divt
             partvector[0, o + i + 1] = da[i] / divt
 
     W_top_small = np.nan * np.zeros(
-        (np.int(count_time * divt + 1), len(latitude), len(longitude))
+        (int(count_time * divt + 1), len(latitude), len(longitude))
     )
     W_down_small = np.nan * np.zeros(
-        (np.int(count_time * divt + 1), len(latitude), len(longitude))
+        (int(count_time * divt + 1), len(latitude), len(longitude))
     )
 
     Fa_E_down_small = np.nan * np.zeros(
-        (np.int(count_time * divt), len(latitude), len(longitude))
+        (int(count_time * divt), len(latitude), len(longitude))
     )
     Fa_N_down_small = np.nan * np.zeros(
-        (np.int(count_time * divt), len(latitude), len(longitude))
+        (int(count_time * divt), len(latitude), len(longitude))
     )
     Fa_E_top_small = np.nan * np.zeros(
-        (np.int(count_time * divt), len(latitude), len(longitude))
+        (int(count_time * divt), len(latitude), len(longitude))
     )
     Fa_N_top_small = np.nan * np.zeros(
-        (np.int(count_time * divt), len(latitude), len(longitude))
+        (int(count_time * divt), len(latitude), len(longitude))
     )
 
-    for t in range(1, np.int(count_time * divt) + 1):
+    for t in range(1, int(count_time * divt) + 1):
         W_top_small[t - 1] = W_top[
-            np.int(t / divt + oddvector[0, t - 1] - 1)
+            int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            W_top[np.int(t / divt + oddvector[0, t - 1])]
-            - W_top[np.int(t / divt + oddvector[0, t - 1] - 1)]
+            W_top[int(t / divt + oddvector[0, t - 1])]
+            - W_top[int(t / divt + oddvector[0, t - 1] - 1)]
         )
         W_top_small[-1] = W_top[-1]
         W_down_small[t - 1] = W_down[
-            np.int(t / divt + oddvector[0, t - 1] - 1)
+            int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            W_down[np.int(t / divt + oddvector[0, t - 1])]
-            - W_down[np.int(t / divt + oddvector[0, t - 1] - 1)]
+            W_down[int(t / divt + oddvector[0, t - 1])]
+            - W_down[int(t / divt + oddvector[0, t - 1] - 1)]
         )
         W_down_small[-1] = W_down[-1]
 
         Fa_E_down_small[t - 1] = Fa_E_down[
-            np.int(t / divt + oddvector[0, t - 1] - 1)
+            int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_E_down[np.int(t / divt + oddvector[0, t - 1])]
-            - Fa_E_down[np.int(t / divt + oddvector[0, t - 1] - 1)]
+            Fa_E_down[int(t / divt + oddvector[0, t - 1])]
+            - Fa_E_down[int(t / divt + oddvector[0, t - 1] - 1)]
         )
         Fa_N_down_small[t - 1] = Fa_N_down[
-            np.int(t / divt + oddvector[0, t - 1] - 1)
+            int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_N_down[np.int(t / divt + oddvector[0, t - 1])]
-            - Fa_N_down[np.int(t / divt + oddvector[0, t - 1] - 1)]
+            Fa_N_down[int(t / divt + oddvector[0, t - 1])]
+            - Fa_N_down[int(t / divt + oddvector[0, t - 1] - 1)]
         )
         Fa_E_top_small[t - 1] = Fa_E_top[
-            np.int(t / divt + oddvector[0, t - 1] - 1)
+            int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_E_top[np.int(t / divt + oddvector[0, t - 1])]
-            - Fa_E_top[np.int(t / divt + oddvector[0, t - 1] - 1)]
+            Fa_E_top[int(t / divt + oddvector[0, t - 1])]
+            - Fa_E_top[int(t / divt + oddvector[0, t - 1] - 1)]
         )
         Fa_N_top_small[t - 1] = Fa_N_top[
-            np.int(t / divt + oddvector[0, t - 1] - 1)
+            int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_N_top[np.int(t / divt + oddvector[0, t - 1])]
-            - Fa_N_top[np.int(t / divt + oddvector[0, t - 1] - 1)]
+            Fa_N_top[int(t / divt + oddvector[0, t - 1])]
+            - Fa_N_top[int(t / divt + oddvector[0, t - 1] - 1)]
         )
 
     W_top = W_top_small
@@ -405,17 +405,17 @@ def change_units(
 
     # convert to m3
     Fa_E_top_m3 = (
-        Fa_E_top_kgpmps * timestep / np.float(divt) * L_EW_gridcell / density_water
+        Fa_E_top_kgpmps * timestep / float(divt) * L_EW_gridcell / density_water
     )  # [kg*m^-1*s^-1*s*m*kg^-1*m^3]=[m3]
     Fa_E_down_m3 = (
-        Fa_E_down_kgpmps * timestep / np.float(divt) * L_EW_gridcell / density_water
+        Fa_E_down_kgpmps * timestep / float(divt) * L_EW_gridcell / density_water
     )  # [s*m*kg*m^-1*s^-1*kg^-1*m^3]=[m3]
 
     Fa_N_top_swap = np.zeros(
-        (len(latitude), np.int(count_time * np.float(divt)), len(longitude))
+        (len(latitude), int(count_time * float(divt)), len(longitude))
     )
     Fa_N_down_swap = np.zeros(
-        (len(latitude), np.int(count_time * np.float(divt)), len(longitude))
+        (len(latitude), int(count_time * float(divt)), len(longitude))
     )
     Fa_N_top_kgpmps_swap = np.swapaxes(Fa_N_top_kgpmps, 0, 1)
     Fa_N_down_kgpmps_swap = np.swapaxes(Fa_N_down_kgpmps, 0, 1)
@@ -423,7 +423,7 @@ def change_units(
         Fa_N_top_swap[c] = (
             Fa_N_top_kgpmps_swap[c]
             * timestep
-            / np.float(divt)
+            / float(divt)
             * 0.5
             * (L_N_gridcell[c] + L_S_gridcell[c])
             / density_water
@@ -431,7 +431,7 @@ def change_units(
         Fa_N_down_swap[c] = (
             Fa_N_down_kgpmps_swap[c]
             * timestep
-            / np.float(divt)
+            / float(divt)
             * 0.5
             * (L_N_gridcell[c] + L_S_gridcell[c])
             / density_water
@@ -491,7 +491,7 @@ def get_stablefluxes(
             * stab
             * np.reshape(W_top[:-1, :, :], (np.size(W_top[:-1, :, :]))),
         ),
-        (np.int(count_time * np.float(divt)), len(latitude), len(longitude)),
+        (int(count_time * float(divt)), len(latitude), len(longitude)),
     )
     Fa_N_top_stable = np.reshape(
         np.minimum(
@@ -506,7 +506,7 @@ def get_stablefluxes(
             * stab
             * np.reshape(W_top[:-1, :, :], (np.size(W_top[:-1, :, :]))),
         ),
-        (np.int(count_time * np.float(divt)), len(latitude), len(longitude)),
+        (int(count_time * float(divt)), len(latitude), len(longitude)),
     )
     Fa_E_down_stable = np.reshape(
         np.minimum(
@@ -521,7 +521,7 @@ def get_stablefluxes(
             * stab
             * np.reshape(W_down[:-1, :, :], (np.size(W_down[:-1, :, :]))),
         ),
-        (np.int(count_time * np.float(divt)), len(latitude), len(longitude)),
+        (int(count_time * float(divt)), len(latitude), len(longitude)),
     )
     Fa_N_down_stable = np.reshape(
         np.minimum(
@@ -536,7 +536,7 @@ def get_stablefluxes(
             * stab
             * np.reshape(W_down[:-1, :, :], (np.size(W_down[:-1, :, :]))),
         ),
-        (np.int(count_time * np.float(divt)), len(latitude), len(longitude)),
+        (int(count_time * float(divt)), len(latitude), len(longitude)),
     )
 
     # get rid of the nan values
@@ -646,7 +646,7 @@ def getFa_Vert(
     residual_down = np.zeros(np.shape(P))  # residual factor [m3]
     residual_top = np.zeros(np.shape(P))  # residual factor [m3]
 
-    for t in range(np.int(count_time * divt)):
+    for t in range(int(count_time * divt)):
         # down: calculate with moisture fluxes:
         Sa_after_Fa_down[0, 1:-1, :] = (
             W_down[t, 1:-1, :]
@@ -718,7 +718,7 @@ def getFa_Vert(
                 stab * np.reshape(W_down[1:, :, :], (np.size(W_down[1:, :, :]))),
             ),
         ),
-        (np.int(count_time * np.float(divt)), len(latitude), len(longitude)),
+        (int(count_time * float(divt)), len(latitude), len(longitude)),
     )
 
     # redefine the vertical flux
