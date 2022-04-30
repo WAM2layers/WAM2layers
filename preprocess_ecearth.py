@@ -491,31 +491,18 @@ def getFa_Vert(
     # total moisture in the column
     W = W_top + W_down
 
-    def stagger_E(Fa_E):
+    def divergence_zonal(Fa_E):
         """Define the horizontal fluxes over the boundaries."""
+
+        # TODO: Is this correct? I think the eastern and western boundaries are
+        # mixed up. Also the inserted zeros might cause trouble
 
         # fluxes over the eastern boundary
         Fa_E_boundary = np.zeros_like(Fa_E)
         Fa_E_boundary[:, :, :-1] = 0.5 * (Fa_E[:, :, :-1] + Fa_E[:, :, 1:])
 
-        # find out where the positive and negative fluxes are
-        Fa_E_pos = np.where(Fa_E_boundary < 0, 0, 1)
-        Fa_E_neg = Fa_E_pos - 1
-
-        # separate directions west-east (all positive numbers)
-        Fa_E_WE = Fa_E_boundary * Fa_E_pos
-        Fa_E_EW = Fa_E_boundary * Fa_E_neg
-
-        # fluxes over the western boundary
-        Fa_W_WE = np.zeros_like(P)
-        Fa_W_WE[:, :, 1:] = Fa_E_WE[:, :, :-1]
-        Fa_W_WE[:, :, 0] = Fa_E_WE[:, :, -1]
-
-        Fa_W_EW = np.zeros_like(P)
-        Fa_W_EW[:, :, 1:] = Fa_E_EW[:, :, :-1]
-        Fa_W_EW[:, :, 0] = Fa_E_EW[:, :, -1]
-
-        return - Fa_E_WE + Fa_E_EW + Fa_W_WE - Fa_W_EW
+        Fa_W_boundary = np.roll(Fa_E_boundary, 1)
+        return Fa_W_boundary - Fa_E_boundary
 
     def stagger_N(Fa_N):
         """Define the horizontal fluxes over the boundaries."""
@@ -531,8 +518,8 @@ def getFa_Vert(
         Fa_S_NS[:, :-1, :] = Fa_N_NS[:, 1:, :]
         return - Fa_N_SN + Fa_N_NS + Fa_S_SN - Fa_S_NS
 
-    Fa_EW_top_total = stagger_E(Fa_E_top)
-    Fa_EW_down_total = stagger_E(Fa_E_down)
+    Fa_EW_top_total = divergence_zonal(Fa_E_top)
+    Fa_EW_down_total = divergence_zonal(Fa_E_down)
     Fa_SN_top_total = stagger_N(Fa_N_top)
     Fa_SN_down_total = stagger_N(Fa_N_down)
 
