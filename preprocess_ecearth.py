@@ -513,53 +513,33 @@ def getFa_Vert(
         Fa_S_boundary = np.roll(Fa_N_boundary, -1, axis=1)
         return Fa_S_boundary - Fa_N_boundary
 
-    Fa_EW_top_total = divergence_zonal(Fa_E_top)
-    Fa_EW_down_total = divergence_zonal(Fa_E_down)
-    Fa_SN_top_total = divergence_meridional(Fa_N_top)
-    Fa_SN_down_total = divergence_meridional(Fa_N_down)
+    zonal_divergence_top = divergence_zonal(Fa_E_top)
+    zonal_divergence_down = divergence_zonal(Fa_E_down)
+    meridional_divergence_top = divergence_meridional(Fa_N_top)
+    meridional_divergence_down = divergence_meridional(Fa_N_down)
 
     # check the water balance
-    Sa_after_Fa_down = np.zeros([1, len(latitude), len(longitude)])
-    Sa_after_Fa_top = np.zeros([1, len(latitude), len(longitude)])
-    Sa_after_all_down = np.zeros([1, len(latitude), len(longitude)])
-    Sa_after_all_top = np.zeros([1, len(latitude), len(longitude)])
     residual_down = np.zeros_like(P)  # residual factor [m3]
     residual_top = np.zeros_like(P)  # residual factor [m3]
 
     for t in range(int(count_time * divt)):
-        # down: calculate with moisture fluxes:
-        Sa_after_Fa_down[0, 1:-1, :] = (
+        tendency_down = (
             W_down[t, 1:-1, :]
-            + Fa_EW_down_total[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
-            + Fa_SN_down_total[t, 1:-1, :]
-        )
-
-        # top: calculate with moisture fluxes:
-        Sa_after_Fa_top[0, 1:-1, :] = (
-            W_top[t, 1:-1, :]
-            + Fa_EW_top_total[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
-            + Fa_SN_top_total[t, 1:-1, :]
-        )
-
-        # down: substract precipitation and add evaporation
-        Sa_after_all_down[0, 1:-1, :] = (
-            Sa_after_Fa_down[0, 1:-1, :]
+            + zonal_divergence_down[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
+            + meridional_divergence_down[t, 1:-1, :]
             - P[t, 1:-1, :] * (W_down[t, 1:-1, :] / W[t, 1:-1, :])
             + E[t, 1:-1, :]
         )
 
-        # top: substract precipitation
-        Sa_after_all_top[0, 1:-1, :] = Sa_after_Fa_top[0, 1:-1, :] - P[t, 1:-1, :] * (
-            W_top[t, 1:-1, :] / W[t, 1:-1, :]
+        tendency_top = (
+            W_top[t, 1:-1, :]
+            + zonal_divergence_top[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
+            + meridional_divergence_top[t, 1:-1, :]
+            - P[t, 1:-1, :] * (W_top[t, 1:-1, :] / W[t, 1:-1, :])
         )
 
-        # down: calculate the residual
-        residual_down[t, 1:-1, :] = (
-            W_down[t + 1, 1:-1, :] - Sa_after_all_down[0, 1:-1, :]
-        )
-
-        # top: calculate the residual
-        residual_top[t, 1:-1, :] = W_top[t + 1, 1:-1, :] - Sa_after_all_top[0, 1:-1, :]
+        residual_down[t, 1:-1, :] = W_down[t + 1, 1:-1, :] - tendency_down
+        residual_top[t, 1:-1, :] = W_top[t + 1, 1:-1, :] - tendency_top
 
     # compute the resulting vertical moisture flux
     Fa_Vert_raw = (
@@ -569,7 +549,9 @@ def getFa_Vert(
     # stabilize the outfluxes / influxes
     # during the reduced timestep the vertical flux can maximally empty/fill 1/x of the top or down storage
     stab = 1.0 / 4.0
-    Fa_Vert_stable = np.minimum(np.abs(Fa_Vert_raw), np.minimum(stab * W_top[1:, :, :], stab * W_down[1:, :, :]))
+    Fa_Vert_stable = np.minimum(
+        np.abs(Fa_Vert_raw), np.minimum(stab * W_top[1:, :, :], stab * W_down[1:, :, :])
+    )
 
     # redefine the vertical flux
     Fa_Vert = np.sign(Fa_Vert_raw) * Fa_Vert_stable
