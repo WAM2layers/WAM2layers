@@ -522,24 +522,23 @@ def getFa_Vert(
     residual_down = np.zeros_like(P)  # residual factor [m3]
     residual_top = np.zeros_like(P)  # residual factor [m3]
 
-    for t in range(int(count_time * divt)):
-        tendency_down = (
-            W_down[t, 1:-1, :]
-            + zonal_divergence_down[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
-            + meridional_divergence_down[t, 1:-1, :]
-            - P[t, 1:-1, :] * (W_down[t, 1:-1, :] / W[t, 1:-1, :])
-            + E[t, 1:-1, :]
-        )
+    tendency_down = (
+        W_down[:-1, 1:-1, :]
+        + zonal_divergence_down[:, 1:-1, :]  # TODO shouldn't this be [:, :, 1:-1]?
+        + meridional_divergence_down[:, 1:-1, :]
+        - P[:, 1:-1, :] * (W_down[:-1, 1:-1, :] / W[:-1, 1:-1, :])
+        + E[:, 1:-1, :]
+    )
 
-        tendency_top = (
-            W_top[t, 1:-1, :]
-            + zonal_divergence_top[t, 1:-1, :]  # TODO shouldn't this be [t, :, 1:-1]?
-            + meridional_divergence_top[t, 1:-1, :]
-            - P[t, 1:-1, :] * (W_top[t, 1:-1, :] / W[t, 1:-1, :])
-        )
+    tendency_top = (
+        W_top[:-1, 1:-1, :]
+        + zonal_divergence_top[:, 1:-1, :]  # TODO shouldn't this be [:, :, 1:-1]?
+        + meridional_divergence_top[:, 1:-1, :]
+        - P[:, 1:-1, :] * (W_top[:-1, 1:-1, :] / W[:-1, 1:-1, :])
+    )
 
-        residual_down[t, 1:-1, :] = W_down[t + 1, 1:-1, :] - tendency_down
-        residual_top[t, 1:-1, :] = W_top[t + 1, 1:-1, :] - tendency_top
+    residual_down[:, 1:-1, :] = W_down[1:, 1:-1, :] - tendency_down
+    residual_top[:, 1:-1, :] = W_top[1:, 1:-1, :] - tendency_top
 
     # compute the resulting vertical moisture flux
     Fa_Vert_raw = (
