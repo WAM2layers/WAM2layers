@@ -46,9 +46,9 @@ def get_input_data(variable, date):
         return days.isel(time=slice(0, 10))
 
 
-def get_output_path(year, month, a):
+def get_output_path(year, month, day, extension=".nc"):
     """Get data for output file."""
-    filename = f"{year}-{month:02d}-{a:02d}fluxes_storages.mat"
+    filename = f"{year}-{month:02d}-{day:02d}fluxes_storages{extension}"
     save_path = os.path.join(config["interdata_folder"], filename)
     return save_path
 
@@ -482,10 +482,6 @@ def getFa_Vert(
     P,
     W_top,
     W_down,
-    divt,
-    count_time,
-    latitude,
-    longitude,
 ):
 
     # total moisture in the column
@@ -494,8 +490,9 @@ def getFa_Vert(
     def divergence_zonal(Fa_E):
         """Define the horizontal fluxes over the boundaries."""
 
-        # TODO: Is this correct? I think the eastern and western boundaries are
-        # mixed up. Also the inserted zeros might cause trouble
+        # TODO: Is this correct? It looks like the eastern and western
+        # boundaries are mixed up. Also the inserted zeros might cause trouble.
+        # I think the implementation should be exactly like the meridional one.
         # I have verified that this code does exactly the same as the original.
 
         # fluxes over the eastern boundary
@@ -522,31 +519,32 @@ def getFa_Vert(
     residual_down = np.zeros_like(P)  # residual factor [m3]
     residual_top = np.zeros_like(P)  # residual factor [m3]
 
-    tendency_down = (
-        W_down[:-1, 1:-1, :]
-        + zonal_divergence_down[:, 1:-1, :]  # TODO shouldn't this be [:, :, 1:-1]?
+    tendency_down = (  # TODO why skip the N/S but not W/E edges?
+        +zonal_divergence_down[:, 1:-1, :]
         + meridional_divergence_down[:, 1:-1, :]
         - P[:, 1:-1, :] * (W_down[:-1, 1:-1, :] / W[:-1, 1:-1, :])
         + E[:, 1:-1, :]
     )
 
-    tendency_top = (
-        W_top[:-1, 1:-1, :]
-        + zonal_divergence_top[:, 1:-1, :]  # TODO shouldn't this be [:, :, 1:-1]?
+    tendency_top = (  # TODO why skip the N/S but not W/E edges?
+        +zonal_divergence_top[:, 1:-1, :]
         + meridional_divergence_top[:, 1:-1, :]
         - P[:, 1:-1, :] * (W_top[:-1, 1:-1, :] / W[:-1, 1:-1, :])
     )
 
-    residual_down[:, 1:-1, :] = W_down[1:, 1:-1, :] - tendency_down
-    residual_top[:, 1:-1, :] = W_top[1:, 1:-1, :] - tendency_top
+    residual_down[:, 1:-1, :] = (
+        W_down[1:, 1:-1, :] - W_down[:-1, 1:-1, :] - tendency_down
+    )
+    residual_top[:, 1:-1, :] = W_top[1:, 1:-1, :] - W_top[:-1, 1:-1, :] - tendency_top
 
-    # compute the resulting vertical moisture flux
+    # compute the resulting vertical moisture flux; the vertical velocity so
+    # that the new residual_down/W_down = residual_top/W_top (positive downward)
     Fa_Vert_raw = (
         W_down[1:, :, :] / W[1:, :, :] * (residual_down + residual_top) - residual_down
-    )  # the vertical velocity so that the new residual_down/W_down =  residual_top/W_top (positive downward)
+    )
 
-    # stabilize the outfluxes / influxes
-    # during the reduced timestep the vertical flux can maximally empty/fill 1/x of the top or down storage
+    # stabilize the outfluxes / influxes; during the reduced timestep the
+    # vertical flux can maximally empty/fill 1/x of the top or down storage
     stab = 1.0 / 4.0
     Fa_Vert_stable = np.minimum(
         np.abs(Fa_Vert_raw), np.minimum(stab * W_top[1:, :, :], stab * W_down[1:, :, :])
@@ -555,7 +553,7 @@ def getFa_Vert(
     # redefine the vertical flux
     Fa_Vert = np.sign(Fa_Vert_raw) * Fa_Vert_stable
 
-    return Fa_Vert_raw, Fa_Vert, residual_down, residual_top
+    return Fa_Vert
 
 
 # Runtime & Results
@@ -665,7 +663,7 @@ for date in datelist:
     print(f"Step 6b finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # determine the vertical moisture flux
-    Fa_Vert_raw, Fa_Vert, residual_down, residual_top = getFa_Vert(
+    Fa_Vert = getFa_Vert(
         Fa_E_top,
         Fa_E_down,
         Fa_N_top,
@@ -674,28 +672,23 @@ for date in datelist:
         P,
         W_top,
         W_down,
-        divt,
-        count_time,
-        latitude,
-        longitude,
     )
     print(f"Step 7 finished, elapsed time since start: {dt.datetime.now() - start}")
 
-    sio.savemat(
-        get_output_path(year, month, day),
-        {
-            "Fa_E_top": Fa_E_top,
-            "Fa_N_top": Fa_N_top,
-            "Fa_E_down": Fa_E_down,
-            "Fa_N_down": Fa_N_down,
-            "E": E,
-            "P": P,
-            "W_top": W_top,
-            "W_down": W_down,
-            "Fa_Vert": Fa_Vert,
-        },
-        do_compression=True,
-    )  # save as mat file
+    # Save preprocessed data
+    xr.Dataset(
+        {  # TODO: would be nice to add coordinates and units as well
+            "Fa_E_top": (["time", "lat", "lon"], Fa_E_top),
+            "Fa_N_top": (["time", "lat", "lon"], Fa_N_top),
+            "Fa_E_down": (["time", "lat", "lon"], Fa_E_down),
+            "Fa_N_down": (["time", "lat", "lon"], Fa_N_down),
+            "E": (["time", "lat", "lon"], E),
+            "P": (["time", "lat", "lon"], P),
+            "W_top": (["time2", "lat", "lon"], W_top),  # note different time
+            "W_down": (["time2", "lat", "lon"], W_down),  # note different time
+            "Fa_Vert": (["time", "lat", "lon"], Fa_Vert),
+        }
+    ).to_netcdf(get_output_path(year, month, day, extension=".nc"))
 
     end = dt.datetime.now()
     print(f"Runtime fluxes_and_storages for {day=}, {year=} is {end-start}")

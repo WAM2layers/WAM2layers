@@ -3,11 +3,13 @@ Compare some snapshots from preprocessing EC-Earth with
 the output of the original code.
 """
 
+import xarray as xr
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
 
 original_data = loadmat("../original_output_data/2002-01-01fluxes_storages.mat")
-new_data = loadmat("../output_data/2002-01-01fluxes_storages.mat")
+# new_data = loadmat("../output_data/2002-01-01fluxes_storages.mat")
+new_data = xr.open_dataset("../output_data/2002-01-01fluxes_storages.nc")
 
 t = 0
 for variable in [
