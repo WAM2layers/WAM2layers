@@ -13,7 +13,7 @@ import yaml
 from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
 
 # Read case configuration
-with open("cases/example.yaml") as f:
+with open("cases/era5.yaml") as f:
     config = yaml.safe_load(f)
 
 # Parse input from config file
