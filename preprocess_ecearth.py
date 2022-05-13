@@ -384,10 +384,10 @@ def getrefined_new(
 
 # Code
 def change_units(
-    Fa_E_top_1,
-    Fa_E_down_1,
-    Fa_N_top_1,
-    Fa_N_down_1,
+    Fa_E_top_kgpmps,
+    Fa_E_down_kgpmps,
+    Fa_N_top_kgpmps,
+    Fa_N_down_kgpmps,
     timestep,
     divt,
     L_EW_gridcell,
@@ -396,12 +396,6 @@ def change_units(
     L_S_gridcell,
     latitude,
 ):
-
-    # redefine according to units
-    Fa_E_top_kgpmps = Fa_E_top_1
-    Fa_E_down_kgpmps = Fa_E_down_1
-    Fa_N_top_kgpmps = Fa_N_top_1
-    Fa_N_down_kgpmps = Fa_N_down_1
 
     # convert to m3
     Fa_E_top_m3 = (
