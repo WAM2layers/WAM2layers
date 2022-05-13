@@ -1,5 +1,7 @@
 """Generic functions useful for preprocessing various input datasets."""
 
+import numpy as np
+
 
 # within this new definition of refined I do a linear interpolation over time of my fluxes
 def getrefined_new(

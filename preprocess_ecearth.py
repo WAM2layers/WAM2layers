@@ -4,7 +4,6 @@ import os
 
 import numpy as np
 import pandas as pd
-import scipy.io as sio
 import xarray as xr
 import yaml
 from scipy.interpolate import interp1d
@@ -27,6 +26,21 @@ lonnrs = np.arange(config["lonnrs"])
 datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
+
+# obtain the constants
+(
+    latitude,
+    longitude,
+    lsm,
+    g,
+    density_water,
+    timestep,
+    A_gridcell,
+    L_N_gridcell,
+    L_S_gridcell,
+    L_EW_gridcell,
+    gridcell,
+) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
 
 
 def _get_input_data(variable, date):
@@ -261,22 +275,6 @@ def getEP(latnrs, lonnrs, date, A_gridcell):
 
 # Runtime & Results
 start1 = dt.datetime.now()
-# obtain the constants
-(
-    latitude,
-    longitude,
-    lsm,
-    g,
-    density_water,
-    timestep,
-    A_gridcell,
-    L_N_gridcell,
-    L_S_gridcell,
-    L_EW_gridcell,
-    gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
-
-
 for date in datelist:
     start = dt.datetime.now()
 

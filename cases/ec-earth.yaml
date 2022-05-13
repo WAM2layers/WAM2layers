@@ -1,8 +1,8 @@
 # Data paths
-land_sea_mask: D:\ERA5\lsm_data_NH.nc
-region: C:\Users\bened003\OneDrive - Wageningen University & Research\scripts\WAM_pressure_ECEarth\mask_Miss_ECEarth.npy   # region to perform the tracking for
-input_folder: D:\ERA5\
-interdata_folder: C:\Users\bened003\OneDrive - Wageningen University & Research\escience\interdata\
+land_sea_mask: ../EC-Earth_sample_data/landseamask_ECearth_T799.nc
+region: ../EC-Earth_sample_data/mask_Miss_ECEarth.npy   # region to perform the tracking for
+input_folder: ../EC-Earth_sample_data
+interdata_folder: ../output_data
 name_of_run: ""
 
 # Time
@@ -15,8 +15,8 @@ count_time: 24  # number of indices to get data from (24 timesteps a day, 1-hour
 
 # Manage the extent of your dataset
 # Define the latitude and longitude cell numbers to consider and corresponding lakes that should be considered part of the land
-latnrs: 101 #np.arange(0, 267)  # minimal domain
-lonnrs: 201 #np.arange(0, 444)
+latnrs: 267
+lonnrs: 444
 
 isglobal: false  # true for global computations (i.e. Earth round), false for a local domain with boundaries
 
