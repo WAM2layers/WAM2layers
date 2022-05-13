@@ -1,37 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jun 21 12:38:45 2016
-
-@author: Ent00002
-"""
-
-"""
-Created on Mon Feb 18 15:30:43 2019
-
-@author: bened003
-"""
-
 import numpy as np
 from netCDF4 import Dataset
 
-
-def getconstants_pressure_ECEarth(
+def getconstants_pressure_ERA5(
     latnrs, lonnrs, invariant_data
 ):  # def getconstants in Python is the same as function in MATLAB.
 
     # load the latitude and longitude from the invariants file
-    latitude = Dataset(invariant_data, mode="r").variables["LAT"][444:711][
-        ::-1
-    ]  # [degrees north]
-    longitude = Dataset(invariant_data, mode="r").variables["XAS"][934:1378][
-        ::-1
-    ]  # [degrees east]
+    latitude = Dataset(invariant_data, mode="r").variables["latitude"][latnrs][:]  # [degrees north]
+    longitude = Dataset(invariant_data, mode="r").variables["longitude"][lonnrs][:]  # [degrees east]
 
     # Create land-sea-mask (in this model lakes are considered part of the land)
     lsm = np.squeeze(
-        Dataset(invariant_data, mode="r").variables["SST"][0, 444:711, 934:1378]
+        Dataset(invariant_data, mode="r").variables["lsm"][0, latnrs, lonnrs]
     )[
-        ::-1, ::-1
+        :,:
     ]  # 0 = sea, 1 = land
 
     # for n in range(len(lake_mask[:,0])): # 1 = sea, 0 = land
