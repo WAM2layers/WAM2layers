@@ -1,8 +1,8 @@
 # Data paths
-land_sea_mask: D:\ERA5\lsm_data_NH.nc
+land_sea_mask: ../ERA5/lsm_data_NH.nc
 region: C:\Users\bened003\OneDrive - Wageningen University & Research\scripts\WAM_pressure_ECEarth\mask_Miss_ECEarth.npy   # region to perform the tracking for
-input_folder: D:\ERA5\
-interdata_folder: C:\Users\bened003\OneDrive - Wageningen University & Research\escience\interdata\
+input_folder: ../ERA5
+interdata_folder: ../output_data
 name_of_run: ""
 
 # Time

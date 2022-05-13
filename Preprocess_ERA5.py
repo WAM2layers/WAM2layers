@@ -1,48 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 16 13:24:45 2016
-
-@author: Ent00002
-"""
-
-"""
-Created on Mon Feb 18 15:30:43 2019
-
-@author: bened003
-"""
-
-# This script is similar as the Fluxes_and_States_Masterscript from WAM-2layers from Ruud van der Ent, except that it threads atmospheric data at five pressure levels instead of model levels
-
-# Includes a spline vertical interpolation for data on pressure levels from the EC-Earth climate model (Hazeleger et al., 2010)
-# In this case the atmospheric data is provided on the following five pressure levels: 850 hPa, 700 hPa, 500 hPa, 300 hPa, 200 hPa
-# Includes a linear interpolation of the moisture fluxes over time (in def getrefined_new)
-# We have implemented a datelist function so the model can run for multiple years without having problems with leap years
-
-# My input data are monthly files with 3-hourly (surface variables) and 6-hourly data (atmospheric variables)
-
 import calendar
 import datetime as dt
+import glob
 import os
-import sys
-from datetime import timedelta
 from timeit import default_timer as timer
-
-import matplotlib.pyplot as plt
 
 # Import libraries
 import numpy as np
 import scipy.io as sio
+import xarray as xr
 import yaml
 
-# from getconstants_pressure_ECEarth_T159 import interp_along_axis
-from netCDF4 import Dataset
-from scipy import interpolate
-from scipy.interpolate import interp1d
-
-from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
+from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
 
 # Read case configuration
-with open("cases/example.yaml") as f:
+with open("cases/era5.yaml") as f:
     config = yaml.safe_load(f)
 
 # Parse input from config file
@@ -53,6 +24,7 @@ divt = config["divt"]
 count_time = config["count_time"]
 latnrs = np.arange(config["latnrs"])
 lonnrs = np.arange(config["lonnrs"])
+
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -82,19 +54,21 @@ else:  # leap
     )
 
 
-def get_input_data(variable, year, month):
-    """Get input data for variable."""
-    filename = f"{name_of_run}{variable}_{year}{month:02d}_NH.nc"
+def get_3d_data(variable, year, month):
+    filename = f"{variable}_ERA5_{year}_{month:02d}_*NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return Dataset(filepath, "r")
+    files = []
+    for file in glob.glob(filepath):
+        ds = xr.open_dataset(file, chunks='auto')
+        files.append(ds)
+
+    return xr.concat(files, dim="level").sortby("level")[variable]
 
 
-def get_input_data_next_month(variable, year, month):
-    """Get input data for next month(?)"""
-    if month == 12:
-        return get_input_data(variable, year + 1, 1)
-    else:
-        return get_input_data(variable, year, month + 1)
+def get_2d_data(variable, year, month):
+    filename = f"{variable}_ERA5_{year}_{month:02d}_NH.nc"
+    filepath = os.path.join(config["input_folder"], filename)
+    return xr.open_dataset(filepath, chunks='auto')
 
 
 def get_output_data(year, month, a):
@@ -104,393 +78,90 @@ def get_output_data(year, month, a):
     return save_path
 
 
-# Code (no need to look at this for running)
+def getWandFluxes(date, density_water, g, A_gridcell):
+    """Determine the fluxes and states."""
 
-# Determine the fluxes and states
-# In this defintion the vertical spline interpolation is performed to determine the moisture fluxes for the two layers at each grid cell
-def getWandFluxes(
-    latnrs,
-    lonnrs,
-    final_time,
-    a,
-    year,
-    month,
-    begin_time,
-    count_time,
-    density_water,
-    latitude,
-    longitude,
-    g,
-    A_gridcell,
-):
+    # Load data
+    u = get_3d_data("u", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    v = get_3d_data("v", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    q = get_3d_data("q", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    sp = get_2d_data("sp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    levels = q.level
 
-    if a != final_time:  # not the end of the year
-        # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
-        q = get_input_data("Q", year, month).variables["Q"][
-            begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
-        ]  # kg/kg
-        time = get_input_data("Q", year, month).variables["time"][
-            begin_time : (begin_time + count_time + 1)
-        ]
-        q_levels = get_input_data("Q", year, month).variables["lev"][:]
-        # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        q2m = get_input_data("Q2M", year, month).variables["Q2M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  # kg/kg #:267,134:578
-        time_q2m = get_input_data("Q2M", year, month).variables["time"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2
-        ]
+    # Calculate fluxes
+    uq = u * q
+    vq = v * q
 
-        # surface pressure is 3-hourly data (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        lnsp = get_input_data("LNSP", year, month).variables["LNSP"][
-            begin_time * 2 : (begin_time * 2 + count_time * 2 + 1) : 2,
-            0,
-            latnrs,
-            lonnrs,
-        ]  # [Pa] #:267,134:578
+    # Integrate fluxes over original ERA5 layers
+    midpoints = 0.5 * (levels.values[1:] + levels.values[:-1])
+    uq_midpoints = uq.interp(level=midpoints)
+    vq_midpoints = vq.interp(level=midpoints)
+    q_midpoints = q.interp(level=midpoints)
 
-        # read the u-wind data
-        u = get_input_data("U", year, month).variables["U"][
-            begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
-        ]  # m/s
-        u_levels = get_input_data("U", year, month).variables["lev"][:]
-        # wind at 10m, 3-hourly data
-        u10 = get_input_data("U10", year, month).variables["U10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  # m/s
-
-        # read the v-wind data
-        v = get_input_data("V", year, month).variables["V"][
-            begin_time : (begin_time + count_time + 1), :, latnrs, lonnrs
-        ]  # m/s
-        v_levels = get_input_data("V", year, month).variables["lev"][:]
-        # wind at 10m, 3-hourly data
-        v10 = get_input_data("V10", year, month).variables["V10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2 + 1) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  # m/s
-
-    else:  # end of the year/month
-        # specific humidity atmospheric data is 6-hourly (06.00,12.00,18.00, 00.00)
-        q_first = get_input_data("Q", year, month).variables["Q"][
-            begin_time : (begin_time + count_time), :, latnrs, lonnrs
-        ]
-        q = np.insert(
-            q_first,
-            [len(q_first[:, 0, 0, 0])],
-            (
-                get_input_data_next_month("Q", year, month).variables["Q"][
-                    0, :, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # kg/kg
-
-        # specific humidity surface data is 3-hourly (03.00,06.00,09.00,12.00,15.00,18.00,21.00,00.00)
-        q2m_first = get_input_data("Q2M", year, month).variables["Q2M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]  #:267,134:578
-        q2m = np.insert(
-            q2m_first,
-            [len(q2m_first[:, 0, 0])],
-            (
-                get_input_data_next_month("Q2M", year, month).variables["Q2M"][
-                    1, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # kg/kg #:267,134:578
-
-        # surface pressure 3-hourly data (00.00,03.00,06.00,09.00,12.00,15.00,18.00,21.00)
-        lnsp_first = get_input_data("LNSP", year, month).variables["LNSP"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            0,
-            latnrs,
-            lonnrs,
-        ]  # [Pa] #:267,134:578
-        lnsp = np.insert(
-            lnsp_first,
-            [len(lnsp_first[:, 0, 0])],
-            (
-                get_input_data_next_month("LNSP", year, month).variables["LNSP"][
-                    0, 0, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # [Pa] #:267,134:578
-
-        u_first = get_input_data("U", year, month).variables["U"][
-            begin_time : (begin_time + count_time), :, latnrs, lonnrs
-        ]
-        u = np.insert(
-            u_first,
-            [len(u_first[:, 0, 0, 0])],
-            (
-                get_input_data_next_month("U", year, month).variables["U"][
-                    0, :, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-        u10_first = get_input_data("U10", year, month).variables["U10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]
-        u10 = np.insert(
-            u10_first,
-            [len(u10_first[:, 0, 0])],
-            (
-                get_input_data_next_month("U10", year, month).variables["U10M"][
-                    1, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-        # read the v-wind data
-        v_first = get_input_data("V", year, month).variables["V"][
-            begin_time : (begin_time + count_time), :, latnrs, lonnrs
-        ]
-        v = np.insert(
-            v_first,
-            [len(v_first[:, 0, 0, 0])],
-            (
-                get_input_data_next_month("V", year, month).variables["V"][
-                    0, :, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-        v10_first = get_input_data("V10", year, month).variables["V10M"][
-            begin_time * 2 + 1 : (begin_time * 2 + count_time * 2) + 1 : 2,
-            latnrs,
-            lonnrs,
-        ]
-        v10 = np.insert(
-            u10_first,
-            [len(u10_first[:, 0, 0])],
-            (
-                get_input_data_next_month("V10", year, month).variables["V10M"][
-                    1, latnrs, lonnrs
-                ]
-            ),
-            axis=0,
-        )  # m/s
-
-    print("Data is loaded", dt.datetime.now().time())
-    time = [0, 1, 2, 3, 4]
-    intervals_regular = (
-        40  # from five pressure levels the vertical data is interpolated to 40 levels
-    )
-    sp = np.exp(
-        lnsp
-    )  # Pa # To convert logarithmic surface pressure to surface pressure
-    del lnsp
-    ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
-    P_boundary = 0.72878581 * sp + 7438.803223
-    dp = (sp - 20000.0) / (intervals_regular - 1)
-    time = q.shape[0]
-
-    p_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    p_maxmin[:, 1:-1, :, :] = (
-        sp[:, np.newaxis, :, :]
-        - dp[:, np.newaxis, :, :]
-        * np.arange(0, intervals_regular)[np.newaxis, :, np.newaxis, np.newaxis]
-    )
-
-    mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
-    mask[:, 0, :, :] = 1.0  # bottom value is always 1
-
-    p_maxmin[:, :-1, :, :] = (
-        mask[:, 1:, :, :] * p_maxmin[:, 1:, :, :]
-        + (1 - mask[:, 1:, :, :]) * p_maxmin[:, :-1, :, :]
-    )
-    p_maxmin[:, 1:, :, :] = np.where(
-        p_maxmin[:, :-1, :, :] == p_maxmin[:, 1:, :, :],
-        P_boundary[:, np.newaxis, :, :],
-        p_maxmin[:, 1:, :, :],
-    )
-
-    del (dp, mask)
-    print(
-        "after p_maxmin and now add surface and atmosphere together for u,q,v",
-        dt.datetime.now().time(),
-    )
-
-    levelist = np.squeeze(get_input_data("U", year, month).variables["lev"])  # Pa
-    p = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    p[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis]
-    p[:, 0, :, :] = sp
-
-    u_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    u_total[:, 1:-1, :, :] = u
-    u_total[:, 0, :, :] = u10
-    u_total[:, -1, :, :] = u[:, -1, :, :]
-
-    v_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    v_total[:, 1:-1, :, :] = v
-    v_total[:, 0, :, :] = v10
-    v_total[:, -1, :, :] = v[:, -1, :, :]
-
-    q_total = np.zeros((time, levelist.size + 2, len(latitude), len(longitude)))
-    q_total[:, 1:-1, :, :] = q
-    q_total[:, 0, :, :] = q2m
-
-    mask = np.ones(u_total.shape, dtype=np.bool)
-    mask[:, 1:-1, :, :] = levelist[np.newaxis, :, np.newaxis, np.newaxis] < (
-        sp[:, np.newaxis, :, :] - 1000.0
-    )  # Pa
-
-    u_masked = np.ma.masked_array(u_total, mask=~mask)
-    v_masked = np.ma.masked_array(v_total, mask=~mask)
-    q_masked = np.ma.masked_array(q_total, mask=~mask)
-    p_masked = np.ma.masked_array(p, mask=~mask)
-
-    del (u_total, v_total, q_total, p, u, v, q, u10, v10, q2m, sp)
-
-    print("before interpolation loop", dt.datetime.now().time())
-
-    uq_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    vq_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-    q_maxmin = np.zeros((time, intervals_regular + 2, len(latitude), len(longitude)))
-
-    for t in range(time):  # loop over timesteps
-        for i in range(len(latitude)):  # loop over latitude
-            for j in range(len(longitude)):  # loop over longitude
-                pp = p_masked[t, :, i, j]
-                uu = u_masked[t, :, i, j]
-                vv = v_masked[t, :, i, j]
-                qq = q_masked[t, :, i, j]
-
-                pp = pp[~pp.mask]
-                uu = uu[~uu.mask]
-                vv = vv[~vv.mask]
-                qq = qq[~qq.mask]
-
-                f_uq = interp1d(pp, uu * qq, "cubic")  # spline interpolation
-                uq_maxmin[t, :, i, j] = f_uq(
-                    p_maxmin[t, :, i, j]
-                )  # spline interpolation
-
-                f_vq = interp1d(pp, vv * qq, "cubic")  # spline interpolation
-                vq_maxmin[t, :, i, j] = f_vq(
-                    p_maxmin[t, :, i, j]
-                )  # spline interpolation
-
-                f_q = interp1d(pp, qq)  # linear interpolation
-                q_maxmin[t, :, i, j] = f_q(p_maxmin[t, :, i, j])  # linear interpolation
-
-    del (u_masked, v_masked, q_masked, p_masked, mask, f_uq, f_vq, f_q)
-    print("after interpolation loop", dt.datetime.now().time())
-
-    # pressure between full levels
-    P_between = np.maximum(
-        0, p_maxmin[:, :-1, :, :] - p_maxmin[:, 1:, :, :]
-    )  # the maximum statement is necessary to avoid negative humidity values
-    # Imme: in P_between you do not calculate the pressure between two levels but the pressure difference between two levels!!!
-    q_between = 0.5 * (q_maxmin[:, 1:, :, :] + q_maxmin[:, :-1, :, :])
-    uq_between = 0.5 * (uq_maxmin[:, 1:, :, :] + uq_maxmin[:, :-1, :, :])
-    vq_between = 0.5 * (vq_maxmin[:, 1:, :, :] + vq_maxmin[:, :-1, :, :])
+    p = levels.broadcast_like(u)  # hPa
+    dp_midpoints = p.diff(dim="level")
+    dp_midpoints["level"] = midpoints
 
     # eastward and northward fluxes
-    Fa_E_p = uq_between * P_between / g
-    Fa_N_p = vq_between * P_between / g
+    eastward_flux = uq_midpoints * dp_midpoints / g
+    northward_flux = vq_midpoints * dp_midpoints / g
 
-    # compute the column water vapor
-    cwv = (
-        q_between * P_between / g
-    )  # column water vapor = specific humidity * pressure levels length / g [kg/m2]
-    # make tcwv vector
-    tcwv = np.squeeze(
-        np.sum(cwv, 1)
-    )  # total column water vapor, cwv is summed over the vertical [kg/m2]
+    # compute the column water vapor = specific humidity * pressure levels length
+    cwv = q_midpoints * dp_midpoints / g
 
-    # use mask
-    mask = np.where(p_maxmin > P_boundary[:, np.newaxis, :, :], 1.0, 0.0)
+    # total column water vapor, cwv is summed over the vertical [kg/m2]
+    tcwv = cwv.sum(dim="level")
 
-    vapor_down = np.sum(mask[:, :-1, :, :] * q_between * P_between / g, axis=1)
-    vapor_top = np.sum((1 - mask[:, :-1, :, :]) * q_between * P_between / g, axis=1)
+    # apply mask so only level in upper or lower layer are masked, based on surface pressure and pressur on boundary
+    ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
+    P_boundary = 0.72878581 * sp + 7438.803223
+    lower_layer = (p.level < sp.sp / 100) & (p.level > P_boundary.sp / 100)
+    upper_layer = p.level < P_boundary.sp / 100
 
-    Fa_E_down = np.sum(mask[:, :-1, :, :] * Fa_E_p, axis=1)  # kg*m-1*s-1
-    Fa_N_down = np.sum(mask[:, :-1, :, :] * Fa_N_p, axis=1)  # kg*m-1*s-1
-    Fa_E_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_E_p, axis=1)  # kg*m-1*s-1
-    Fa_N_top = np.sum((1 - mask[:, :-1, :, :]) * Fa_N_p, axis=1)  # kg*m-1*s-1
+    # integrate the fluxes over the upper and lower layer based on the mask
+    eastward_flux_lower = eastward_flux.where(lower_layer).sum(dim="level")
+    northward_flux_lower = northward_flux.where(lower_layer).sum(dim="level")
 
-    vapor_total = vapor_top + vapor_down
+    eastward_flux_upper = eastward_flux.where(upper_layer).sum(dim="level")
+    northward_flux_upper = northward_flux.where(upper_layer).sum(dim="level")
 
-    # check whether the next calculation results in all zeros
-    test0 = tcwv - vapor_total
-    print(
-        (
-            "check calculation water vapor, this value should be zero: "
-            + str(np.sum(test0))
-        )
+    W_upper = cwv.where(upper_layer).sum(dim="level")
+    W_lower = cwv.where(lower_layer).sum(dim="level")
+
+    vapor_total = W_upper + W_lower
+
+    test0 = (tcwv - vapor_total).sum().values
+    print(f"Check calculation water vapor, this value should be zero: {test0}")
+
+    # convert units to water volumes m3
+    W_top = W_upper * A_gridcell / density_water  # m3
+    W_down = W_lower * A_gridcell / density_water  # m3
+
+    return (
+        # TODO: don't load everything in memory here
+        cwv.values,
+        W_top.values,
+        W_down.values,
+        eastward_flux_upper.values,
+        northward_flux_upper.values,
+        eastward_flux_lower.values,
+        northward_flux_lower.values,
     )
-
-    # put A_gridcell on a 3D grid
-    A_gridcell2D = np.tile(A_gridcell, [1, len(longitude)])
-    A_gridcell_1_2D = np.reshape(A_gridcell2D, [1, len(latitude), len(longitude)])
-    A_gridcell_plus3D = np.tile(A_gridcell_1_2D, [count_time + 1, 1, 1])
-
-    # water volumes
-    W_top = vapor_top * A_gridcell_plus3D / density_water  # m3
-    W_down = vapor_down * A_gridcell_plus3D / density_water  # m3
-
-    return cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down
 
 
 # Code
-
-
-def getEP(
-    latnrs, lonnrs, year, month, begin_time, count_time, latitude, longitude, A_gridcell
-):
-    # 3-hourly data so 8 steps per day
-
-    # (accumulated after the forecast at 00.00 and 12.00 by steps of 3 hours in time
-    evaporation = get_input_data("EVAP", year, month).variables["E"][
-        begin_time * 2 : (begin_time * 2 + count_time * 2), latnrs, lonnrs
-    ]  # m
-    precipitation = get_input_data("TP", year, month).variables["TP"][
-        begin_time * 2 : (begin_time * 2 + count_time * 2), latnrs, lonnrs
-    ]  # m
-
-    # delete and transfer negative values, change sign convention to all positive
-    precipitation = np.reshape(
-        np.maximum(
-            np.reshape(precipitation, (np.size(precipitation)))
-            + np.maximum(np.reshape(evaporation, (np.size(evaporation))), 0.0),
-            0.0,
-        ),
-        (np.int(count_time * 2), len(latitude), len(longitude)),
-    )
-    evaporation = np.reshape(
-        np.abs(np.minimum(np.reshape(evaporation, (np.size(evaporation))), 0.0)),
-        (np.int(count_time * 2), len(latitude), len(longitude)),
-    )
+def getEP(date, A_gridcell):
+    """Load precipitation and evaporation data with units of m3."""
+    evap = get_2d_data("e", date.year, date.month)
+    precip = get_2d_data("tp", date.year, date.month)
 
     # calculate volumes
-    A_gridcell2D = np.tile(A_gridcell, [1, len(longitude)])
-    A_gridcell_1_2D = np.reshape(A_gridcell2D, [1, len(latitude), len(longitude)])
-    A_gridcell_max3D = np.tile(A_gridcell_1_2D, [count_time * 2, 1, 1])
+    evap *= A_gridcell  # m3
+    precip *= A_gridcell  # m3
 
-    E = evaporation * A_gridcell_max3D
-    P = precipitation * A_gridcell_max3D
+    # TODO: don't load everything in memory here
+    return evap.values, precip.values
 
-    return E, P
-
-
-# Code
 
 # within this new definition of refined I do a linear interpolation over time of my fluxes
 def getrefined_new(
@@ -979,57 +650,22 @@ start1 = timer()
     L_S_gridcell,
     L_EW_gridcell,
     gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
+) = getconstants_pressure_ERA5(latnrs, lonnrs, config["land_sea_mask"])
 
-for date in datelist[:]:
-    start = timer()
-
-    a = date.day
-    yearnumber = date.year
-    monthnumber = date.month
-
-    begin_time = (
-        a - 1
-    ) * count_time  # because python starts counting at 0 (so the first timesteps start at 0)
-
-    if int(calendar.isleap(yearnumber)) == 0:  # no leap year
-        final_time = months_length_nonleap[monthnumber - 1]
-    else:  # leap
-        final_time = months_length_leap[monthnumber - 1]
-
-    print(date, yearnumber, monthnumber, a, begin_time, final_time)
-
+for date in datelist[:2]:
+    # start = timer()
     print(("0 = " + str(timer())))
     #    #1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
     cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
-        latnrs,
-        lonnrs,
-        final_time,
-        a,
-        yearnumber,
-        monthnumber,
-        begin_time,
-        count_time,
+        date,
         density_water,
-        latitude,
-        longitude,
         g,
         A_gridcell,
     )
     print(("1,2,3 = " + str(timer())))
 
     # 4 evaporation and precipitation
-    E, P = getEP(
-        latnrs,
-        lonnrs,
-        yearnumber,
-        monthnumber,
-        begin_time,
-        count_time,
-        latitude,
-        longitude,
-        A_gridcell,
-    )
+    E, P = getEP(date, A_gridcell)
     print(("4 = " + str(timer())))
 
     # put data on a smaller time step
