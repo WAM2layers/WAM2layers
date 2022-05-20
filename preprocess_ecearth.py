@@ -273,6 +273,30 @@ def getEP(latnrs, lonnrs, date, A_gridcell):
     return E.values, P.values
 
 
+# Code
+def change_units(
+    Fa_E_top,
+    Fa_E_down,
+    Fa_N_top,
+    Fa_N_down,
+    timestep,
+    divt,
+    L_EW_gridcell,
+    density_water,
+    L_N_gridcell,
+    L_S_gridcell,
+):
+    # convert to m3   [kg*m^-1 * s^-1 * s * m * kg^-1 * m^3] = [m3]
+    # convert to m3 [  * s    * m / kg/m3]
+    Fa_E_top *= (timestep / divt) * (L_EW_gridcell / density_water)
+    Fa_E_down *= (timestep / divt) * (L_EW_gridcell / density_water)
+
+    L_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
+    Fa_N_top *= (timestep / divt) * (L_gridcell[None, :, None] / density_water)
+    Fa_N_down *= (timestep / divt) * (L_gridcell[None, :, None] / density_water)
+
+    return Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down
+
 # Runtime & Results
 start1 = dt.datetime.now()
 for date in datelist:

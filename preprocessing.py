@@ -127,61 +127,6 @@ def getrefined_new(
     return Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down, E, P, W_top, W_down
 
 
-# Code
-def change_units(
-    Fa_E_top_kgpmps,
-    Fa_E_down_kgpmps,
-    Fa_N_top_kgpmps,
-    Fa_N_down_kgpmps,
-    timestep,
-    divt,
-    L_EW_gridcell,
-    density_water,
-    L_N_gridcell,
-    L_S_gridcell,
-    latitude,
-):
-
-    # convert to m3
-    Fa_E_top_m3 = (
-        Fa_E_top_kgpmps * timestep / float(divt) * L_EW_gridcell / density_water
-    )  # [kg*m^-1*s^-1*s*m*kg^-1*m^3]=[m3]
-    Fa_E_down_m3 = (
-        Fa_E_down_kgpmps * timestep / float(divt) * L_EW_gridcell / density_water
-    )  # [s*m*kg*m^-1*s^-1*kg^-1*m^3]=[m3]
-
-    Fa_N_top_swap = np.zeros(
-        (len(latitude), int(count_time * float(divt)), len(longitude))
-    )
-    Fa_N_down_swap = np.zeros(
-        (len(latitude), int(count_time * float(divt)), len(longitude))
-    )
-    Fa_N_top_kgpmps_swap = np.swapaxes(Fa_N_top_kgpmps, 0, 1)
-    Fa_N_down_kgpmps_swap = np.swapaxes(Fa_N_down_kgpmps, 0, 1)
-    for c in range(len(latitude)):
-        Fa_N_top_swap[c] = (
-            Fa_N_top_kgpmps_swap[c]
-            * timestep
-            / float(divt)
-            * 0.5
-            * (L_N_gridcell[c] + L_S_gridcell[c])
-            / density_water
-        )  # [s*m*kg*m^-1*s^-1*kg^-1*m^3]=[m3]
-        Fa_N_down_swap[c] = (
-            Fa_N_down_kgpmps_swap[c]
-            * timestep
-            / float(divt)
-            * 0.5
-            * (L_N_gridcell[c] + L_S_gridcell[c])
-            / density_water
-        )  # [s*m*kg*m^-1*s^-1*kg^-1*m^3]=[m3]
-
-    Fa_N_top_m3 = np.swapaxes(Fa_N_top_swap, 0, 1)
-    Fa_N_down_m3 = np.swapaxes(Fa_N_down_swap, 0, 1)
-
-    return Fa_E_top_m3, Fa_E_down_m3, Fa_N_top_m3, Fa_N_down_m3
-
-
 def get_stablefluxes(Fa_E, Fa_N, W):
     """Stabilize the outfluxes / influxes.
 
@@ -211,7 +156,31 @@ def get_stablefluxes(Fa_E, Fa_N, W):
     return Fa_E, Fa_N
 
 
-# Code
+def divergence_zonal(Fa_E):
+    """Define the horizontal fluxes over the boundaries."""
+
+    # TODO: Is this correct? It looks like the eastern and western
+    # boundaries are mixed up. Also the inserted zeros might cause trouble.
+    # I think the implementation should be exactly like the meridional one.
+    # I have verified that this code does exactly the same as the original.
+
+    # fluxes over the eastern boundary
+    Fa_E_boundary = np.zeros_like(Fa_E)
+    Fa_E_boundary[:, :, :-1] = 0.5 * (Fa_E[:, :, :-1] + Fa_E[:, :, 1:])
+
+    Fa_W_boundary = np.roll(Fa_E_boundary, 1)
+    return Fa_W_boundary - Fa_E_boundary
+
+
+def divergence_meridional(Fa_N):
+    """Define the horizontal fluxes over the boundaries."""
+    Fa_N_boundary = np.zeros_like(Fa_N)
+    Fa_N_boundary[:, 1:, :] = 0.5 * (Fa_N[:, :-1, :] + Fa_N[:, 1:, :])
+
+    Fa_S_boundary = np.roll(Fa_N_boundary, -1, axis=1)
+    return Fa_S_boundary - Fa_N_boundary
+
+
 def getFa_Vert(
     Fa_E_top,
     Fa_E_down,
@@ -225,29 +194,6 @@ def getFa_Vert(
 
     # total moisture in the column
     W = W_top + W_down
-
-    def divergence_zonal(Fa_E):
-        """Define the horizontal fluxes over the boundaries."""
-
-        # TODO: Is this correct? It looks like the eastern and western
-        # boundaries are mixed up. Also the inserted zeros might cause trouble.
-        # I think the implementation should be exactly like the meridional one.
-        # I have verified that this code does exactly the same as the original.
-
-        # fluxes over the eastern boundary
-        Fa_E_boundary = np.zeros_like(Fa_E)
-        Fa_E_boundary[:, :, :-1] = 0.5 * (Fa_E[:, :, :-1] + Fa_E[:, :, 1:])
-
-        Fa_W_boundary = np.roll(Fa_E_boundary, 1)
-        return Fa_W_boundary - Fa_E_boundary
-
-    def divergence_meridional(Fa_N):
-        """Define the horizontal fluxes over the boundaries."""
-        Fa_N_boundary = np.zeros_like(Fa_N)
-        Fa_N_boundary[:, 1:, :] = 0.5 * (Fa_N[:, :-1, :] + Fa_N[:, 1:, :])
-
-        Fa_S_boundary = np.roll(Fa_N_boundary, -1, axis=1)
-        return Fa_S_boundary - Fa_N_boundary
 
     zonal_divergence_top = divergence_zonal(Fa_E_top)
     zonal_divergence_down = divergence_zonal(Fa_E_down)
