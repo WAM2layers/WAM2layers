@@ -1,21 +1,17 @@
-import calendar
 import datetime as dt
 import glob
 import os
-from timeit import default_timer as timer
 
-# Import libraries
-import numpy as np
-import scipy.io as sio
+# import numpy as np
+import pandas as pd
 import xarray as xr
 import yaml
 
 from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
-
-from preprocessing import getrefined_new, get_stablefluxes, getFa_Vert
+from preprocessing import get_stablefluxes, getFa_Vert, getrefined_new
 
 # Read case configuration
-with open("cases/era5.yaml") as f:
+with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
 # Parse input from config file
@@ -24,9 +20,10 @@ input_folder = config["input_folder"]
 name_of_run = config["name_of_run"]
 divt = config["divt"]
 count_time = config["count_time"]
-latnrs = np.arange(config["latnrs"])
-lonnrs = np.arange(config["lonnrs"])
 
+datelist = pd.date_range(
+    start=config["start_date"], end=config["end_date"], freq="h", inclusive="left"
+)
 
 # to create datelist
 def get_times_daily(startdate, enddate):
@@ -38,135 +35,19 @@ def get_times_daily(startdate, enddate):
     return dateList
 
 
-months = np.arange(config["start_month"], config["end_month"])
-months_length_leap = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-months_length_nonleap = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(config["start_year"], config["end_year"])
-
-# create datelist
-if int(calendar.isleap(years[-1])) == 0:  # no leap year
-    datelist = get_times_daily(
-        dt.date(years[0], months[0], 1),
-        dt.date(years[-1], months[-1], months_length_nonleap[months[-1] - 1]),
-    )
-else:  # leap
-    datelist = get_times_daily(
-        dt.date(years[0], months[0], 1),
-        dt.date(years[-1], months[-1], months_length_leap[months[-1] - 1]),
-    )
-
-
-def get_3d_data(variable, year, month):
-    filename = f"{variable}_ERA5_{year}_{month:02d}_*NH.nc"
+def get_data(variable, year, month):
+    # filename = f"{variable}_ERA5_{year}_{month:02d}_NH.nc"
+    filename = f"FloodCase_{year}{month:02d}_{variable}.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    files = []
-    for file in glob.glob(filepath):
-        ds = xr.open_dataset(file, chunks='auto')
-        files.append(ds)
-
-    return xr.concat(files, dim="level").sortby("level")[variable]
+    print(f"Loading {variable}")
+    return xr.open_dataset(filepath)[variable]
 
 
-def get_2d_data(variable, year, month):
-    filename = f"{variable}_ERA5_{year}_{month:02d}_NH.nc"
-    filepath = os.path.join(config["input_folder"], filename)
-    return xr.open_dataset(filepath, chunks='auto')
-
-
-def get_output_data(year, month, a):
+def get_output_path(year, month, day, extension=".nc"):
     """Get data for output file."""
-    filename = f"{year}-{month:02d}-{a:02d}fluxes_storages.mat"
+    filename = f"{year}-{month:02d}-{day:02d}fluxes_storages{extension}"
     save_path = os.path.join(config["interdata_folder"], filename)
     return save_path
-
-
-def getWandFluxes(date, density_water, g, A_gridcell):
-    """Determine the fluxes and states."""
-
-    # Load data
-    u = get_3d_data("u", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    v = get_3d_data("v", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    q = get_3d_data("q", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    sp = get_2d_data("sp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    levels = q.level
-
-    # Calculate fluxes
-    uq = u * q
-    vq = v * q
-
-    # Integrate fluxes over original ERA5 layers
-    midpoints = 0.5 * (levels.values[1:] + levels.values[:-1])
-    uq_midpoints = uq.interp(level=midpoints)
-    vq_midpoints = vq.interp(level=midpoints)
-    q_midpoints = q.interp(level=midpoints)
-
-    p = levels.broadcast_like(u)  # hPa
-    dp_midpoints = p.diff(dim="level")
-    dp_midpoints["level"] = midpoints
-
-    # eastward and northward fluxes
-    eastward_flux = uq_midpoints * dp_midpoints / g
-    northward_flux = vq_midpoints * dp_midpoints / g
-
-    # compute the column water vapor = specific humidity * pressure levels length
-    cwv = q_midpoints * dp_midpoints / g
-
-    # total column water vapor, cwv is summed over the vertical [kg/m2]
-    tcwv = cwv.sum(dim="level")
-
-    # apply mask so only level in upper or lower layer are masked, based on surface pressure and pressur on boundary
-    ##Imme: location of boundary is hereby hard defined at model level 47 which corresponds with about
-    P_boundary = 0.72878581 * sp + 7438.803223
-    lower_layer = (p.level < sp.sp / 100) & (p.level > P_boundary.sp / 100)
-    upper_layer = p.level < P_boundary.sp / 100
-
-    # integrate the fluxes over the upper and lower layer based on the mask
-    eastward_flux_lower = eastward_flux.where(lower_layer).sum(dim="level")
-    northward_flux_lower = northward_flux.where(lower_layer).sum(dim="level")
-
-    eastward_flux_upper = eastward_flux.where(upper_layer).sum(dim="level")
-    northward_flux_upper = northward_flux.where(upper_layer).sum(dim="level")
-
-    W_upper = cwv.where(upper_layer).sum(dim="level")
-    W_lower = cwv.where(lower_layer).sum(dim="level")
-
-    vapor_total = W_upper + W_lower
-
-    test0 = (tcwv - vapor_total).sum().values
-    print(f"Check calculation water vapor, this value should be zero: {test0}")
-
-    # convert units to water volumes m3
-    W_top = W_upper * A_gridcell / density_water  # m3
-    W_down = W_lower * A_gridcell / density_water  # m3
-
-    return (
-        # TODO: don't load everything in memory here
-        cwv.values,
-        W_top.values,
-        W_down.values,
-        eastward_flux_upper.values,
-        northward_flux_upper.values,
-        eastward_flux_lower.values,
-        northward_flux_lower.values,
-    )
-
-
-# Code
-def getEP(date, A_gridcell):
-    """Load precipitation and evaporation data with units of m3."""
-    evap = get_2d_data("e", date.year, date.month)
-    precip = get_2d_data("tp", date.year, date.month)
-
-    # calculate volumes
-    evap *= A_gridcell  # m3
-    precip *= A_gridcell  # m3
-
-    # TODO: don't load everything in memory here
-    return evap.values, precip.values
-
-#%% Runtime & Results
-
-start1 = timer()
 
 # obtain the constants
 (
@@ -181,125 +62,112 @@ start1 = timer()
     L_S_gridcell,
     L_EW_gridcell,
     gridcell,
-) = getconstants_pressure_ERA5(latnrs, lonnrs, config["land_sea_mask"])
+) = getconstants_pressure_ERA5(config["land_sea_mask"])
 
-for date in datelist[:2]:
-    # start = timer()
-    print(("0 = " + str(timer())))
-    #    #1 integrate specific humidity to get the (total) column water (vapor) and calculate horizontal moisture fluxes
-    cwv, W_top, W_down, Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down = getWandFluxes(
-        date,
-        density_water,
-        g,
-        A_gridcell,
+for date in datelist:
+
+    # Load data
+    u = get_data("u", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    v = get_data("v", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    q = get_data("q", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    sp = get_data("sp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    evap = get_data("e", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    cp = get_data("cp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    lsp = get_data("lsp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    precip = cp + lsp
+
+    # Calculate volumes
+    evap *= A_gridcell  # m3
+    precip *= A_gridcell  # m3
+
+    # Create pressure array
+    levels = q.level
+    p = levels.broadcast_like(u)  # hPa
+
+    # Interpolate to new levels
+    edges = 0.5 * (levels.values[1:] + levels.values[:-1])
+    u = u.interp(level=edges)
+    v = v.interp(level=edges)
+    q = q.interp(level=edges)
+
+    # Calculate pressure jump
+    dp = p.diff(dim="level")
+    dp["level"] = edges
+
+    # Determine the fluxes and states
+    uq = u*q * dp / g  # eastward moisture flux
+    vq = v*q * dp / g  # northward moisture flux
+    cwv = q * dp / g * A_gridcell / density_water  # column water vapor (m3)
+
+    # Split in 2 layers
+    P_boundary = 0.72878581 * sp + 7438.803223
+    lower_layer = (dp.level < sp / 100) & (dp.level > P_boundary / 100)
+    upper_layer = dp.level < P_boundary / 100
+
+    # Integrate fluxes and state
+    uq_lower = uq.where(lower_layer).sum(dim="level")
+    vq_lower = vq.where(lower_layer).sum(dim="level")
+    w_lower = cwv.where(lower_layer).sum(dim="level")
+
+    uq_upper = uq.where(upper_layer).sum(dim="level")
+    vq_upper = vq.where(upper_layer).sum(dim="level")
+    w_upper = cwv.where(upper_layer).sum(dim="level")
+
+    print(
+        "Check calculation water vapor, this value should be zero:",
+        (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values
     )
-    print(("1,2,3 = " + str(timer())))
-
-    # 4 evaporation and precipitation
-    E, P = getEP(date, A_gridcell)
-    print(("4 = " + str(timer())))
-
-    # put data on a smaller time step
-    (
-        Fa_E_top_1,
-        Fa_N_top_1,
-        Fa_E_down_1,
-        Fa_N_down_1,
-        E,
-        P,
-        W_top,
-        W_down,
-    ) = getrefined_new(
-        Fa_E_top,
-        Fa_N_top,
-        Fa_E_down,
-        Fa_N_down,
-        W_top,
-        W_down,
-        E,
-        P,
-        divt,
-        count_time,
-        latitude,
-        longitude,
-    )
-    print(("5 = " + str(timer())))
 
     # change units to m3
-    Fa_E_top_m3, Fa_E_down_m3, Fa_N_top_m3, Fa_N_down_m3 = change_units(
-        Fa_E_top_1,
-        Fa_E_down_1,
-        Fa_N_top_1,
-        Fa_N_down_1,
-        timestep,
-        divt,
-        L_EW_gridcell,
-        density_water,
-        L_N_gridcell,
-        L_S_gridcell,
-        latitude,
-    )
-    print(("6a = " + str(timer())))
+    density_water = 1000  # [kg/m3]
+    L_mid_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
+    uq_upper *= (timestep / divt) * (L_EW_gridcell / density_water)
+    uq_lower *= (timestep / divt) * (L_EW_gridcell / density_water)
+    vq_upper *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
+    vq_lower *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
+
+    # Put data on a smaller time step
+    uq_upper = uq_upper.resample(time='15Min').interpolate("linear")
+    vq_upper = vq_upper.resample(time='15Min').interpolate("linear")
+    w_upper = w_upper.resample(time='15Min').interpolate("linear")
+
+    uq_lower = uq_lower.resample(time='15Min').interpolate("linear")
+    vq_lower = vq_lower.resample(time='15Min').interpolate("linear")
+    w_lower = w_lower.resample(time='15Min').interpolate("linear")
+
+    precip = precip.resample(time='15Min').bfill() / 4
+    evap = evap.resample(time='15Min').bfill() / 4
 
     # stabilize horizontal fluxes
-    Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down = get_stablefluxes(
-        Fa_E_top_m3,
-        Fa_E_down_m3,
-        Fa_N_top_m3,
-        Fa_N_down_m3,
-        timestep,
-        divt,
-        L_EW_gridcell,
-        density_water,
-        L_N_gridcell,
-        L_S_gridcell,
-        latitude,
-    )
-    print(("6b = " + str(timer())))
+    uq_upper, uq_upper = get_stablefluxes(uq_upper, vq_upper, w_upper)
+    uq_lower, uq_lower = get_stablefluxes(uq_lower, vq_lower, w_lower)
 
     # determine the vertical moisture flux
-    Fa_Vert_raw, Fa_Vert, residual_down, residual_top = getFa_Vert(
-        Fa_E_top,
-        Fa_E_down,
-        Fa_N_top,
-        Fa_N_down,
-        E,
-        P,
-        W_top,
-        W_down,
+    Fa_Vert_raw, Fa_Vert, residual_down, residual_upper = getFa_Vert(
+        uq_upper,
+        uq_upper,
+        vq_upper,
+        vq_lower,
+        evap,
+        precip,
+        w_upper,
+        w_lower,
         divt,
         count_time,
         latitude,
         longitude,
     )
-    print(("7 = " + str(timer())))
-
-    # np.savez_compressed(get_output_path(year, month, a), E=E, P=P, Fa_E_top=Fa_E_top, Fa_N_top= Fa_N_top, Fa_E_down=Fa_E_down, Fa_N_down=Fa_N_down, W_down=W_down, W_top=W_top, residual_top=residual_top, residual_down=residual_down, Fa_Vert=Fa_Vert) # save as .npy file
-    sio.savemat(
-        get_output_path(year, month, a),
-        {
-            "Fa_E_top": Fa_E_top,
-            "Fa_N_top": Fa_N_top,
-            "Fa_E_down": Fa_E_down,
-            "Fa_N_down": Fa_N_down,
-            "E": E,
-            "P": P,
-            "W_top": W_top,
-            "W_down": W_down,
-            "Fa_Vert": Fa_Vert,
-        },
-        do_compression=True,
-    )  # save as mat file
-
-    end = timer()
-    print(
-        "Runtime fluxes_and_storages for day "
-        + str(a)
-        + " in year "
-        + str(yearnumber)
-        + " is",
-        (end - start),
-        " seconds.",
-    )
-end1 = timer()
-print("The total runtime is", (end1 - start1), " seconds.")
+    # Save preprocessed data
+    xr.Dataset(
+        {  # TODO: would be nice to add coordinates and units as well
+            "uq_upper": (["time", "lat", "lon"], uq_upper),
+            "vq_upper": (["time", "lat", "lon"], vq_upper),
+            "uq_upper": (["time", "lat", "lon"], uq_upper),
+            "vq_lower": (["time", "lat", "lon"], vq_lower),
+            "E": (["time", "lat", "lon"], evap),
+            "P": (["time", "lat", "lon"], precip),
+            "w_upper": (["time2", "lat", "lon"], w_upper),  # note different time
+            "w_lower": (["time2", "lat", "lon"], w_lower),  # note different time
+            "Fa_Vert": (["time", "lat", "lon"], Fa_Vert),
+        }
+    ).to_netcdf(get_output_path(year, month, day, extension=".nc"))
