@@ -8,7 +8,6 @@ import xarray as xr
 import yaml
 from scipy.interpolate import interp1d
 
-from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
 from preprocessing import getrefined_new, get_stablefluxes, getFa_Vert
 
 # Read case configuration
@@ -27,20 +26,48 @@ datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
 
+######################
 # obtain the constants
-(
-    latitude,
-    longitude,
-    lsm,
-    g,
-    density_water,
-    timestep,
-    A_gridcell,
-    L_N_gridcell,
-    L_S_gridcell,
-    L_EW_gridcell,
-    gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
+from netCDF4 import Dataset
+invariant_data = config['land_sea_mask']
+# load the latitude and longitude from the invariants file
+latitude = Dataset(invariant_data, mode="r").variables["LAT"][444:711][
+    ::-1
+]  # [degrees north]
+longitude = Dataset(invariant_data, mode="r").variables["XAS"][934:1378][
+    ::-1
+]  # [degrees east]
+
+# Create land-sea-mask (in this model lakes are considered part of the land)
+lsm = np.squeeze(
+    Dataset(invariant_data, mode="r").variables["SST"][0, 444:711, 934:1378]
+)[::-1, ::-1]  # 0 = sea, 1 = land
+
+g = 9.80665  # [m/s2] from ERA-interim archive
+density_water = 1000  # [kg/m3]
+dg = 111089.56  # [m] length of 1 degree latitude
+timestep = (6 * 3600)  # [s] timestep in the ERA-interim archive (watch out! P & E have 3 hour timestep)
+Erad = 6.371e6  # [m] Earth radius
+
+# Semiconstants
+gridcell = np.abs(longitude[1] - longitude[0])  # [degrees] grid cell size
+
+# new area size calculation:
+lat_n_bound = np.minimum(90.0, latitude + 0.5 * gridcell)
+lat_s_bound = np.maximum(-90.0, latitude - 0.5 * gridcell)
+
+A_gridcell = np.zeros([len(latitude), 1])
+A_gridcell[:, 0] = ((np.pi / 180.0) * Erad ** 2 * abs(np.sin(lat_s_bound * np.pi / 180.0) - np.sin(lat_n_bound * np.pi / 180.0)) * gridcell)
+
+L_EW_gridcell = gridcell * dg  # [m] length eastern/western boundary of a cell
+L_N_gridcell = dg * gridcell * np.cos((latitude + gridcell / 2) * np.pi / 180)  # [m] length northern boundary of a cell
+L_S_gridcell = dg * gridcell * np.cos((latitude - gridcell / 2) * np.pi / 180)  # [m] length southern boundary of a cell
+L_mid_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
+
+# A_gridcell2 = L_EW_gridcell * L_mid_gridcell
+# breakpoint()
+
+######################
 
 
 def _get_input_data(variable, date):
@@ -273,30 +300,6 @@ def getEP(latnrs, lonnrs, date, A_gridcell):
     return E.values, P.values
 
 
-# Code
-def change_units(
-    Fa_E_top,
-    Fa_E_down,
-    Fa_N_top,
-    Fa_N_down,
-    timestep,
-    divt,
-    L_EW_gridcell,
-    density_water,
-    L_N_gridcell,
-    L_S_gridcell,
-):
-    # convert to m3   [kg*m^-1 * s^-1 * s * m * kg^-1 * m^3] = [m3]
-    # convert to m3 [  * s    * m / kg/m3]
-    Fa_E_top *= (timestep / divt) * (L_EW_gridcell / density_water)
-    Fa_E_down *= (timestep / divt) * (L_EW_gridcell / density_water)
-
-    L_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
-    Fa_N_top *= (timestep / divt) * (L_gridcell[None, :, None] / density_water)
-    Fa_N_down *= (timestep / divt) * (L_gridcell[None, :, None] / density_water)
-
-    return Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down
-
 # Runtime & Results
 start1 = dt.datetime.now()
 for date in datelist:
@@ -366,20 +369,11 @@ for date in datelist:
     )
     print(f"Step 5 finished, elapsed time since start: {dt.datetime.now() - start}")
 
-    # change units to m3
-    Fa_E_top_m3, Fa_E_down_m3, Fa_N_top_m3, Fa_N_down_m3 = change_units(
-        Fa_E_top_1,
-        Fa_E_down_1,
-        Fa_N_top_1,
-        Fa_N_down_1,
-        timestep,
-        divt,
-        L_EW_gridcell,
-        density_water,
-        L_N_gridcell,
-        L_S_gridcell,
-        latitude,
-    )
+    # convert to m3   [kg*m^-1 * s^-1 * s * m * kg^-1 * m^3] = [m3]
+    Fa_E_top *= (timestep / divt) * (L_EW_gridcell / density_water)
+    Fa_E_down *= (timestep / divt) * (L_EW_gridcell / density_water)
+    Fa_N_top *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
+    Fa_N_down *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
     print(f"Step 6a finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # stabilize horizontal fluxes
@@ -388,16 +382,7 @@ for date in datelist:
     print(f"Step 6b finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # determine the vertical moisture flux
-    Fa_Vert = getFa_Vert(
-        Fa_E_top,
-        Fa_E_down,
-        Fa_N_top,
-        Fa_N_down,
-        E,
-        P,
-        W_top,
-        W_down,
-    )
+    Fa_Vert = getFa_Vert(Fa_E_top, Fa_E_down, Fa_N_top, Fa_N_down, E, P, W_top, W_down)
     print(f"Step 7 finished, elapsed time since start: {dt.datetime.now() - start}")
 
     # Save preprocessed data
