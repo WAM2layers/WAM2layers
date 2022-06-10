@@ -24,13 +24,6 @@ def get_data(variable, year, month):
     return xr.open_dataset(filepath)[variable]
 
 
-def get_output_path(year, month, day, extension=".nc"):
-    """Get data for output file."""
-    filename = f"{year}-{month:02d}-{day:02d}fluxes_storages{extension}"
-    save_path = os.path.join(config["interdata_folder"], filename)
-    return save_path
-
-
 datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
@@ -141,6 +134,8 @@ for date in datelist:
     )
 
     # Save preprocessed data
+    filename = f"{year}-{month:02d}-{day:02d}fluxes_storages.nc"
+    output_path = os.path.join(config["interdata_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fa_e_upper": (["time", "lat", "lon"], fa_e_upper),
@@ -153,4 +148,4 @@ for date in datelist:
             "evap": (["time", "lat", "lon"], evap),
             "precip": (["time", "lat", "lon"], precip),
         }
-    ).to_netcdf(get_output_path(year, month, day, extension=".nc"))
+    ).to_netcdf(output_path)
