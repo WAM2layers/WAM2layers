@@ -1,5 +1,3 @@
-import datetime as dt
-import glob
 import os
 
 # import numpy as np
@@ -8,7 +6,7 @@ import xarray as xr
 import yaml
 
 from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
-from preprocessing import get_stablefluxes, getFa_Vert, getrefined_new
+from preprocessing import get_stablefluxes, getFa_Vert
 
 # Read case configuration
 with open("cases/era5_2013.yaml") as f:
@@ -22,24 +20,14 @@ divt = config["divt"]
 count_time = config["count_time"]
 
 datelist = pd.date_range(
-    start=config["start_date"], end=config["end_date"], freq="h", inclusive="left"
+    start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
-
-# to create datelist
-def get_times_daily(startdate, enddate):
-    """generate a dictionary with date/times"""
-    numdays = enddate - startdate
-    dateList = []
-    for x in range(0, numdays.days + 1):
-        dateList.append(startdate + dt.timedelta(days=x))
-    return dateList
 
 
 def get_data(variable, year, month):
     # filename = f"{variable}_ERA5_{year}_{month:02d}_NH.nc"
     filename = f"FloodCase_{year}{month:02d}_{variable}.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    print(f"Loading {variable}")
     return xr.open_dataset(filepath)[variable]
 
 
@@ -65,15 +53,20 @@ def get_output_path(year, month, day, extension=".nc"):
 ) = getconstants_pressure_ERA5(config["land_sea_mask"])
 
 for date in datelist:
+    print(date)
+
+    year = date.year
+    month = date.month
+    day = date.day
 
     # Load data
-    u = get_data("u", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    v = get_data("v", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    q = get_data("q", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    sp = get_data("sp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    evap = get_data("e", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    cp = get_data("cp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
-    lsp = get_data("lsp", date.year, date.month).sel(time=date.strftime('%Y%m%d'))
+    u = get_data("u", year, month).sel(time=date.strftime('%Y%m%d'))
+    v = get_data("v", year, month).sel(time=date.strftime('%Y%m%d'))
+    q = get_data("q", year, month).sel(time=date.strftime('%Y%m%d'))
+    sp = get_data("sp", year, month).sel(time=date.strftime('%Y%m%d'))
+    evap = get_data("e", year, month).sel(time=date.strftime('%Y%m%d'))
+    cp = get_data("cp", year, month).sel(time=date.strftime('%Y%m%d'))
+    lsp = get_data("lsp", year, month).sel(time=date.strftime('%Y%m%d'))
     precip = cp + lsp
 
     # Calculate volumes
@@ -118,7 +111,7 @@ for date in datelist:
         (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values
     )
 
-    # change units to m3
+    # Change units to m3
     density_water = 1000  # [kg/m3]
     L_mid_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
     uq_upper *= (timestep / divt) * (L_EW_gridcell / density_water)
@@ -127,47 +120,49 @@ for date in datelist:
     vq_lower *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
 
     # Put data on a smaller time step
-    uq_upper = uq_upper.resample(time='15Min').interpolate("linear")
-    vq_upper = vq_upper.resample(time='15Min').interpolate("linear")
-    w_upper = w_upper.resample(time='15Min').interpolate("linear")
+    time = w_upper.time.values
+    newtime = pd.date_range(time[0], time[-1], freq='15Min')
+    w_upper = w_upper.interp(time=newtime).values
+    w_lower = w_lower.interp(time=newtime).values
 
-    uq_lower = uq_lower.resample(time='15Min').interpolate("linear")
-    vq_lower = vq_lower.resample(time='15Min').interpolate("linear")
-    w_lower = w_lower.resample(time='15Min').interpolate("linear")
+    # Put fluxes on the edges instead of midpoints
+    newtime = newtime[:-1] + pd.Timedelta('15Min') / 2
+    uq_upper = uq_upper.interp(time=newtime).values
+    vq_upper = vq_upper.interp(time=newtime).values
 
-    precip = precip.resample(time='15Min').bfill() / 4
-    evap = evap.resample(time='15Min').bfill() / 4
+    uq_lower = uq_lower.interp(time=newtime).values
+    vq_lower = vq_lower.interp(time=newtime).values
 
-    # stabilize horizontal fluxes
+    precip = (precip.reindex(time=newtime, method='bfill') / 4).values
+    evap = (evap.reindex(time=newtime, method='bfill') / 4).values
+
+    # Stabilize horizontal fluxes
     uq_upper, uq_upper = get_stablefluxes(uq_upper, vq_upper, w_upper)
     uq_lower, uq_lower = get_stablefluxes(uq_lower, vq_lower, w_lower)
 
-    # determine the vertical moisture flux
-    Fa_Vert_raw, Fa_Vert, residual_down, residual_upper = getFa_Vert(
+    # Determine the vertical moisture flux
+    Fa_Vert = getFa_Vert(
         uq_upper,
-        uq_upper,
+        uq_lower,
         vq_upper,
         vq_lower,
         evap,
         precip,
         w_upper,
         w_lower,
-        divt,
-        count_time,
-        latitude,
-        longitude,
-    )
+        )
+
     # Save preprocessed data
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "uq_upper": (["time", "lat", "lon"], uq_upper),
             "vq_upper": (["time", "lat", "lon"], vq_upper),
-            "uq_upper": (["time", "lat", "lon"], uq_upper),
+            "uq_lower": (["time", "lat", "lon"], uq_lower),
             "vq_lower": (["time", "lat", "lon"], vq_lower),
-            "E": (["time", "lat", "lon"], evap),
-            "P": (["time", "lat", "lon"], precip),
             "w_upper": (["time2", "lat", "lon"], w_upper),  # note different time
             "w_lower": (["time2", "lat", "lon"], w_lower),  # note different time
             "Fa_Vert": (["time", "lat", "lon"], Fa_Vert),
+            "E": (["time", "lat", "lon"], evap),
+            "P": (["time", "lat", "lon"], precip),
         }
     ).to_netcdf(get_output_path(year, month, day, extension=".nc"))

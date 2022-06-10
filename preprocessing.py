@@ -157,25 +157,22 @@ def get_stablefluxes(Fa_E, Fa_N, W):
 
 
 def divergence_zonal(Fa_E):
-    """Define the horizontal fluxes over the boundaries."""
+    """Define the horizontal fluxes over the zonal boundaries."""
+    flux = np.asarray(Fa_E)
 
-    # TODO: Is this correct? It looks like the eastern and western
-    # boundaries are mixed up. Also the inserted zeros might cause trouble.
-    # I think the implementation should be exactly like the meridional one.
-    # I have verified that this code does exactly the same as the original.
-
-    # fluxes over the eastern boundary
-    Fa_E_boundary = np.zeros_like(Fa_E)
-    Fa_E_boundary[:, :, :-1] = 0.5 * (Fa_E[:, :, :-1] + Fa_E[:, :, 1:])
+    Fa_E_boundary = np.zeros_like(flux)
+    Fa_E_boundary[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
 
     Fa_W_boundary = np.roll(Fa_E_boundary, 1)
     return Fa_W_boundary - Fa_E_boundary
 
 
 def divergence_meridional(Fa_N):
-    """Define the horizontal fluxes over the boundaries."""
-    Fa_N_boundary = np.zeros_like(Fa_N)
-    Fa_N_boundary[:, 1:, :] = 0.5 * (Fa_N[:, :-1, :] + Fa_N[:, 1:, :])
+    """Define the horizontal fluxes over the meridional boundaries."""
+    flux = np.asarray(Fa_N)
+
+    Fa_N_boundary = np.zeros_like(flux)
+    Fa_N_boundary[:, 1:, :] = 0.5 * (flux[:, :-1, :] + flux[:, 1:, :])
 
     Fa_S_boundary = np.roll(Fa_N_boundary, -1, axis=1)
     return Fa_S_boundary - Fa_N_boundary
