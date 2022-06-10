@@ -19,10 +19,13 @@ with open("cases/era5_2013.yaml") as f:
 
 def load_data(variable, date):
     """Load data for given variable and date."""
-    filename = f"FloodCase_{date.year}{date.month:02d}_{variable}.nc"
+    filename = f"FloodCase_201305_{variable}.nc"
     filepath = os.path.join(config["input_folder"], filename)
     da = xr.open_dataset(filepath)[variable]
-    return da.sel(time=date.strftime("%Y%m%d"))
+
+    # Include midnight of the next day (if available)
+    extra = date + pd.Timedelta(days=1)
+    return da.sel(time=slice(date, extra))
 
 
 datelist = pd.date_range(
@@ -97,14 +100,14 @@ for date in datelist:
     fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
     fa_n_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
 
-    # Put data on a smaller time step
+    # Put data on a smaller time step...
     time = w_upper.time.values
-    newtime = pd.date_range(time[0], time[-1], freq="15Min")
+    newtime = pd.date_range(time[0], time[-1], freq="15Min")[:-1]
     w_upper = w_upper.interp(time=newtime).values
     w_lower = w_lower.interp(time=newtime).values
 
-    # Put fluxes on the edges instead of midpoints
-    newtime = newtime[:-1] + pd.Timedelta("15Min") / 2
+    # ... fluxes on the edges instead of midpoints
+    newtime = newtime[:-1] + pd.Timedelta("6Min") / 2
     fa_e_upper = fa_e_upper.interp(time=newtime).values
     fa_n_upper = fa_n_upper.interp(time=newtime).values
 
@@ -131,6 +134,9 @@ for date in datelist:
     )
 
     # Save preprocessed data
+    # Note: fluxes (dim: time) are at the edges of the timesteps,
+    # while states (dim: time2) are at the midpoints and include next midnight
+    # so the first state from day 2 will overlap with the last flux from day 1
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = os.path.join(config["interdata_folder"], filename)
     xr.Dataset(
@@ -139,8 +145,8 @@ for date in datelist:
             "fa_n_upper": (["time", "lat", "lon"], fa_n_upper),
             "fa_e_lower": (["time", "lat", "lon"], fa_e_lower),
             "fa_n_lower": (["time", "lat", "lon"], fa_n_lower),
-            "w_upper": (["time2", "lat", "lon"], w_upper),  # note different time
-            "w_lower": (["time2", "lat", "lon"], w_lower),  # note different time
+            "w_upper": (["time2", "lat", "lon"], w_upper),
+            "w_lower": (["time2", "lat", "lon"], w_lower),
             "fa_vert": (["time", "lat", "lon"], fa_vert),
             "evap": (["time", "lat", "lon"], evap),
             "precip": (["time", "lat", "lon"], precip),
