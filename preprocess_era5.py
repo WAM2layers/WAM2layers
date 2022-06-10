@@ -17,11 +17,12 @@ with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
 
-def get_data(variable, year, month):
-    # filename = f"{variable}_ERA5_{year}_{month:02d}_NH.nc"
-    filename = f"FloodCase_{year}{month:02d}_{variable}.nc"
+def load_data(variable, date):
+    """Load data for given variable and date."""
+    filename = f"FloodCase_{date.year}{date.month:02d}_{variable}.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return xr.open_dataset(filepath)[variable]
+    da = xr.open_dataset(filepath)[variable]
+    return da.sel(time=date.strftime("%Y%m%d"))
 
 
 datelist = pd.date_range(
@@ -31,18 +32,14 @@ datelist = pd.date_range(
 for date in datelist:
     print(date)
 
-    year = date.year
-    month = date.month
-    day = date.day
-
     # Load data
-    u = get_data("u", year, month).sel(time=date.strftime("%Y%m%d"))
-    v = get_data("v", year, month).sel(time=date.strftime("%Y%m%d"))
-    q = get_data("q", year, month).sel(time=date.strftime("%Y%m%d"))
-    sp = get_data("sp", year, month).sel(time=date.strftime("%Y%m%d"))
-    evap = get_data("e", year, month).sel(time=date.strftime("%Y%m%d"))
-    cp = get_data("cp", year, month).sel(time=date.strftime("%Y%m%d"))
-    lsp = get_data("lsp", year, month).sel(time=date.strftime("%Y%m%d"))
+    u = load_data("u", date)
+    v = load_data("v", date)
+    q = load_data("q", date)
+    sp = load_data("sp", date)
+    evap = load_data("e", date)
+    cp = load_data("cp", date)
+    lsp = load_data("lsp", date)
     precip = cp + lsp
 
     # Get grid info
@@ -134,7 +131,7 @@ for date in datelist:
     )
 
     # Save preprocessed data
-    filename = f"{year}-{month:02d}-{day:02d}fluxes_storages.nc"
+    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = os.path.join(config["interdata_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
