@@ -7,7 +7,7 @@ import xarray as xr
 import yaml
 
 from preprocessing import (
-    getrefined_new, get_stable_fluxes, get_vertical_transport, get_grid_info,
+    resample, get_stable_fluxes, get_vertical_transport, get_grid_info,
     join_levels, repeat_upper_level, get_new_target_levels, interpolate
 )
 
@@ -164,29 +164,14 @@ for date in datelist:
     precip = (precipitation * a_gridcell).values
 
     # put data on a smaller time step
-    (
-        fa_e_upper,
-        fa_n_upper,
-        fa_e_lower,
-        fa_n_lower,
-        evap,
-        precip,
-        w_upper,
-        w_lower,
-    ) = getrefined_new(
-        fa_e_upper,
-        fa_n_upper,
-        fa_e_lower,
-        fa_n_lower,
-        w_upper,
-        w_lower,
-        evap,
-        precip,
-        divt,
-        count_time,
-        lat,
-        lon,
-    )
+    evap = resample(evap, divt/2, count_time, method='bfill')[:-1]
+    precip = resample(precip, divt/2, count_time, method='bfill')[:-1]
+    w_upper = resample(w_upper, divt, count_time, method='interp')
+    w_lower = resample(w_lower, divt, count_time, method='interp')
+    fa_e_upper = resample(fa_e_upper, divt, count_time, method='interp')[:-1]
+    fa_e_lower = resample(fa_e_lower, divt, count_time, method='interp')[:-1]
+    fa_n_upper = resample(fa_n_upper, divt, count_time, method='interp')[:-1]
+    fa_n_lower = resample(fa_n_lower, divt, count_time, method='interp')[:-1]
 
     # convert to m3   [kg*m^-1 * s^-1 * s * m * kg^-1 * m^3] = [m3]
     total_seconds = config["timestep"] / config["divt"]
