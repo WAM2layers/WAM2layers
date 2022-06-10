@@ -10,8 +10,8 @@ start_date: '20130521'
 end_date: '20130604'
 
 # divt & count_time
+timestep: 3600  # s; ERA5 data comes at hourly time steps
 divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
-count_time: 24  # number of indices to get data from (24 timesteps a day, 1-hourly data from ERA5)
 
 # Backtracking options
 Kvf: 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)

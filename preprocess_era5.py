@@ -1,27 +1,18 @@
 import os
 
-# import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
 
-from getconstants_pressure_ERA5 import getconstants_pressure_ERA5
-from preprocessing import get_stablefluxes, getFa_Vert
+from preprocessing import get_stablefluxes, getFa_Vert, get_grid_info
+
+# Set constants
+g = 9.80665  # [m/s2]
+density_water = 1000  # [kg/m3]
 
 # Read case configuration
 with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
-
-# Parse input from config file
-# Reassignment not strictly needed but improves readability for often used vars
-input_folder = config["input_folder"]
-name_of_run = config["name_of_run"]
-divt = config["divt"]
-count_time = config["count_time"]
-
-datelist = pd.date_range(
-    start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
-)
 
 
 def get_data(variable, year, month):
@@ -37,20 +28,10 @@ def get_output_path(year, month, day, extension=".nc"):
     save_path = os.path.join(config["interdata_folder"], filename)
     return save_path
 
-# obtain the constants
-(
-    latitude,
-    longitude,
-    lsm,
-    g,
-    density_water,
-    timestep,
-    A_gridcell,
-    L_N_gridcell,
-    L_S_gridcell,
-    L_EW_gridcell,
-    gridcell,
-) = getconstants_pressure_ERA5(config["land_sea_mask"])
+
+datelist = pd.date_range(
+    start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
+)
 
 for date in datelist:
     print(date)
@@ -68,6 +49,11 @@ for date in datelist:
     cp = get_data("cp", year, month).sel(time=date.strftime('%Y%m%d'))
     lsp = get_data("lsp", year, month).sel(time=date.strftime('%Y%m%d'))
     precip = cp + lsp
+
+    # Get grid info
+    latitude = u.latitude.values
+    longitude = u.longitude.values
+    A_gridcell, L_EW_gridcell, L_N_gridcell, L_S_gridcell, L_mid_gridcell = get_grid_info(latitude, longitude)
 
     # Calculate volumes
     evap *= A_gridcell  # m3
@@ -112,12 +98,12 @@ for date in datelist:
     )
 
     # Change units to m3
-    density_water = 1000  # [kg/m3]
-    L_mid_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
-    uq_upper *= (timestep / divt) * (L_EW_gridcell / density_water)
-    uq_lower *= (timestep / divt) * (L_EW_gridcell / density_water)
-    vq_upper *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
-    vq_lower *= (timestep / divt) * (L_mid_gridcell[None, :, None] / density_water)
+    # TODO: Check this! Change units before interp is tricky, if not wrong
+    total_seconds = config["timestep"] / config["divt"]
+    uq_upper *= total_seconds * (L_EW_gridcell / density_water)
+    uq_lower *= total_seconds * (L_EW_gridcell / density_water)
+    vq_upper *= total_seconds * (L_mid_gridcell[None, :, None] / density_water)
+    vq_lower *= total_seconds * (L_mid_gridcell[None, :, None] / density_water)
 
     # Put data on a smaller time step
     time = w_upper.time.values
