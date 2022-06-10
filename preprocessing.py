@@ -3,22 +3,22 @@
 import numpy as np
 
 
-# within this new definition of refined I do a linear interpolation over time of my fluxes
 def getrefined_new(
-    Fa_E_top,
-    Fa_N_top,
-    Fa_E_down,
-    Fa_N_down,
-    W_top,
-    W_down,
-    E,
-    P,
+    fa_e_top,
+    fa_n_top,
+    fa_e_down,
+    fa_n_down,
+    w_top,
+    w_down,
+    e,
+    p,
     divt,
     count_time,
     latitude,
     longitude,
 ):
-    # This definition refines the timestep of the data
+    """This definition refines the timestep of the data."""
+    # within this new definition of refined i do a linear interpolation over time of my fluxes
     # Imme: change the timesteps from 6-hourly and 3-hourly to 96 timesteps a day
 
     # for 3 hourly information
@@ -32,19 +32,19 @@ def getrefined_new(
             oddvector2[0, o + i] = (divt2 - da[i]) / divt2
             partvector2[0, o + i + 1] = da[i] / divt2
 
-    E_small = np.nan * np.zeros(
+    e_small = np.nan * np.zeros(
         (int(count_time * 2 * divt2), len(latitude), len(longitude))
     )
     for t in range(1, int(count_time * 2 * divt2) + 1):
-        E_small[t - 1] = (1.0 / divt2) * E[int(t / divt2 + oddvector2[0, t - 1] - 1)]
-    E = E_small
+        e_small[t - 1] = (1.0 / divt2) * e[int(t / divt2 + oddvector2[0, t - 1] - 1)]
+    e = e_small
 
-    P_small = np.nan * np.zeros(
+    p_small = np.nan * np.zeros(
         (int(count_time * 2 * divt2), len(latitude), len(longitude))
     )
     for t in range(1, int(count_time * 2 * divt2) + 1):
-        P_small[t - 1] = (1.0 / divt2) * P[int(t / divt2 + oddvector2[0, t - 1] - 1)]
-    P = P_small
+        p_small[t - 1] = (1.0 / divt2) * p[int(t / divt2 + oddvector2[0, t - 1] - 1)]
+    p = p_small
 
     # for 6 hourly info
     oddvector = np.zeros((1, int(count_time * divt)))
@@ -56,191 +56,192 @@ def getrefined_new(
             oddvector[0, o + i] = (divt - da[i]) / divt
             partvector[0, o + i + 1] = da[i] / divt
 
-    W_top_small = np.nan * np.zeros(
+    w_top_small = np.nan * np.zeros(
         (int(count_time * divt + 1), len(latitude), len(longitude))
     )
-    W_down_small = np.nan * np.zeros(
+    w_down_small = np.nan * np.zeros(
         (int(count_time * divt + 1), len(latitude), len(longitude))
     )
 
-    Fa_E_down_small = np.nan * np.zeros(
+    fa_e_down_small = np.nan * np.zeros(
         (int(count_time * divt), len(latitude), len(longitude))
     )
-    Fa_N_down_small = np.nan * np.zeros(
+    fa_n_down_small = np.nan * np.zeros(
         (int(count_time * divt), len(latitude), len(longitude))
     )
-    Fa_E_top_small = np.nan * np.zeros(
+    fa_e_top_small = np.nan * np.zeros(
         (int(count_time * divt), len(latitude), len(longitude))
     )
-    Fa_N_top_small = np.nan * np.zeros(
+    fa_n_top_small = np.nan * np.zeros(
         (int(count_time * divt), len(latitude), len(longitude))
     )
 
     for t in range(1, int(count_time * divt) + 1):
-        W_top_small[t - 1] = W_top[
+        w_top_small[t - 1] = w_top[
             int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            W_top[int(t / divt + oddvector[0, t - 1])]
-            - W_top[int(t / divt + oddvector[0, t - 1] - 1)]
+            w_top[int(t / divt + oddvector[0, t - 1])]
+            - w_top[int(t / divt + oddvector[0, t - 1] - 1)]
         )
-        W_top_small[-1] = W_top[-1]
-        W_down_small[t - 1] = W_down[
+        w_top_small[-1] = w_top[-1]
+        w_down_small[t - 1] = w_down[
             int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            W_down[int(t / divt + oddvector[0, t - 1])]
-            - W_down[int(t / divt + oddvector[0, t - 1] - 1)]
+            w_down[int(t / divt + oddvector[0, t - 1])]
+            - w_down[int(t / divt + oddvector[0, t - 1] - 1)]
         )
-        W_down_small[-1] = W_down[-1]
+        w_down_small[-1] = w_down[-1]
 
-        Fa_E_down_small[t - 1] = Fa_E_down[
+        fa_e_down_small[t - 1] = fa_e_down[
             int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_E_down[int(t / divt + oddvector[0, t - 1])]
-            - Fa_E_down[int(t / divt + oddvector[0, t - 1] - 1)]
+            fa_e_down[int(t / divt + oddvector[0, t - 1])]
+            - fa_e_down[int(t / divt + oddvector[0, t - 1] - 1)]
         )
-        Fa_N_down_small[t - 1] = Fa_N_down[
+        fa_n_down_small[t - 1] = fa_n_down[
             int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_N_down[int(t / divt + oddvector[0, t - 1])]
-            - Fa_N_down[int(t / divt + oddvector[0, t - 1] - 1)]
+            fa_n_down[int(t / divt + oddvector[0, t - 1])]
+            - fa_n_down[int(t / divt + oddvector[0, t - 1] - 1)]
         )
-        Fa_E_top_small[t - 1] = Fa_E_top[
+        fa_e_top_small[t - 1] = fa_e_top[
             int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_E_top[int(t / divt + oddvector[0, t - 1])]
-            - Fa_E_top[int(t / divt + oddvector[0, t - 1] - 1)]
+            fa_e_top[int(t / divt + oddvector[0, t - 1])]
+            - fa_e_top[int(t / divt + oddvector[0, t - 1] - 1)]
         )
-        Fa_N_top_small[t - 1] = Fa_N_top[
+        fa_n_top_small[t - 1] = fa_n_top[
             int(t / divt + oddvector[0, t - 1] - 1)
         ] + partvector[0, t - 1] * (
-            Fa_N_top[int(t / divt + oddvector[0, t - 1])]
-            - Fa_N_top[int(t / divt + oddvector[0, t - 1] - 1)]
+            fa_n_top[int(t / divt + oddvector[0, t - 1])]
+            - fa_n_top[int(t / divt + oddvector[0, t - 1] - 1)]
         )
 
-    W_top = W_top_small
-    W_down = W_down_small
-    Fa_E_down = Fa_E_down_small
-    Fa_N_down = Fa_N_down_small
-    Fa_E_top = Fa_E_top_small
-    Fa_N_top = Fa_N_top_small
+    w_top = w_top_small
+    w_down = w_down_small
+    fa_e_down = fa_e_down_small
+    fa_n_down = fa_n_down_small
+    fa_e_top = fa_e_top_small
+    fa_n_top = fa_n_top_small
 
-    return Fa_E_top, Fa_N_top, Fa_E_down, Fa_N_down, E, P, W_top, W_down
+    return fa_e_top, fa_n_top, fa_e_down, fa_n_down, e, p, w_top, w_down
 
 
-def get_stablefluxes(Fa_E, Fa_N, W):
+def get_stable_fluxes(fa_e, fa_n, w):
     """Stabilize the outfluxes / influxes.
 
     During the reduced timestep the water cannot move further than 1/x * the
     gridcell, In other words at least x * the reduced timestep is needed to
     cross a gridcell.
     """
-    Fa_E_abs = np.abs(Fa_E)
-    Fa_N_abs = np.abs(Fa_N)
+    fa_e_abs = np.abs(fa_e)
+    fa_n_abs = np.abs(fa_n)
 
     stab = 1.0 / 2.0
 
-    Fa_E_corrected = (Fa_E_abs / (Fa_E_abs + Fa_N_abs)) * stab * W[:-1, :, :]
-    Fa_E_stable = np.minimum(Fa_E_abs, Fa_E_corrected)
+    fa_e_corrected = (fa_e_abs / (fa_e_abs + fa_n_abs)) * stab * w[:-1, :, :]
+    fa_e_stable = np.minimum(fa_e_abs, fa_e_corrected)
 
-    Fa_N_corrected = (Fa_N_abs / (Fa_E_abs + Fa_N_abs)) * stab * W[:-1, :, :]
-    Fa_N_stable = np.minimum(Fa_N_abs, Fa_N_corrected)
+    fa_n_corrected = (fa_n_abs / (fa_e_abs + fa_n_abs)) * stab * w[:-1, :, :]
+    fa_n_stable = np.minimum(fa_n_abs, fa_n_corrected)
 
     # get rid of the nan values
-    Fa_E_stable[np.isnan(Fa_E_stable)] = 0
-    Fa_N_stable[np.isnan(Fa_N_stable)] = 0
+    fa_e_stable[np.isnan(fa_e_stable)] = 0
+    fa_n_stable[np.isnan(fa_n_stable)] = 0
 
     # redefine
-    Fa_E = np.sign(Fa_E) * Fa_E_stable
-    Fa_N = np.sign(Fa_N) * Fa_N_stable
+    fa_e = np.sign(fa_e) * fa_e_stable
+    fa_n = np.sign(fa_n) * fa_n_stable
 
-    return Fa_E, Fa_N
+    return fa_e, fa_n
 
 
-def divergence_zonal(Fa_E):
+def divergence_zonal(fa_e):
     """Define the horizontal fluxes over the zonal boundaries."""
-    flux = np.asarray(Fa_E)
+    flux = np.asarray(fa_e)
 
-    Fa_E_boundary = np.zeros_like(flux)
-    Fa_E_boundary[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
+    fa_e_boundary = np.zeros_like(flux)
+    fa_e_boundary[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
 
-    Fa_W_boundary = np.roll(Fa_E_boundary, 1)
-    return Fa_W_boundary - Fa_E_boundary
+    fa_w_boundary = np.roll(fa_e_boundary, 1)
+    return fa_w_boundary - fa_e_boundary
 
 
-def divergence_meridional(Fa_N):
+def divergence_meridional(fa_n):
     """Define the horizontal fluxes over the meridional boundaries."""
-    flux = np.asarray(Fa_N)
+    flux = np.asarray(fa_n)
 
-    Fa_N_boundary = np.zeros_like(flux)
-    Fa_N_boundary[:, 1:, :] = 0.5 * (flux[:, :-1, :] + flux[:, 1:, :])
+    fa_n_boundary = np.zeros_like(flux)
+    fa_n_boundary[:, 1:, :] = 0.5 * (flux[:, :-1, :] + flux[:, 1:, :])
 
-    Fa_S_boundary = np.roll(Fa_N_boundary, -1, axis=1)
-    return Fa_S_boundary - Fa_N_boundary
+    fa_s_boundary = np.roll(fa_n_boundary, -1, axis=1)
+    return fa_s_boundary - fa_n_boundary
 
 
-def getFa_Vert(
-    Fa_E_top,
-    Fa_E_down,
-    Fa_N_top,
-    Fa_N_down,
-    E,
-    P,
-    W_top,
-    W_down,
+def get_vertical_transport(
+    fa_e_top,
+    fa_e_down,
+    fa_n_top,
+    fa_n_down,
+    e,
+    p,
+    w_top,
+    w_down,
 ):
 
     # total moisture in the column
-    W = W_top + W_down
+    w = w_top + w_down
 
-    zonal_divergence_top = divergence_zonal(Fa_E_top)
-    zonal_divergence_down = divergence_zonal(Fa_E_down)
-    meridional_divergence_top = divergence_meridional(Fa_N_top)
-    meridional_divergence_down = divergence_meridional(Fa_N_down)
+    zonal_divergence_top = divergence_zonal(fa_e_top)
+    zonal_divergence_down = divergence_zonal(fa_e_down)
+    meridional_divergence_top = divergence_meridional(fa_n_top)
+    meridional_divergence_down = divergence_meridional(fa_n_down)
 
     # check the water balance
-    residual_down = np.zeros_like(P)  # residual factor [m3]
-    residual_top = np.zeros_like(P)  # residual factor [m3]
+    residual_down = np.zeros_like(p)  # residual factor [m3]
+    residual_top = np.zeros_like(p)  # residual factor [m3]
 
-    tendency_down = (  # TODO why skip the N/S but not W/E edges?
+    tendency_down = (  # todo why skip the n/s but not w/e edges?
         +zonal_divergence_down[:, 1:-1, :]
         + meridional_divergence_down[:, 1:-1, :]
-        - P[:, 1:-1, :] * (W_down[:-1, 1:-1, :] / W[:-1, 1:-1, :])
-        + E[:, 1:-1, :]
+        - p[:, 1:-1, :] * (w_down[:-1, 1:-1, :] / w[:-1, 1:-1, :])
+        + e[:, 1:-1, :]
     )
 
-    tendency_top = (  # TODO why skip the N/S but not W/E edges?
+    tendency_top = (  # todo why skip the n/s but not w/e edges?
         +zonal_divergence_top[:, 1:-1, :]
         + meridional_divergence_top[:, 1:-1, :]
-        - P[:, 1:-1, :] * (W_top[:-1, 1:-1, :] / W[:-1, 1:-1, :])
+        - p[:, 1:-1, :] * (w_top[:-1, 1:-1, :] / w[:-1, 1:-1, :])
     )
 
     residual_down[:, 1:-1, :] = (
-        W_down[1:, 1:-1, :] - W_down[:-1, 1:-1, :] - tendency_down
+        w_down[1:, 1:-1, :] - w_down[:-1, 1:-1, :] - tendency_down
     )
-    residual_top[:, 1:-1, :] = W_top[1:, 1:-1, :] - W_top[:-1, 1:-1, :] - tendency_top
+    residual_top[:, 1:-1, :] = w_top[1:, 1:-1, :] - w_top[:-1, 1:-1, :] - tendency_top
 
     # compute the resulting vertical moisture flux; the vertical velocity so
-    # that the new residual_down/W_down = residual_top/W_top (positive downward)
-    Fa_Vert_raw = (
-        W_down[1:, :, :] / W[1:, :, :] * (residual_down + residual_top) - residual_down
+    # that the new residual_down/w_down = residual_top/w_top (positive downward)
+    fa_vert_raw = (
+        w_down[1:, :, :] / w[1:, :, :] * (residual_down + residual_top) - residual_down
     )
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
     stab = 1.0 / 4.0
-    Fa_Vert_stable = np.minimum(
-        np.abs(Fa_Vert_raw), np.minimum(stab * W_top[1:, :, :], stab * W_down[1:, :, :])
+    fa_vert_stable = np.minimum(
+        np.abs(fa_vert_raw), np.minimum(stab * w_top[1:, :, :], stab * w_down[1:, :, :])
     )
 
     # redefine the vertical flux
-    Fa_Vert = np.sign(Fa_Vert_raw) * Fa_Vert_stable
+    fa_vert = np.sign(fa_vert_raw) * fa_vert_stable
 
-    return Fa_Vert
+    return fa_vert
 
-# Get grid information
+
 def get_grid_info(latitude, longitude):
+    """Return grid cell area and lenght sides."""
     dg = 111089.56  # [m] length of 1 degree latitude
-    Erad = 6.371e6  # [m] Earth radius
+    erad = 6.371e6  # [m] Earth radius
 
     gridcell = np.abs(longitude[1] - longitude[0])  # [degrees] grid cell size
 
@@ -249,11 +250,20 @@ def get_grid_info(latitude, longitude):
     lat_s_bound = np.maximum(-90.0, latitude - 0.5 * gridcell)
 
     # TODO check this calculation!
-    A_gridcell = np.zeros([len(latitude), 1])
-    A_gridcell[:, 0] = ((np.pi / 180.0) * Erad ** 2 * abs(np.sin(lat_s_bound * np.pi / 180.0) - np.sin(lat_n_bound * np.pi / 180.0)) * gridcell)
+    a_gridcell = np.zeros([len(latitude), 1])
+    a_gridcell[:, 0] = (
+        (np.pi / 180.0)
+        * erad ** 2
+        * abs(np.sin(lat_s_bound * np.pi / 180.0) - np.sin(lat_n_bound * np.pi / 180.0))
+        * gridcell
+    )
 
-    L_EW_gridcell = gridcell * dg  # [m] length eastern/western boundary of a cell
-    L_N_gridcell = dg * gridcell * np.cos((latitude + gridcell / 2) * np.pi / 180)  # [m] length northern boundary of a cell
-    L_S_gridcell = dg * gridcell * np.cos((latitude - gridcell / 2) * np.pi / 180)  # [m] length southern boundary of a cell
-    L_mid_gridcell = 0.5 * (L_N_gridcell + L_S_gridcell)
-    return A_gridcell,L_EW_gridcell,L_N_gridcell,L_S_gridcell, L_mid_gridcell
+    l_ew_gridcell = gridcell * dg  # [m] length eastern/western boundary of a cell
+    l_n_gridcell = (
+        dg * gridcell * np.cos((latitude + gridcell / 2) * np.pi / 180)
+    )  # [m] length northern boundary of a cell
+    l_s_gridcell = (
+        dg * gridcell * np.cos((latitude - gridcell / 2) * np.pi / 180)
+    )  # [m] length southern boundary of a cell
+    l_mid_gridcell = 0.5 * (l_n_gridcell + l_s_gridcell)
+    return a_gridcell, l_ew_gridcell, l_mid_gridcell

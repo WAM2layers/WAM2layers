@@ -4,7 +4,9 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from preprocessing import get_stablefluxes, getFa_Vert, get_grid_info
+from preprocessing import (get_grid_info, get_stable_fluxes,
+                           get_vertical_transport)
+
 
 # Set constants
 g = 9.80665  # [m/s2]
@@ -41,23 +43,23 @@ for date in datelist:
     day = date.day
 
     # Load data
-    u = get_data("u", year, month).sel(time=date.strftime('%Y%m%d'))
-    v = get_data("v", year, month).sel(time=date.strftime('%Y%m%d'))
-    q = get_data("q", year, month).sel(time=date.strftime('%Y%m%d'))
-    sp = get_data("sp", year, month).sel(time=date.strftime('%Y%m%d'))
-    evap = get_data("e", year, month).sel(time=date.strftime('%Y%m%d'))
-    cp = get_data("cp", year, month).sel(time=date.strftime('%Y%m%d'))
-    lsp = get_data("lsp", year, month).sel(time=date.strftime('%Y%m%d'))
+    u = get_data("u", year, month).sel(time=date.strftime("%Y%m%d"))
+    v = get_data("v", year, month).sel(time=date.strftime("%Y%m%d"))
+    q = get_data("q", year, month).sel(time=date.strftime("%Y%m%d"))
+    sp = get_data("sp", year, month).sel(time=date.strftime("%Y%m%d"))
+    evap = get_data("e", year, month).sel(time=date.strftime("%Y%m%d"))
+    cp = get_data("cp", year, month).sel(time=date.strftime("%Y%m%d"))
+    lsp = get_data("lsp", year, month).sel(time=date.strftime("%Y%m%d"))
     precip = cp + lsp
 
     # Get grid info
-    latitude = u.latitude.values
-    longitude = u.longitude.values
-    A_gridcell, L_EW_gridcell, L_N_gridcell, L_S_gridcell, L_mid_gridcell = get_grid_info(latitude, longitude)
+    lat = u.latitude.values
+    lon = u.longitude.values
+    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
 
     # Calculate volumes
-    evap *= A_gridcell  # m3
-    precip *= A_gridcell  # m3
+    evap *= a_gridcell  # m3
+    precip *= a_gridcell  # m3
 
     # Create pressure array
     levels = q.level
@@ -74,9 +76,9 @@ for date in datelist:
     dp["level"] = edges
 
     # Determine the fluxes and states
-    uq = u*q * dp / g  # eastward moisture flux
-    vq = v*q * dp / g  # northward moisture flux
-    cwv = q * dp / g * A_gridcell / density_water  # column water vapor (m3)
+    fa_e = u * q * dp / g  # eastward atmospheric moisture flux
+    fa_n = v * q * dp / g  # northward atmospheric moisture flux
+    cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
 
     # Split in 2 layers
     P_boundary = 0.72878581 * sp + 7438.803223
@@ -84,71 +86,71 @@ for date in datelist:
     upper_layer = dp.level < P_boundary / 100
 
     # Integrate fluxes and state
-    uq_lower = uq.where(lower_layer).sum(dim="level")
-    vq_lower = vq.where(lower_layer).sum(dim="level")
+    fa_e_lower = fa_e.where(lower_layer).sum(dim="level")
+    fa_n_lower = fa_n.where(lower_layer).sum(dim="level")
     w_lower = cwv.where(lower_layer).sum(dim="level")
 
-    uq_upper = uq.where(upper_layer).sum(dim="level")
-    vq_upper = vq.where(upper_layer).sum(dim="level")
+    fa_e_upper = fa_e.where(upper_layer).sum(dim="level")
+    fa_n_upper = fa_n.where(upper_layer).sum(dim="level")
     w_upper = cwv.where(upper_layer).sum(dim="level")
 
     print(
         "Check calculation water vapor, this value should be zero:",
-        (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values
+        (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values,
     )
 
     # Change units to m3
     # TODO: Check this! Change units before interp is tricky, if not wrong
     total_seconds = config["timestep"] / config["divt"]
-    uq_upper *= total_seconds * (L_EW_gridcell / density_water)
-    uq_lower *= total_seconds * (L_EW_gridcell / density_water)
-    vq_upper *= total_seconds * (L_mid_gridcell[None, :, None] / density_water)
-    vq_lower *= total_seconds * (L_mid_gridcell[None, :, None] / density_water)
+    fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
+    fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
+    fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
+    fa_n_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
 
     # Put data on a smaller time step
     time = w_upper.time.values
-    newtime = pd.date_range(time[0], time[-1], freq='15Min')
+    newtime = pd.date_range(time[0], time[-1], freq="15Min")
     w_upper = w_upper.interp(time=newtime).values
     w_lower = w_lower.interp(time=newtime).values
 
     # Put fluxes on the edges instead of midpoints
-    newtime = newtime[:-1] + pd.Timedelta('15Min') / 2
-    uq_upper = uq_upper.interp(time=newtime).values
-    vq_upper = vq_upper.interp(time=newtime).values
+    newtime = newtime[:-1] + pd.Timedelta("15Min") / 2
+    fa_e_upper = fa_e_upper.interp(time=newtime).values
+    fa_n_upper = fa_n_upper.interp(time=newtime).values
 
-    uq_lower = uq_lower.interp(time=newtime).values
-    vq_lower = vq_lower.interp(time=newtime).values
+    fa_e_lower = fa_e_lower.interp(time=newtime).values
+    fa_n_lower = fa_n_lower.interp(time=newtime).values
 
-    precip = (precip.reindex(time=newtime, method='bfill') / 4).values
-    evap = (evap.reindex(time=newtime, method='bfill') / 4).values
+    precip = (precip.reindex(time=newtime, method="bfill") / 4).values
+    evap = (evap.reindex(time=newtime, method="bfill") / 4).values
 
     # Stabilize horizontal fluxes
-    uq_upper, uq_upper = get_stablefluxes(uq_upper, vq_upper, w_upper)
-    uq_lower, uq_lower = get_stablefluxes(uq_lower, vq_lower, w_lower)
+    fa_e_upper, fa_e_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
+    fa_e_lower, fa_e_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
 
     # Determine the vertical moisture flux
-    Fa_Vert = getFa_Vert(
-        uq_upper,
-        uq_lower,
-        vq_upper,
-        vq_lower,
+    fa_vert = get_vertical_transport(
+        fa_e_upper,
+        fa_e_lower,
+        fa_n_upper,
+        fa_n_lower,
         evap,
         precip,
         w_upper,
         w_lower,
-        )
+    )
 
     # Save preprocessed data
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "uq_upper": (["time", "lat", "lon"], uq_upper),
-            "vq_upper": (["time", "lat", "lon"], vq_upper),
-            "uq_lower": (["time", "lat", "lon"], uq_lower),
-            "vq_lower": (["time", "lat", "lon"], vq_lower),
+            "fa_e_upper": (["time", "lat", "lon"], fa_e_upper),
+            "fa_n_upper": (["time", "lat", "lon"], fa_n_upper),
+            "fa_e_lower": (["time", "lat", "lon"], fa_e_lower),
+            "fa_n_lower": (["time", "lat", "lon"], fa_n_lower),
             "w_upper": (["time2", "lat", "lon"], w_upper),  # note different time
             "w_lower": (["time2", "lat", "lon"], w_lower),  # note different time
-            "Fa_Vert": (["time", "lat", "lon"], Fa_Vert),
-            "E": (["time", "lat", "lon"], evap),
-            "P": (["time", "lat", "lon"], precip),
+            "fa_vert": (["time", "lat", "lon"], fa_vert),
+            "evap": (["time", "lat", "lon"], evap),
+            "precip": (["time", "lat", "lon"], precip),
         }
     ).to_netcdf(get_output_path(year, month, day, extension=".nc"))
