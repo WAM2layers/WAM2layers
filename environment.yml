@@ -8,4 +8,5 @@ dependencies:
   - netcdf4
   - matplotlib
   - pyyaml
-prefix: /home/peter/miniconda3/envs/wam2layers
+  - xarray
+  - ipython
