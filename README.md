@@ -7,42 +7,67 @@ eventually ends up (forward tracking).
 
 ## How to use
 
-The current version of the code is tailored to EC-Earth climate model output.
-It assumes an input directory with the following files:
+The model workflow consists of three steps:
 
-- EVAP_200201_NH.nc (evaporation at the surface)
-- LNSP_200201_NH.nc (logarithm of surface pressure)
-- Q_200201_NH.nc (specific humidity at pressure levels)
-- Q2M_200201_NH.nc (specific humidity at the surface 2m)
-- TP_200201_NH.nc (total precipitation (convective + large-scale) at the surface)
-- U_200201_NH.nc (eastward wind field at pressure levels)
-- U10_200201_NH.nc (eastward wind at the surface 10m)
-- V_200201_NH.nc (northward wind field at pressure levels)
-- V10_200201_NH.nc (northward wind at the surface 10m)
-- landseamask_ECearth_T799.nc (land-sea mask)
-- mask_Miss_ECEarth.npy (mask to designate area of interest to perform the tracking for)
-
-The workflow is as follows:
-
-1. Preprocess the input data. The script `Fluxes_and_States_mat.py` converts the
-   data to 2 layers and calculates the moisture fluxes between these layers and
-   between all grid cells. It also does time interpolation to make sure the CFL
-   criterion is not violated during the model run. Output is stored in
-   intermediate (matlab) files.
-2. Run the tracking code. The script `Backtrack_savedaily_mat.py` performs
-   backtracking from a selected region. Forward tracking is currently missing from this codebase, and is available in the original code by Ruud van der Ent.
-3. Postprocess the output data.
+1. Preprocess the input data. This step converts raw input data to a format that
+   is understood by WAM-2layers (described in detail below). Preprocessing
+   scripts are readily available for several commonly used datasets. See
+   `preprocess_era5.py` as an example. Some useful utility functions are
+   available in the file `preprocessing.py`.
+2. Run the tracking code. The script `backtrack.py` performs backtracking for a
+   selected region. Forward tracking is currently missing from this codebase,
+   but we are planning to reinstate it soon(ish).
+3. Optionally postprocess the output data. Some legacy code is available here:
    - `Con_E_Recyc_Output_monthly_mat.py`: aggregate daily data as monthly means
      and store in convenient format.
    - `Hor_Fluxes_Output_mat.py`: convert intermediate output (moisture fluxes over the grid cells) from step 1
      preprocessing to monthly data.
-     
-Note: Data paths are hardcoded into the scripts mentioned above. You'll have
-to update them manually before running each script.
+
+## Input data format
+The backtracking code makes several assumptions about the incoming data. We use
+the term pre-processing for anything that's done to convert raw input data to
+the format that is supported by WAM-2layers, i.e.
+
+- Data should be stored in netcdf files, one file per day.
+- The file should contain the following variables:
+   - fa_e_upper: eastward moisture transport in the upper layer
+   - fa_n_upper: northward moisture transport in the upper layer
+   - fa_e_lower: eastward moisture transport in the lower layer
+   - fa_n_lower: northward moisture transport in the lower layer
+   - w_upper: total water in the upper layer
+   - w_lower: total water in the lower layer
+   - fa_vert: vertical transport of water between the layers
+   - evap: evaporation from the surface
+   - precip: precipiation
+- All variables should be in units of m3
+- Flux variables are in between the state variables, e.g. for hourly data the
+  state variables (w_upper and w_lower) come at 00, 01, ... 00, and the fluxes
+  come at 00:30, 01:30, .. 23:30. For the state variables, the midnight edges
+  for one day and the next are included in both files, so there is some
+  duplication there.
+-
+
+Here is an example of a preprocessed netCDF file. Note that the latitude,
+longitude, and time may vary for your data.
+
+```
+Dimensions:     (time: 95, lat: 121, lon: 321, time2: 96)
+Dimensions without coordinates: time, lat, lon, time2
+Data variables:
+    fa_e_upper  (time, lat, lon) float64 ...
+    fa_n_upper  (time, lat, lon) float64 ...
+    fa_e_lower  (time, lat, lon) float64 ...
+    fa_n_lower  (time, lat, lon) float64 ...
+    w_upper     (time2, lat, lon) float64 ...
+    w_lower     (time2, lat, lon) float64 ...
+    fa_vert     (time, lat, lon) float64 ...
+    evap        (time, lat, lon) float32 ...
+    precip      (time, lat, lon) float32 ...
+```
 
 ## Other versions
 
-This is the official codebase for the WAM2Layers moisture tracking model as of
+This is the official codebase for the WAM-2layers moisture tracking model as of
 18/03/2022, but there are still several other versions around:
 
 - [Original Python code by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython)
