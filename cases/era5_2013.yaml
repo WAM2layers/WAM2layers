@@ -1,19 +1,26 @@
 # Data paths
-land_sea_mask: ../era5_2013/FloodCase_201305_lsm.nc
-region:
-input_folder: ../era5_2013
+# Tracking region mask (same domain as data), by default land-sea mask is used
+# Values should be between 0 and 1
+land_sea_mask: ../era5_2013/FloodCase_201305_lsm.nc # TODO: tracking_region_mask:  ../era5_2013/FloodCase_201305_lsm.nc 
+region: #TODO: Delete region 
+input_folder: /data/volume_2/era5_2013
 interdata_folder: ../output_data
 name_of_run: ""
 
-# Time
+# Time (format YYYYMMDD)
 start_date: '20130521'
 end_date: '20130604'
 
 # divt & count_time
+# TODO: timestep can be removed
 timestep: 3600  # s; ERA5 data comes at hourly time steps
-divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
+# TODO: Remove divt, should be changed to calculation time step used in tracking
+# Consult readme for guidance on time step configuration
+divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes) --> Do the current chosen values of 3600 and 60 mean a division in a 60 seconds (1 minute) time step? 
 
-# Backtracking options
+# Tracking options
 Kvf: 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
 timetracking: false  # false for not tracking time and true for tracking time
 veryfirstrun: true  # true if no run has been done before from which can be continued, otherwise false
+
+#TODO: Add start tracking time and end tracking time?

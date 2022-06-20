@@ -4,22 +4,22 @@ import pandas as pd
 import xarray as xr
 import yaml
 
+# Load WAM2layers preprocessing functions
 from preprocessing import (get_grid_info, get_stable_fluxes,
                            get_vertical_transport)
 
-
-# Set constants
+# Constants used for unit conversion (TODO: maybe move to function)
 g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
-# Read case configuration
+# Read case configuration (change settings in this file)
 with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
 
 def load_data(variable, date):
     """Load data for given variable and date."""
-    filename = f"FloodCase_201305_{variable}.nc"
+    filename = f"FloodCase_201305_{variable}.nc" # Question/To Do: Should the filename template in the function call?
     filepath = os.path.join(config["input_folder"], filename)
     da = xr.open_dataset(filepath)[variable]
 
@@ -39,7 +39,7 @@ for date in datelist:
     u = load_data("u", date)
     v = load_data("v", date)
     q = load_data("q", date)
-    sp = load_data("sp", date)
+    sp = load_data("sp", date) #--> Should the units be in Pa or hPa? 
     evap = load_data("e", date)
     cp = load_data("cp", date)
     lsp = load_data("lsp", date)
@@ -50,7 +50,7 @@ for date in datelist:
     lon = u.longitude.values
     a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
 
-    # Calculate volumes
+    # Calculate volumes --> Assumption is that precipitation/evaporation is in integrated (m/h) units? 
     evap *= a_gridcell  # m3
     precip *= a_gridcell  # m3
 
@@ -58,7 +58,7 @@ for date in datelist:
     levels = q.level
     p = levels.broadcast_like(u)  # hPa
 
-    # Interpolate to new levels
+    # Interpolate to new levels --> "Interpolate to layer interface/edge"?
     edges = 0.5 * (levels.values[1:] + levels.values[:-1])
     u = u.interp(level=edges)
     v = v.interp(level=edges)
@@ -68,24 +68,24 @@ for date in datelist:
     dp = p.diff(dim="level")
     dp["level"] = edges
 
-    # Determine the fluxes and states
+    # Determine the fluxes and states --> Indirectly assumes hydrostatic balance
     fa_e = u * q * dp / g  # eastward atmospheric moisture flux
     fa_n = v * q * dp / g  # northward atmospheric moisture flux
     cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
 
-    # Split in 2 layers
-    P_boundary = 0.72878581 * sp + 7438.803223
-    lower_layer = (dp.level < sp / 100) & (dp.level > P_boundary / 100)
+    # Split in 2 layers --> A bit of magic here
+    P_boundary = 0.72878581 * sp + 7438.803223 #--> P in kleine letters?
+    lower_layer = (dp.level < sp / 100) & (dp.level > P_boundary / 100) #--> Conversion to hPa from Pa? 
     upper_layer = dp.level < P_boundary / 100
 
     # Integrate fluxes and state
-    fa_e_lower = fa_e.where(lower_layer).sum(dim="level")
+    fa_e_lower = fa_e.where(lower_layer).sum(dim="level") #--> Minor point, but should the name of the vertical level be included in the configuration file? Sometimes the vertical level is called "lev" instead of "level"
     fa_n_lower = fa_n.where(lower_layer).sum(dim="level")
-    w_lower = cwv.where(lower_layer).sum(dim="level")
+    w_lower = cwv.where(lower_layer).sum(dim="level") #--> vertically integrated water vapour in the lower level
 
     fa_e_upper = fa_e.where(upper_layer).sum(dim="level")
     fa_n_upper = fa_n.where(upper_layer).sum(dim="level")
-    w_upper = cwv.where(upper_layer).sum(dim="level")
+    w_upper = cwv.where(upper_layer).sum(dim="level") #--> vertically integrated water vapour in the upper level
 
     print(
         "Check calculation water vapor, this value should be zero:",
@@ -94,7 +94,9 @@ for date in datelist:
 
     # Change units to m3
     # TODO: Check this! Change units before interp is tricky, if not wrong
-    total_seconds = config["timestep"] / config["divt"]
+    # TODO: Move frequency (now called total_seconds) to config file, and change consistently
+    # TODO: Move this to below the interpolation step
+    total_seconds = config["timestep"] / config["divt"] #--> Not very clear what is done here
     fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
     fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
     fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
@@ -102,18 +104,19 @@ for date in datelist:
 
     # Put data on a smaller time step...
     time = w_upper.time.values
-    newtime = pd.date_range(time[0], time[-1], freq="15Min")[:-1]
+    newtime = pd.date_range(time[0], time[-1], freq="2Min")[:-1] # TODO: Rename to new variable (e.g. state_time)
     w_upper = w_upper.interp(time=newtime).values
     w_lower = w_lower.interp(time=newtime).values
 
     # ... fluxes on the edges instead of midpoints
-    newtime = newtime[:-1] + pd.Timedelta("6Min") / 2
+    newtime = newtime[:-1] + pd.Timedelta("2Min") / 2 # TODO: Rename to new variable (e.g. flux_time)
     fa_e_upper = fa_e_upper.interp(time=newtime).values
     fa_n_upper = fa_n_upper.interp(time=newtime).values
 
     fa_e_lower = fa_e_lower.interp(time=newtime).values
     fa_n_lower = fa_n_lower.interp(time=newtime).values
 
+    # TODO: Correction factor instead of hard coded factor (of 4)
     precip = (precip.reindex(time=newtime, method="bfill") / 4).values
     evap = (evap.reindex(time=newtime, method="bfill") / 4).values
 
