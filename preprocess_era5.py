@@ -32,7 +32,7 @@ datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist:
+for date in datelist[:]:
     print(date)
 
     # Load data
@@ -56,7 +56,7 @@ for date in datelist:
 
     # Create pressure array
     levels = q.level
-    p = levels.broadcast_like(u)  # hPa
+    p = levels.broadcast_like(u)*100  # Pa
 
     # Interpolate to new levels
     edges = 0.5 * (levels.values[1:] + levels.values[:-1])
@@ -65,13 +65,13 @@ for date in datelist:
     q = q.interp(level=edges)
 
     # Calculate pressure jump
-    dp = p.diff(dim="level")
+    dp = p.diff(dim="level") 
     dp["level"] = edges
 
     # Determine the fluxes and states
-    fa_e = u * q * dp / g  # eastward atmospheric moisture flux
-    fa_n = v * q * dp / g  # northward atmospheric moisture flux
-    cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
+    fa_e = u * q * dp * 100 / g  # eastward atmospheric moisture flux
+    fa_n = v * q * dp * 100 / g  # northward atmospheric moisture flux
+    cwv = q * dp * 100 / g * a_gridcell / density_water  # column water vapor (m3)
 
     # Split in 2 layers
     P_boundary = 0.72878581 * sp + 7438.803223
