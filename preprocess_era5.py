@@ -1,8 +1,10 @@
 import os
 
 import pandas as pd
+import numpy as np
 import xarray as xr
 import yaml
+
 
 from preprocessing import (get_grid_info, get_stable_fluxes,
                            get_vertical_transport)
@@ -32,7 +34,7 @@ datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist:
+for date in datelist[:1]:
     print(date)
 
     # Load data
@@ -44,6 +46,7 @@ for date in datelist:
     cp = load_data("cp", date)
     lsp = load_data("lsp", date)
     precip = cp + lsp
+    tcw = load_data("tcw", date) # kg/m2
 
     # Get grid info
     lat = u.latitude.values
@@ -92,6 +95,8 @@ for date in datelist:
         (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values,
     )
 
+    tcwm3 = tcw* a_gridcell[np.newaxis,:] / density_water # m3
+    
     # Change units to m3
     # TODO: Check this! Change units before interp is tricky, if not wrong
     total_seconds = config["timestep"] / config["divt"]

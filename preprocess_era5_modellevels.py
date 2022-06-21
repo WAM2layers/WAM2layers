@@ -14,7 +14,8 @@ g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
 # Select model levels
-modellevels = [1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
+modellevels = np.append( np.arange(1,100,10), np.arange(101,138,1)) #[1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
+print('Number of model levels:',len(modellevels))
 
 # Read case configuration
 with open("cases/era5_2013.yaml") as f:
@@ -45,17 +46,19 @@ datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:]:
+for date in datelist[:1]:
     print(date)
 
     # Load data
     u = load_modellevel_data("u", date)
     v = load_modellevel_data("v", date)
     q = load_modellevel_data("q", date)
-    sp = load_surface_data("sp", date)
+    sp = load_surface_data("sp", date) # in Pa
     evap = load_surface_data("e", date)
     cp = load_surface_data("cp", date)
     lsp = load_surface_data("lsp", date)
+    tcw = load_surface_data("tcw", date) # kg/m2
+    tcrw = load_surface_data("tcrw", date) # kg/m2
     precip = cp + lsp
 
     # Get grid info
@@ -101,10 +104,18 @@ for date in datelist[:]:
     w_upper = cwv.where(upper_layer).sum(dim="lev")
    
     print(
-        "Check calculation water vapor, this value should be zero:",
+        "Check calculation water vapor over two layers, this value should be zero:",
         (cwv.sum(dim="lev") - (w_upper + w_lower)).sum().values,
     )
 
+    tcwm3 = tcw* a_gridcell[np.newaxis,:] / density_water # m3
+    
+    print(
+        "Check calculation water vapor with column water vapour, this value should be close to zero:",
+        (cwv.sum(dim="lev") - (tcwm3)).sum().values,
+    )
+    # is niet hetzelfde.. hoe erg is dat?
+    
     # Change units to m3
     # TODO: Check this! Change units before interp is tricky, if not wrong
     total_seconds = config["timestep"] / config["divt"]
