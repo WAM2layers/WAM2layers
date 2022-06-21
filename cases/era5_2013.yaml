@@ -8,7 +8,7 @@ name_of_run: ""
 # Time
 start_date: '20130521'
 end_date: '20130604'
-target_frequency: '2min'  # See https://stackoverflow.com/a/35339226 for options
+target_frequency: '15min'  # See https://stackoverflow.com/a/35339226 for options
 
 # Backtracking options
 Kvf: 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
