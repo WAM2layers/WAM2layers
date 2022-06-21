@@ -32,7 +32,7 @@ datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:1]:
+for date in datelist[:]:
     print(date)
 
     # Load data
@@ -118,8 +118,8 @@ for date in datelist[:1]:
     evap = (evap.reindex(time=newtime, method="bfill") / 4).values
 
     # Stabilize horizontal fluxes
-    fa_e_upper, fa_e_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
-    fa_e_lower, fa_e_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
+    fa_e_upper, fa_n_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
+    fa_e_lower, fa_n_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
 
     # Determine the vertical moisture flux
     fa_vert = get_vertical_transport(
