@@ -32,7 +32,7 @@ datelist = pd.date_range(
     start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:]:
+for date in datelist[:1]:
     print(date)
 
     # Load data
@@ -69,9 +69,9 @@ for date in datelist[:]:
     dp["level"] = edges
 
     # Determine the fluxes and states
-    fa_e = u * q * dp * 100 / g  # eastward atmospheric moisture flux
-    fa_n = v * q * dp * 100 / g  # northward atmospheric moisture flux
-    cwv = q * dp * 100 / g * a_gridcell / density_water  # column water vapor (m3)
+    fa_e = u * q * dp / g  # eastward atmospheric moisture flux
+    fa_n = v * q * dp / g  # northward atmospheric moisture flux
+    cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
 
     # Split in 2 layers
     P_boundary = 0.72878581 * sp + 7438.803223
