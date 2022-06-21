@@ -14,7 +14,7 @@ g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
 # Select model levels
-modellevels = [1,20,40,60,80,100,105,110,115,120,125,126,127,128,129,130,131,132,133,134,135,136,137]
+modellevels = [1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
 
 # Read case configuration
 with open("cases/era5_2013.yaml") as f:
@@ -77,7 +77,7 @@ for date in datelist[:]:
     p_modellevels = a + b*sp_modellevels2 # in Pa
 
     #calculate the difference between the pressure levels
-    dp_modellevels = p_modellevels.diff(dim="lev")
+    dp_modellevels = p_modellevels.diff(dim="lev") # in Pa
 
     # Determine the fluxes and states
     fa_e = u * q * dp_modellevels / g  # eastward atmospheric moisture flux
@@ -131,8 +131,8 @@ for date in datelist[:]:
     evap = (evap.reindex(time=newtime, method="bfill") / 4).values
 
     # Stabilize horizontal fluxes
-    fa_e_upper, fa_e_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
-    fa_e_lower, fa_e_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
+    fa_e_upper, fa_n_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
+    fa_e_lower, fa_n_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
 
     # Determine the vertical moisture flux
     fa_vert = get_vertical_transport(
