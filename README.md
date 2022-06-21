@@ -26,7 +26,8 @@ The model workflow consists of three steps:
 ## Input data format
 The backtracking code makes several assumptions about the incoming data. We use
 the term pre-processing for anything that's done to convert raw input data to
-the format that is supported by WAM-2layers, i.e.
+the format that is supported by WAM-2layers. The final input data into the
+tracking should have the following characteristics.
 
 - Data should be stored in netcdf files, one file per day.
 - The file should contain the following variables:
