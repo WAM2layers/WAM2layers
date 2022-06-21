@@ -138,14 +138,20 @@ for date in datelist[:]:
     output_path = os.path.join(config["interdata_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "fa_e_upper": (["time", "lat", "lon"], fa_e_upper),
-            "fa_n_upper": (["time", "lat", "lon"], fa_n_upper),
-            "fa_e_lower": (["time", "lat", "lon"], fa_e_lower),
-            "fa_n_lower": (["time", "lat", "lon"], fa_n_lower),
-            "w_upper": (["time2", "lat", "lon"], w_upper),
-            "w_lower": (["time2", "lat", "lon"], w_lower),
-            "fa_vert": (["time", "lat", "lon"], fa_vert),
-            "evap": (["time", "lat", "lon"], evap),
-            "precip": (["time", "lat", "lon"], precip),
+            "fa_e_upper": (["time_fluxes", "lat", "lon"], fa_e_upper),
+            "fa_n_upper": (["time_fluxes", "lat", "lon"], fa_n_upper),
+            "fa_e_lower": (["time_fluxes", "lat", "lon"], fa_e_lower),
+            "fa_n_lower": (["time_fluxes", "lat", "lon"], fa_n_lower),
+            "w_upper": (["time_states", "lat", "lon"], w_upper),
+            "w_lower": (["time_states", "lat", "lon"], w_lower),
+            "fa_vert": (["time_fluxes", "lat", "lon"], fa_vert),
+            "evap": (["time_fluxes", "lat", "lon"], evap),
+            "precip": (["time_fluxes", "lat", "lon"], precip),
+        },
+        coords={
+            'time_fluxes': newtime_fluxes,
+            'time_states': newtime_states,
+            'lat': u.latitude.values,
+            'lon': u.longitude.values
         }
     ).to_netcdf(output_path)
