@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import xarray as xr
 import yaml
+from pathlib import Path
 
 from preprocessing import (get_grid_info, get_stable_fluxes,
                            get_vertical_transport)
@@ -15,6 +16,12 @@ density_water = 1000  # [kg/m3]
 # Read case configuration
 with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
+
+
+# Create the preprocessed data folder if it does not exist yet
+output_dir = Path(config['preprocessed_data_folder'])
+if not output_dir.exists():
+    output_dir.expanduser().mkdir()
 
 
 def load_data(variable, date):
@@ -136,6 +143,7 @@ for date in datelist[:]:
     # so the first state from day 2 will overlap with the last flux from day 1
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = os.path.join(config["preprocessed_data_folder"], filename)
+
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fa_e_upper": (["time_fluxes", "lat", "lon"], fa_e_upper),

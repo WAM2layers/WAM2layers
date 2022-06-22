@@ -5,7 +5,7 @@ preprocess_end_date: '20130604' #YYYYMMDD
 target_frequency: '15min'  # See https://stackoverflow.com/a/35339226 for options
 
 # Settings shared by preprocessing and backtracking
-preprocessed_data_folder: ~/preprocessed_data
+preprocessed_data_folder: ~/WAM2layers/preprocessed_data
 
 # Settings needed to define the tracking region (in space and time)
 region: data/volume_2/era5_2013/FloodCase_201305_lsm.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
