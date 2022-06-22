@@ -1,7 +1,7 @@
 # Settings needed for the data preprocessing (used by preprocess_XXXXXX.py)
 input_folder: ../era5_2013
-preproces_start_date: '20130521' #YYYYMMDD
-preproces_end_date: '20130604' #YYYYMMDD
+preprocess_start_date: '20130521' #YYYYMMDD
+preprocess_end_date: '20130604' #YYYYMMDD
 
 #######################
 # divt & count_time # TODO: Peter
