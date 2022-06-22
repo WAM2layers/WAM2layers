@@ -1,102 +1,38 @@
-import calendar
 import datetime as dt
-import os
+from re import X
 import yaml
 
 import numpy as np
-import scipy.io as sio
-
-from getconstants_pressure_ECEarth import getconstants_pressure_ECEarth
-
+from pathlib import Path
+import pandas as pd
 
 # Read case configuration
-with open("cases/example.yaml") as f:
+with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
-# Parse input from config file
-# Reassignment not strictly needed but improves readability for often used vars
-input_folder = config["input_folder"]
-name_of_run = config["name_of_run"]
-divt = config["divt"]
-count_time = config["count_time"]
-latnrs = np.arange(config["latnrs"])
-lonnrs = np.arange(config["lonnrs"])
-Region = np.load(config["region"])
-Kvf = config["Kvf"]
 
-# to create datelist
-def get_times_daily(startdate, enddate):
-    """generate a dictionary with date/times"""
-    numdays = enddate - startdate
-    dateList = []
-    for x in range(0, numdays.days + 1):
-        dateList.append(startdate + dt.timedelta(days=x))
-    return dateList
-
-
-# BEGIN OF INPUT1 (FILL THIS IN)
-
-months = np.arange(
-    config["start_month"], config["end_month"]
-)  # for full year, enter np.arange(1,13)
-months_length_leap = [4, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-months_length_nonleap = [4, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-years = np.arange(config["start_year"], config["end_year"] + 1)
-
-# create datelist
-if int(calendar.isleap(years[-1])) == 0:  # no leap year
-    datelist = get_times_daily(
-        dt.date(years[0], months[0], 1),
-        dt.date(years[-1], months[-1], months_length_nonleap[months[-1] - 1]),
-    )[::-1]
-else:  # leap
-    datelist = get_times_daily(
-        dt.date(years[0], months[0], 1),
-        dt.date(years[-1], months[-1], months_length_leap[months[-1] - 1]),
-    )[
-        ::-1
-    ]  # [::-1] to run the datelist the other way around
-
-(
-    latitude,
-    longitude,
-    lsm,
-    g,
-    density_water,
-    timestep,
-    A_gridcell,
-    L_N_gridcell,
-    L_S_gridcell,
-    L_EW_gridcell,
-    gridcell,
-) = getconstants_pressure_ECEarth(latnrs, lonnrs, config["land_sea_mask"])
-
-
-# Check if interdata folder exists:
-assert os.path.isdir(
-    config["interdata_folder"]
-), "Please create the interdata_folder before running the script"
-# Check if sub interdata folder exists otherwise create it:
-sub_interdata_folder = os.path.join(
-    config["interdata_folder"], "Regional_backward_daily"
+datelist = pd.date_range(
+    start=config["track_start_date"], end=config["track_end_date"], freq="d", inclusive="left"
 )
 
-if os.path.isdir(sub_interdata_folder):
-    pass
-else:
-    os.makedirs(sub_interdata_folder)
+input_dir = Path(config['preprocessed_data_folder'])
+output_dir = Path(config['output_folder']) / "backtrack"
+
+# Check if input dir exists
+if not input_dir.exists():
+    raise ValueError("Please create the preprocessed_data_folder before running the script")
+
+# Create output dir if it doesn't exist yet
+if not output_dir.exists():
+    output_dir.mkdir(parents=True)
 
 
-def data_path_ea(year, month, day):
-    save_empty_arrays_track = os.path.join(
-        sub_interdata_folder,
-        str(year) + "-" + str(month).zfill(2) + "-" + str(day).zfill(2) + "Sa_track",
-    )
-    save_empty_arrays_time = os.path.join(
-        sub_interdata_folder,
-        str(year) + "-" + str(month).zfill(2) + "-" + str(day).zfill(2) + "Sa_time",
-    )
-    return save_empty_arrays_track, save_empty_arrays_time
+def input_path(date):
+    return f"{input_dir}_{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+
+
+def output_path(date):
+    return f"{output_dir}_{date.strftime('%Y-%m-%d')}_Sa_track.nc"
 
 
 def data_path(previous_data_to_load, yearnumber, month, a):
@@ -162,17 +98,17 @@ def get_Sa_track_backward(
     divt,
     Kvf,
     Region,
-    Fa_E_top,
-    Fa_N_top,
-    Fa_E_down,
-    Fa_N_down,
+    Fa_E_upper,
+    Fa_N_upper,
+    Fa_E_lower,
+    Fa_N_lower,
     Fa_Vert,
     E,
     P,
-    W_top,
-    W_down,
-    Sa_track_top_last,
-    Sa_track_down_last,
+    W_upper,
+    W_lower,
+    Sa_track_upper_last,
+    Sa_track_lower_last,
 ):
 
     # make P_region matrix
@@ -182,15 +118,15 @@ def get_Sa_track_backward(
     P_region = Region3D * P
 
     # Total moisture in the column
-    W = W_top + W_down
+    W = W_upper + W_lower
 
     # separate the direction of the vertical flux and make it absolute
     Fa_upward = np.zeros(np.shape(Fa_Vert))
     Fa_upward[Fa_Vert <= 0] = Fa_Vert[
         Fa_Vert <= 0
     ]  # in 4th timestep: __main__:1: RuntimeWarning: invalid value encountered in less_equal # not a problem
-    Fa_downward = np.zeros(np.shape(Fa_Vert))
-    Fa_downward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0]
+    Fa_lowerward = np.zeros(np.shape(Fa_Vert))
+    Fa_lowerward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0]
     Fa_upward = np.abs(Fa_upward)
 
     # include the vertical dispersion
@@ -200,381 +136,367 @@ def get_Sa_track_backward(
     else:
         Fa_upward = (1.0 + Kvf) * Fa_upward
         Fa_upward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0] * Kvf
-        Fa_downward = (1.0 + Kvf) * Fa_downward
-        Fa_downward[Fa_Vert <= 0] = np.abs(Fa_Vert[Fa_Vert <= 0]) * Kvf
+        Fa_lowerward = (1.0 + Kvf) * Fa_lowerward
+        Fa_lowerward[Fa_Vert <= 0] = np.abs(Fa_Vert[Fa_Vert <= 0]) * Kvf
 
     # define the horizontal fluxes over the boundaries
     # fluxes over the eastern boundary
-    Fa_E_top_boundary = np.zeros(np.shape(Fa_E_top))
-    Fa_E_top_boundary[:, :, :-1] = 0.5 * (Fa_E_top[:, :, :-1] + Fa_E_top[:, :, 1:])
+    Fa_E_upper_boundary = np.zeros(np.shape(Fa_E_upper))
+    Fa_E_upper_boundary[:, :, :-1] = 0.5 * (Fa_E_upper[:, :, :-1] + Fa_E_upper[:, :, 1:])
     if config["isglobal"]:
-        Fa_E_top_boundary[:, :, -1] = 0.5 * (Fa_E_top[:, :, -1] + Fa_E_top[:, :, 0])
-    Fa_E_down_boundary = np.zeros(np.shape(Fa_E_down))
-    Fa_E_down_boundary[:, :, :-1] = 0.5 * (Fa_E_down[:, :, :-1] + Fa_E_down[:, :, 1:])
+        Fa_E_upper_boundary[:, :, -1] = 0.5 * (Fa_E_upper[:, :, -1] + Fa_E_upper[:, :, 0])
+    Fa_E_lower_boundary = np.zeros(np.shape(Fa_E_lower))
+    Fa_E_lower_boundary[:, :, :-1] = 0.5 * (Fa_E_lower[:, :, :-1] + Fa_E_lower[:, :, 1:])
     if config["isglobal"]:
-        Fa_E_down_boundary[:, :, -1] = 0.5 * (Fa_E_down[:, :, -1] + Fa_E_down[:, :, 0])
+        Fa_E_lower_boundary[:, :, -1] = 0.5 * (Fa_E_lower[:, :, -1] + Fa_E_lower[:, :, 0])
 
     # find out where the positive and negative fluxes are
-    Fa_E_top_pos = np.ones(np.shape(Fa_E_top))
-    Fa_E_down_pos = np.ones(np.shape(Fa_E_down))
-    Fa_E_top_pos[Fa_E_top_boundary < 0] = 0
-    Fa_E_down_pos[Fa_E_down_boundary < 0] = 0
-    Fa_E_top_neg = Fa_E_top_pos - 1
-    Fa_E_down_neg = Fa_E_down_pos - 1
+    Fa_E_upper_pos = np.ones(np.shape(Fa_E_upper))
+    Fa_E_lower_pos = np.ones(np.shape(Fa_E_lower))
+    Fa_E_upper_pos[Fa_E_upper_boundary < 0] = 0
+    Fa_E_lower_pos[Fa_E_lower_boundary < 0] = 0
+    Fa_E_upper_neg = Fa_E_upper_pos - 1
+    Fa_E_lower_neg = Fa_E_lower_pos - 1
 
     # separate directions west-east (all positive numbers)
-    Fa_E_top_WE = Fa_E_top_boundary * Fa_E_top_pos
-    Fa_E_top_EW = Fa_E_top_boundary * Fa_E_top_neg
-    Fa_E_down_WE = Fa_E_down_boundary * Fa_E_down_pos
-    Fa_E_down_EW = Fa_E_down_boundary * Fa_E_down_neg
+    Fa_E_upper_WE = Fa_E_upper_boundary * Fa_E_upper_pos
+    Fa_E_upper_EW = Fa_E_upper_boundary * Fa_E_upper_neg
+    Fa_E_lower_WE = Fa_E_lower_boundary * Fa_E_lower_pos
+    Fa_E_lower_EW = Fa_E_lower_boundary * Fa_E_lower_neg
 
     # fluxes over the western boundary
-    Fa_W_top_WE = np.nan * np.zeros(np.shape(P))
-    Fa_W_top_WE[:, :, 1:] = Fa_E_top_WE[:, :, :-1]
-    Fa_W_top_WE[:, :, 0] = Fa_E_top_WE[:, :, -1]
-    Fa_W_top_EW = np.nan * np.zeros(np.shape(P))
-    Fa_W_top_EW[:, :, 1:] = Fa_E_top_EW[:, :, :-1]
-    Fa_W_top_EW[:, :, 0] = Fa_E_top_EW[:, :, -1]
-    Fa_W_down_WE = np.nan * np.zeros(np.shape(P))
-    Fa_W_down_WE[:, :, 1:] = Fa_E_down_WE[:, :, :-1]
-    Fa_W_down_WE[:, :, 0] = Fa_E_down_WE[:, :, -1]
-    Fa_W_down_EW = np.nan * np.zeros(np.shape(P))
-    Fa_W_down_EW[:, :, 1:] = Fa_E_down_EW[:, :, :-1]
-    Fa_W_down_EW[:, :, 0] = Fa_E_down_EW[:, :, -1]
+    Fa_W_upper_WE = np.nan * np.zeros(np.shape(P))
+    Fa_W_upper_WE[:, :, 1:] = Fa_E_upper_WE[:, :, :-1]
+    Fa_W_upper_WE[:, :, 0] = Fa_E_upper_WE[:, :, -1]
+    Fa_W_upper_EW = np.nan * np.zeros(np.shape(P))
+    Fa_W_upper_EW[:, :, 1:] = Fa_E_upper_EW[:, :, :-1]
+    Fa_W_upper_EW[:, :, 0] = Fa_E_upper_EW[:, :, -1]
+    Fa_W_lower_WE = np.nan * np.zeros(np.shape(P))
+    Fa_W_lower_WE[:, :, 1:] = Fa_E_lower_WE[:, :, :-1]
+    Fa_W_lower_WE[:, :, 0] = Fa_E_lower_WE[:, :, -1]
+    Fa_W_lower_EW = np.nan * np.zeros(np.shape(P))
+    Fa_W_lower_EW[:, :, 1:] = Fa_E_lower_EW[:, :, :-1]
+    Fa_W_lower_EW[:, :, 0] = Fa_E_lower_EW[:, :, -1]
 
     # fluxes over the northern boundary
-    # Fa_N_top_boundary = np.nan*np.zeros(np.shape(Fa_N_top)); #Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_top_boundary
+    # Fa_N_upper_boundary = np.nan*np.zeros(np.shape(Fa_N_upper)); #Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_upper_boundary
     # Adapted by Imme
-    Fa_N_top_boundary = np.zeros(np.shape(Fa_N_top))
-    # Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_top_boundary
-    Fa_N_top_boundary[:, 1:, :] = 0.5 * (Fa_N_top[:, :-1, :] + Fa_N_top[:, 1:, :])
-    # Fa_N_down_boundary = np.nan*np.zeros(np.shape(Fa_N_down));
+    Fa_N_upper_boundary = np.zeros(np.shape(Fa_N_upper))
+    # Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_upper_boundary
+    Fa_N_upper_boundary[:, 1:, :] = 0.5 * (Fa_N_upper[:, :-1, :] + Fa_N_upper[:, 1:, :])
+    # Fa_N_lower_boundary = np.nan*np.zeros(np.shape(Fa_N_lower));
     # Adapted by Imme
-    Fa_N_down_boundary = np.zeros(np.shape(Fa_N_down))
+    Fa_N_lower_boundary = np.zeros(np.shape(Fa_N_lower))
     # als je niet met np.nan multiplied krijg je in de volgende alinea geen invalid value encountered in less
     # verandert er verder nog wat!??!
-    Fa_N_down_boundary[:, 1:, :] = 0.5 * (Fa_N_down[:, :-1, :] + Fa_N_down[:, 1:, :])
+    Fa_N_lower_boundary[:, 1:, :] = 0.5 * (Fa_N_lower[:, :-1, :] + Fa_N_lower[:, 1:, :])
 
     # find out where the positive and negative fluxes are
-    Fa_N_top_pos = np.ones(np.shape(Fa_N_top))
-    Fa_N_down_pos = np.ones(np.shape(Fa_N_down))
-    Fa_N_top_pos[
-        Fa_N_top_boundary < 0
-    ] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_top_boundary staan
-    Fa_N_down_pos[
-        Fa_N_down_boundary < 0
-    ] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_top_boundary staan
-    Fa_N_top_neg = Fa_N_top_pos - 1
-    Fa_N_down_neg = Fa_N_down_pos - 1
+    Fa_N_upper_pos = np.ones(np.shape(Fa_N_upper))
+    Fa_N_lower_pos = np.ones(np.shape(Fa_N_lower))
+    Fa_N_upper_pos[
+        Fa_N_upper_boundary < 0
+    ] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
+    Fa_N_lower_pos[
+        Fa_N_lower_boundary < 0
+    ] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
+    Fa_N_upper_neg = Fa_N_upper_pos - 1
+    Fa_N_lower_neg = Fa_N_lower_pos - 1
 
     # separate directions south-north (all positive numbers)
-    Fa_N_top_SN = Fa_N_top_boundary * Fa_N_top_pos
-    Fa_N_top_NS = Fa_N_top_boundary * Fa_N_top_neg
-    Fa_N_down_SN = Fa_N_down_boundary * Fa_N_down_pos
-    Fa_N_down_NS = Fa_N_down_boundary * Fa_N_down_neg
+    Fa_N_upper_SN = Fa_N_upper_boundary * Fa_N_upper_pos
+    Fa_N_upper_NS = Fa_N_upper_boundary * Fa_N_upper_neg
+    Fa_N_lower_SN = Fa_N_lower_boundary * Fa_N_lower_pos
+    Fa_N_lower_NS = Fa_N_lower_boundary * Fa_N_lower_neg
 
     # fluxes over the southern boundary
-    Fa_S_top_SN = np.nan * np.zeros(np.shape(P))
-    Fa_S_top_SN[:, :-1, :] = Fa_N_top_SN[:, 1:, :]
-    Fa_S_top_NS = np.nan * np.zeros(np.shape(P))
-    Fa_S_top_NS[:, :-1, :] = Fa_N_top_NS[:, 1:, :]
-    Fa_S_down_SN = np.nan * np.zeros(np.shape(P))
-    Fa_S_down_SN[:, :-1, :] = Fa_N_down_SN[:, 1:, :]
-    Fa_S_down_NS = np.nan * np.zeros(np.shape(P))
-    Fa_S_down_NS[:, :-1, :] = Fa_N_down_NS[:, 1:, :]
+    Fa_S_upper_SN = np.nan * np.zeros(np.shape(P))
+    Fa_S_upper_SN[:, :-1, :] = Fa_N_upper_SN[:, 1:, :]
+    Fa_S_upper_NS = np.nan * np.zeros(np.shape(P))
+    Fa_S_upper_NS[:, :-1, :] = Fa_N_upper_NS[:, 1:, :]
+    Fa_S_lower_SN = np.nan * np.zeros(np.shape(P))
+    Fa_S_lower_SN[:, :-1, :] = Fa_N_lower_SN[:, 1:, :]
+    Fa_S_lower_NS = np.nan * np.zeros(np.shape(P))
+    Fa_S_lower_NS[:, :-1, :] = Fa_N_lower_NS[:, 1:, :]
 
     # defining size of output
-    Sa_track_down = np.zeros(np.shape(W_down))
-    Sa_track_top = np.zeros(np.shape(W_top))
+    Sa_track_lower = np.zeros(np.shape(W_lower))
+    Sa_track_upper = np.zeros(np.shape(W_upper))
 
     # assign begin values of output == last (but first index) values of the previous time slot
-    Sa_track_down[-1, :, :] = Sa_track_down_last
-    Sa_track_top[-1, :, :] = Sa_track_top_last
+    Sa_track_lower[-1, :, :] = Sa_track_lower_last
+    Sa_track_upper[-1, :, :] = Sa_track_upper_last
 
     # defining sizes of tracked moisture
-    Sa_track_after_Fa_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_track_after_Fa_P_E_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_track_E_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_track_W_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_track_N_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_track_S_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_track_after_Fa_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_track_after_Fa_P_E_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_track_E_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_track_W_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_track_N_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_track_S_top = np.zeros(np.shape(Sa_track_top_last))
+    Sa_track_after_Fa_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_track_after_Fa_P_E_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_track_E_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_track_W_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_track_N_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_track_S_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_track_after_Fa_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_track_after_Fa_P_E_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_track_E_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_track_W_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_track_N_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_track_S_upper = np.zeros(np.shape(Sa_track_upper_last))
 
     # define sizes of total moisture
-    Sa_E_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_W_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_N_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_S_down = np.zeros(np.shape(Sa_track_down_last))
-    Sa_E_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_W_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_N_top = np.zeros(np.shape(Sa_track_top_last))
-    Sa_S_top = np.zeros(np.shape(Sa_track_top_last))
+    Sa_E_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_W_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_N_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_S_lower = np.zeros(np.shape(Sa_track_lower_last))
+    Sa_E_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_W_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_N_upper = np.zeros(np.shape(Sa_track_upper_last))
+    Sa_S_upper = np.zeros(np.shape(Sa_track_upper_last))
 
     # define variables that find out what happens to the water
     north_loss = np.zeros((np.int(count_time * divt), 1, len(longitude)))
     south_loss = np.zeros((np.int(count_time * divt), 1, len(longitude)))
     east_loss = np.zeros((np.int(count_time * divt), 1, len(latitude)))
     west_loss = np.zeros((np.int(count_time * divt), 1, len(latitude)))
-    down_to_top = np.zeros(np.shape(P))
-    top_to_down = np.zeros(np.shape(P))
+    down_to_upper = np.zeros(np.shape(P))
+    top_to_lower = np.zeros(np.shape(P))
     water_lost = np.zeros(np.shape(P))
-    water_lost_down = np.zeros(np.shape(P))
-    water_lost_top = np.zeros(np.shape(P))
+    water_lost_lower = np.zeros(np.shape(P))
+    water_lost_upper = np.zeros(np.shape(P))
 
     # Sa calculation backward in time
     for t in np.arange(np.int(count_time * divt), 0, -1):
         # down: define values of total moisture
-        Sa_E_down[0, :, :-1] = W_down[
+        Sa_E_lower[0, :, :-1] = W_lower[
             t, :, 1:
         ]  # Atmospheric storage of the cell to the east [m3]
         # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_E_down[0,:,-1] = W_down[t,:,0] # Atmospheric storage of the cell to the east [m3]
-        Sa_W_down[0, :, 1:] = W_down[
+        # Sa_E_lower[0,:,-1] = W_lower[t,:,0] # Atmospheric storage of the cell to the east [m3]
+        Sa_W_lower[0, :, 1:] = W_lower[
             t, :, :-1
         ]  # Atmospheric storage of the cell to the west [m3]
         # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_W_down[0,:,0] = W_down[t,:,-1] # Atmospheric storage of the cell to the west [m3]
-        Sa_N_down[0, 1:, :] = W_down[
+        # Sa_W_lower[0,:,0] = W_lower[t,:,-1] # Atmospheric storage of the cell to the west [m3]
+        Sa_N_lower[0, 1:, :] = W_lower[
             t, 0:-1, :
         ]  # Atmospheric storage of the cell to the north [m3]
-        Sa_S_down[0, :-1, :] = W_down[
+        Sa_S_lower[0, :-1, :] = W_lower[
             t, 1:, :
         ]  # Atmospheric storage of the cell to the south [m3]
 
         # top: define values of total moisture
-        Sa_E_top[0, :, :-1] = W_top[
+        Sa_E_upper[0, :, :-1] = W_upper[
             t, :, 1:
         ]  # Atmospheric storage of the cell to the east [m3]
         # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_E_top[0,:,-1] = W_top[t,:,0] # Atmospheric storage of the cell to the east [m3]
-        Sa_W_top[0, :, 1:] = W_top[
+        # Sa_E_upper[0,:,-1] = W_upper[t,:,0] # Atmospheric storage of the cell to the east [m3]
+        Sa_W_upper[0, :, 1:] = W_upper[
             t, :, :-1
         ]  # Atmospheric storage of the cell to the west [m3]
         # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_W_top[0,:,0] = W_top[t,:,-1] # Atmospheric storage of the cell to the west [m3]
-        Sa_N_top[0, 1:, :] = W_top[
+        # Sa_W_upper[0,:,0] = W_upper[t,:,-1] # Atmospheric storage of the cell to the west [m3]
+        Sa_N_upper[0, 1:, :] = W_upper[
             t, :-1, :
         ]  # Atmospheric storage of the cell to the north [m3]
-        Sa_S_top[0, :-1, :] = W_top[
+        Sa_S_upper[0, :-1, :] = W_upper[
             t, 1:, :
         ]  # Atmospheric storage of the cell to the south [m3]
 
         # down: define values of tracked moisture of neighbouring grid cells
-        Sa_track_E_down[0, :, :-1] = Sa_track_down[
+        Sa_track_E_lower[0, :, :-1] = Sa_track_lower[
             t, :, 1:
         ]  # Atmospheric tracked storage of the cell to the east [m3]
         if config["isglobal"]:
-            Sa_track_E_down[0, :, -1] = Sa_track_down[
+            Sa_track_E_lower[0, :, -1] = Sa_track_lower[
                 t, :, 0
             ]  # Atmospheric tracked storage of the cell to the east [m3]
-        Sa_track_W_down[0, :, 1:] = Sa_track_down[
+        Sa_track_W_lower[0, :, 1:] = Sa_track_lower[
             t, :, :-1
         ]  # Atmospheric storage of the cell to the west [m3]
         if config["isglobal"]:
-            Sa_track_W_down[0, :, 0] = Sa_track_down[
+            Sa_track_W_lower[0, :, 0] = Sa_track_lower[
                 t, :, -1
             ]  # Atmospheric storage of the cell to the west [m3]
-        Sa_track_N_down[0, 1:, :] = Sa_track_down[
+        Sa_track_N_lower[0, 1:, :] = Sa_track_lower[
             t, :-1, :
         ]  # Atmospheric storage of the cell to the north [m3]
-        Sa_track_S_down[0, :-1, :] = Sa_track_down[
+        Sa_track_S_lower[0, :-1, :] = Sa_track_lower[
             t, 1:, :
         ]  # Atmospheric storage of the cell to the south [m3]
 
         # down: calculate with moisture fluxes
-        Sa_track_after_Fa_down[0, 1:-1, 1:-1] = (
-            Sa_track_down[t, 1:-1, 1:-1]
-            + Fa_E_down_WE[t - 1, 1:-1, 1:-1]
-            * (Sa_track_E_down[0, 1:-1, 1:-1] / Sa_E_down[0, 1:-1, 1:-1])
-            - Fa_E_down_EW[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
-            - Fa_W_down_WE[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
-            + Fa_W_down_EW[t - 1, 1:-1, 1:-1]
-            * (Sa_track_W_down[0, 1:-1, 1:-1] / Sa_W_down[0, 1:-1, 1:-1])
-            + Fa_N_down_SN[t - 1, 1:-1, 1:-1]
-            * (Sa_track_N_down[0, 1:-1, 1:-1] / Sa_N_down[0, 1:-1, 1:-1])
-            - Fa_N_down_NS[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
-            - Fa_S_down_SN[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
-            + Fa_S_down_NS[t - 1, 1:-1, 1:-1]
-            * (Sa_track_S_down[0, 1:-1, 1:-1] / Sa_S_down[0, 1:-1, 1:-1])
-            - Fa_downward[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
+        Sa_track_after_Fa_lower[0, 1:-1, 1:-1] = (
+            Sa_track_lower[t, 1:-1, 1:-1]
+            + Fa_E_lower_WE[t - 1, 1:-1, 1:-1]
+            * (Sa_track_E_lower[0, 1:-1, 1:-1] / Sa_E_lower[0, 1:-1, 1:-1])
+            - Fa_E_lower_EW[t - 1, 1:-1, 1:-1]
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
+            - Fa_W_lower_WE[t - 1, 1:-1, 1:-1]
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
+            + Fa_W_lower_EW[t - 1, 1:-1, 1:-1]
+            * (Sa_track_W_lower[0, 1:-1, 1:-1] / Sa_W_lower[0, 1:-1, 1:-1])
+            + Fa_N_lower_SN[t - 1, 1:-1, 1:-1]
+            * (Sa_track_N_lower[0, 1:-1, 1:-1] / Sa_N_lower[0, 1:-1, 1:-1])
+            - Fa_N_lower_NS[t - 1, 1:-1, 1:-1]
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
+            - Fa_S_lower_SN[t - 1, 1:-1, 1:-1]
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
+            + Fa_S_lower_NS[t - 1, 1:-1, 1:-1]
+            * (Sa_track_S_lower[0, 1:-1, 1:-1] / Sa_S_lower[0, 1:-1, 1:-1])
+            - Fa_lowerward[t - 1, 1:-1, 1:-1]
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
             + Fa_upward[t - 1, 1:-1, 1:-1]
-            * (Sa_track_top[t, 1:-1, 1:-1] / W_top[t, 1:-1, 1:-1])
+            * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
         )
         # sometimes you get a Runtimewarning: invalid value encountered in less
         # RuntimeWarning: invalid value encountered in divide
-        # ik kan me voorstellen dat die error er komt als er een nan in Sa_track_down zit en dat je daar dan door moet gaan delen..
+        # ik kan me voorstellen dat die error er komt als er een nan in Sa_track_lower zit en dat je daar dan door moet gaan delen..
 
         # top: define values of tracked moisture of neighbouring grid cells
-        Sa_track_E_top[0, :, :-1] = Sa_track_top[
+        Sa_track_E_upper[0, :, :-1] = Sa_track_upper[
             t, :, 1:
         ]  # Atmospheric tracked storage of the cell to the east [m3]
         if config["isglobal"]:
-            Sa_track_E_top[0, :, -1] = Sa_track_top[
+            Sa_track_E_upper[0, :, -1] = Sa_track_upper[
                 t, :, 0
             ]  # Atmospheric tracked storage of the cell to the east [m3]
-        Sa_track_W_top[0, :, 1:] = Sa_track_top[
+        Sa_track_W_upper[0, :, 1:] = Sa_track_upper[
             t, :, :-1
         ]  # Atmospheric tracked storage of the cell to the west [m3]
         if config["isglobal"]:
-            Sa_track_W_top[0, :, 0] = Sa_track_top[
+            Sa_track_W_upper[0, :, 0] = Sa_track_upper[
                 t, :, -1
             ]  # Atmospheric tracked storage of the cell to the west [m3]
-        Sa_track_N_top[0, 1:, :] = Sa_track_top[
+        Sa_track_N_upper[0, 1:, :] = Sa_track_upper[
             t, :-1, :
         ]  # Atmospheric tracked storage of the cell to the north [m3]
-        Sa_track_S_top[0, :-1, :] = Sa_track_top[
+        Sa_track_S_upper[0, :-1, :] = Sa_track_upper[
             t, 1:, :
         ]  # Atmospheric tracked storage of the cell to the south [m3]
 
         # top: calculate with moisture fluxes
-        Sa_track_after_Fa_top[0, 1:-1, 1:-1] = (
-            Sa_track_top[t, 1:-1, 1:-1]
-            + Fa_E_top_WE[t - 1, 1:-1, 1:-1]
-            * (Sa_track_E_top[0, 1:-1, 1:-1] / Sa_E_top[0, 1:-1, 1:-1])
-            - Fa_E_top_EW[t - 1, 1:-1, 1:-1]
-            * (Sa_track_top[t, 1:-1, 1:-1] / W_top[t, 1:-1, 1:-1])
-            - Fa_W_top_WE[t - 1, 1:-1, 1:-1]
-            * (Sa_track_top[t, 1:-1, 1:-1] / W_top[t, 1:-1, 1:-1])
-            + Fa_W_top_EW[t - 1, 1:-1, 1:-1]
-            * (Sa_track_W_top[0, 1:-1, 1:-1] / Sa_W_top[0, 1:-1, 1:-1])
-            + Fa_N_top_SN[t - 1, 1:-1, 1:-1]
-            * (Sa_track_N_top[0, 1:-1, 1:-1] / Sa_N_top[0, 1:-1, 1:-1])
-            - Fa_N_top_NS[t - 1, 1:-1, 1:-1]
-            * (Sa_track_top[t, 1:-1, 1:-1] / W_top[t, 1:-1, 1:-1])
-            - Fa_S_top_SN[t - 1, 1:-1, 1:-1]
-            * (Sa_track_top[t, 1:-1, 1:-1] / W_top[t, 1:-1, 1:-1])
-            + Fa_S_top_NS[t - 1, 1:-1, 1:-1]
-            * (Sa_track_S_top[0, 1:-1, 1:-1] / Sa_S_top[0, 1:-1, 1:-1])
-            + Fa_downward[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
+        Sa_track_after_Fa_upper[0, 1:-1, 1:-1] = (
+            Sa_track_upper[t, 1:-1, 1:-1]
+            + Fa_E_upper_WE[t - 1, 1:-1, 1:-1]
+            * (Sa_track_E_upper[0, 1:-1, 1:-1] / Sa_E_upper[0, 1:-1, 1:-1])
+            - Fa_E_upper_EW[t - 1, 1:-1, 1:-1]
+            * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
+            - Fa_W_upper_WE[t - 1, 1:-1, 1:-1]
+            * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
+            + Fa_W_upper_EW[t - 1, 1:-1, 1:-1]
+            * (Sa_track_W_upper[0, 1:-1, 1:-1] / Sa_W_upper[0, 1:-1, 1:-1])
+            + Fa_N_upper_SN[t - 1, 1:-1, 1:-1]
+            * (Sa_track_N_upper[0, 1:-1, 1:-1] / Sa_N_upper[0, 1:-1, 1:-1])
+            - Fa_N_upper_NS[t - 1, 1:-1, 1:-1]
+            * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
+            - Fa_S_upper_SN[t - 1, 1:-1, 1:-1]
+            * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
+            + Fa_S_upper_NS[t - 1, 1:-1, 1:-1]
+            * (Sa_track_S_upper[0, 1:-1, 1:-1] / Sa_S_upper[0, 1:-1, 1:-1])
+            + Fa_lowerward[t - 1, 1:-1, 1:-1]
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
             - Fa_upward[t - 1, 1:-1, 1:-1]
-            * (Sa_track_top[t, 1:-1, 1:-1] / W_top[t, 1:-1, 1:-1])
+            * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
         )
 
         # losses to the north and south
-        north_loss[t - 1, 0, :] = Fa_N_top_NS[t - 1, 1, :] * (
-            Sa_track_top[t, 1, :] / W_top[t, 1, :]
-        ) + Fa_N_down_NS[t - 1, 1, :] * (Sa_track_down[t, 1, :] / W_down[t, 1, :])
-        south_loss[t - 1, 0, :] = Fa_S_top_SN[t - 1, -2, :] * (
-            Sa_track_top[t, -2, :] / W_top[t, -2, :]
-        ) + Fa_S_down_SN[t - 1, -2, :] * (Sa_track_down[t, -2, :] / W_down[t, -2, :])
+        north_loss[t - 1, 0, :] = Fa_N_upper_NS[t - 1, 1, :] * (
+            Sa_track_upper[t, 1, :] / W_upper[t, 1, :]
+        ) + Fa_N_lower_NS[t - 1, 1, :] * (Sa_track_lower[t, 1, :] / W_lower[t, 1, :])
+        south_loss[t - 1, 0, :] = Fa_S_upper_SN[t - 1, -2, :] * (
+            Sa_track_upper[t, -2, :] / W_upper[t, -2, :]
+        ) + Fa_S_lower_SN[t - 1, -2, :] * (Sa_track_lower[t, -2, :] / W_lower[t, -2, :])
 
         # Imme added: losses to the east and west
-        east_loss[t - 1, 0, :] = Fa_E_top_EW[t - 1, :, -2] * (
-            Sa_track_top[t, :, -2] / W_top[t, :, -2]
-        ) + Fa_E_down_EW[t - 1, :, -2] * (Sa_track_down[t, :, -2] / W_down[t, :, -2])
-        west_loss[t - 1, 0, :] = Fa_W_top_WE[t - 1, :, 1] * (
-            Sa_track_top[t, :, 1] / W_top[t, :, 1]
-        ) + Fa_W_down_WE[t - 1, :, 1] * (Sa_track_down[t, :, 1] / W_down[t, :, 1])
+        east_loss[t - 1, 0, :] = Fa_E_upper_EW[t - 1, :, -2] * (
+            Sa_track_upper[t, :, -2] / W_upper[t, :, -2]
+        ) + Fa_E_lower_EW[t - 1, :, -2] * (Sa_track_lower[t, :, -2] / W_lower[t, :, -2])
+        west_loss[t - 1, 0, :] = Fa_W_upper_WE[t - 1, :, 1] * (
+            Sa_track_upper[t, :, 1] / W_upper[t, :, 1]
+        ) + Fa_W_lower_WE[t - 1, :, 1] * (Sa_track_lower[t, :, 1] / W_lower[t, :, 1])
 
         # down: add precipitation and subtract evaporation
-        Sa_track_after_Fa_P_E_down[0, 1:-1, 1:-1] = (
-            Sa_track_after_Fa_down[0, 1:-1, 1:-1]
-            + P_region[t - 1, 1:-1, 1:-1] * (W_down[t, 1:-1, 1:-1] / W[t, 1:-1, 1:-1])
+        Sa_track_after_Fa_P_E_lower[0, 1:-1, 1:-1] = (
+            Sa_track_after_Fa_lower[0, 1:-1, 1:-1]
+            + P_region[t - 1, 1:-1, 1:-1] * (W_lower[t, 1:-1, 1:-1] / W[t, 1:-1, 1:-1])
             - E[t - 1, 1:-1, 1:-1]
-            * (Sa_track_down[t, 1:-1, 1:-1] / W_down[t, 1:-1, 1:-1])
+            * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
         )
 
         # top: add precipitation
-        Sa_track_after_Fa_P_E_top[0, 1:-1, 1:-1] = Sa_track_after_Fa_top[
+        Sa_track_after_Fa_P_E_upper[0, 1:-1, 1:-1] = Sa_track_after_Fa_upper[
             0, 1:-1, 1:-1
-        ] + P_region[t - 1, 1:-1, 1:-1] * (W_top[t, 1:-1, 1:-1] / W[t, 1:-1, 1:-1])
+        ] + P_region[t - 1, 1:-1, 1:-1] * (W_upper[t, 1:-1, 1:-1] / W[t, 1:-1, 1:-1])
 
         # down and top: redistribute unaccounted water that is otherwise lost from the sytem
-        down_to_top[t - 1, :, :] = np.reshape(
+        down_to_upper[t - 1, :, :] = np.reshape(
             np.maximum(
                 0,
                 np.reshape(
-                    Sa_track_after_Fa_P_E_down, (np.size(Sa_track_after_Fa_P_E_down))
+                    Sa_track_after_Fa_P_E_lower, (np.size(Sa_track_after_Fa_P_E_lower))
                 )
-                - np.reshape(W_down[t - 1, :, :], (np.size(W_down[t - 1, :, :]))),
+                - np.reshape(W_lower[t - 1, :, :], (np.size(W_lower[t - 1, :, :]))),
             ),
             (len(latitude), len(longitude)),
         )  # Imme: invalid value encountered in maximum
-        top_to_down[t - 1, :, :] = np.reshape(
+        top_to_lower[t - 1, :, :] = np.reshape(
             np.maximum(
                 0,
                 np.reshape(
-                    Sa_track_after_Fa_P_E_top, (np.size(Sa_track_after_Fa_P_E_top))
+                    Sa_track_after_Fa_P_E_upper, (np.size(Sa_track_after_Fa_P_E_upper))
                 )
-                - np.reshape(W_top[t - 1, :, :], (np.size(W_top[t - 1, :, :]))),
+                - np.reshape(W_upper[t - 1, :, :], (np.size(W_upper[t - 1, :, :]))),
             ),
             (len(latitude), len(longitude)),
         )  # Imme: invalid value encountered in maximum
-        Sa_track_down[t - 1, 1:-1, 1:-1] = (
-            Sa_track_after_Fa_P_E_down[0, 1:-1, 1:-1]
-            - down_to_top[t - 1, 1:-1, 1:-1]
-            + top_to_down[t - 1, 1:-1, 1:-1]
+        Sa_track_lower[t - 1, 1:-1, 1:-1] = (
+            Sa_track_after_Fa_P_E_lower[0, 1:-1, 1:-1]
+            - down_to_upper[t - 1, 1:-1, 1:-1]
+            + top_to_lower[t - 1, 1:-1, 1:-1]
         )
-        Sa_track_top[t - 1, 1:-1, 1:-1] = (
-            Sa_track_after_Fa_P_E_top[0, 1:-1, 1:-1]
-            - top_to_down[t - 1, 1:-1, 1:-1]
-            + down_to_top[t - 1, 1:-1, 1:-1]
+        Sa_track_upper[t - 1, 1:-1, 1:-1] = (
+            Sa_track_after_Fa_P_E_upper[0, 1:-1, 1:-1]
+            - top_to_lower[t - 1, 1:-1, 1:-1]
+            + down_to_upper[t - 1, 1:-1, 1:-1]
         )
 
     return (
-        Sa_track_top,
-        Sa_track_down,
+        Sa_track_upper,
+        Sa_track_lower,
         north_loss,
         south_loss,
         east_loss,
         west_loss,
-        down_to_top,
-        top_to_down,
+        down_to_upper,
+        top_to_lower,
         water_lost,
     )
 
 
-def create_empty_array(count_time, divt, latitude, longitude, years):
-    Sa_time_top = np.zeros(
-        (np.int(count_time * divt) + 1, len(latitude), len(longitude))
-    )
-    Sa_time_down = np.zeros(
-        (np.int(count_time * divt) + 1, len(latitude), len(longitude))
-    )
-    Sa_track_top = np.zeros(
-        (np.int(count_time * divt) + 1, len(latitude), len(longitude))
-    )
-    Sa_track_down = np.zeros(
-        (np.int(count_time * divt) + 1, len(latitude), len(longitude))
-    )
+def create_empty_array(count_time, divt, latitude, longitude, ):
 
-    np.savez_compressed(
-        datapathea[0],
-        Sa_track_top_last=Sa_track_top[0, :, :],
-        Sa_track_down_last=Sa_track_down[0, :, :],
-    )
-    np.savez_compressed(
-        datapathea[1], Sa_time_top=Sa_time_top, Sa_time_down=Sa_time_down
-    )
-
-    #    sio.savemat(datapathea[0], {'Sa_track_top':Sa_track_top,'Sa_track_down':Sa_track_down},do_compression=True)
-    #    sio.savemat(datapathea[1], {'Sa_time_top':Sa_time_top,'Sa_time_down':Sa_time_down},do_compression=True)
-    return
 
 
 # Runtime & Results
 
 # The two lines below create empty arrays for first runs/initial values are zero.
-previous_data_to_load = datelist[1:][0] + dt.timedelta(days=1)
-datapathea = data_path_ea(
-    previous_data_to_load.year, previous_data_to_load.month, previous_data_to_load.day
-)  # define paths for empty arrays
+previous_data_to_load = datelist[-1] + dt.timedelta(days=1)
+datapathea = data_path_ea(previous_data_to_load)  # define paths for empty arrays
+
+# Load 1 dataset to get grid info
+ds = xr.open_dataset(input_path(datelist[0]))
+
+
 if config["veryfirstrun"]:
-    create_empty_array(
-        count_time, divt, latitude, longitude, years
-    )  # creates empty arrays for first day run
-    # so in this specific case for 2011 0 an empty array is created with zeros
+    # Create initial field and store to disk
+    Sa_track_upper = np.zeros_like(ds.w_upper)
+    Sa_track_lower = np.zeros_like(ds.w_upper)
+
+    xr.Dataset(
+        {
+            "Sa_track_upper": (["time_states", "lat", "lon"], Sa_track_upper),
+            "Sa_track_lower": (["time_states", "lat", "lon"], Sa_track_lower),
+        },
+    ).to_netcdf(datapathea)
+
 
 for date in datelist[1:]:
 
@@ -590,39 +512,39 @@ for date in datelist[1:]:
     print(datapath[0])
     # Imme: Hier laad je de getrackte data van de laatste tijdstap, als de laatste tijdstap er neit was dan is die aangemaakt met create_empty_array en zit ie vol met zeros
     loading_ST = np.load(datapath[0])
-    # Sa_track_top = loading_ST['Sa_track_top'] # array with zeros #Imme moeten dit zeros zijn of al ingevulde data
-    # Sa_track_down = loading_ST['Sa_track_down']
-    Sa_track_top_last_1 = loading_ST["Sa_track_top_last"]  # Sa_track_top[0,:,:]
-    Sa_track_down_last_1 = loading_ST["Sa_track_down_last"]  # Sa_track_down[0,:,:]
-    Sa_track_top_last = np.reshape(
-        Sa_track_top_last_1, (1, len(latitude), len(longitude))
+    # Sa_track_upper = loading_ST['Sa_track_upper'] # array with zeros #Imme moeten dit zeros zijn of al ingevulde data
+    # Sa_track_lower = loading_ST['Sa_track_lower']
+    Sa_track_upper_last_1 = loading_ST["Sa_track_upper_last"]  # Sa_track_upper[0,:,:]
+    Sa_track_lower_last_1 = loading_ST["Sa_track_lower_last"]  # Sa_track_lower[0,:,:]
+    Sa_track_upper_last = np.reshape(
+        Sa_track_upper_last_1, (1, len(latitude), len(longitude))
     )  # in deze array staan nan en volgens mij hoort dat niet!!
-    Sa_track_down_last = np.reshape(
-        Sa_track_down_last_1, (1, len(latitude), len(longitude))
+    Sa_track_lower_last = np.reshape(
+        Sa_track_lower_last_1, (1, len(latitude), len(longitude))
     )  # in deze array staan nan en volgens mij hoort dat niet!!
 
     loading_FS = sio.loadmat(datapath[1], verify_compressed_data_integrity=False)
-    Fa_E_top = loading_FS["Fa_E_top"]
-    Fa_N_top = loading_FS["Fa_N_top"]
-    Fa_E_down = loading_FS["Fa_E_down"]
-    Fa_N_down = loading_FS["Fa_N_down"]
+    Fa_E_upper = loading_FS["Fa_E_upper"]
+    Fa_N_upper = loading_FS["Fa_N_upper"]
+    Fa_E_lower = loading_FS["Fa_E_lower"]
+    Fa_N_lower = loading_FS["Fa_N_lower"]
     E = loading_FS["E"]
     P = loading_FS["P"]
-    W_top = loading_FS["W_top"]
-    W_down = loading_FS["W_down"]
+    W_upper = loading_FS["W_upper"]
+    W_lower = loading_FS["W_lower"]
     Fa_Vert = loading_FS["Fa_Vert"]
 
     # call the backward tracking function
     if not config["timetracking"]:  # I use timetracking: false
         (
-            Sa_track_top,
-            Sa_track_down,
+            Sa_track_upper,
+            Sa_track_lower,
             north_loss,
             south_loss,
             east_loss,
             west_loss,
-            down_to_top,
-            top_to_down,
+            down_to_upper,
+            top_to_lower,
             water_lost,
         ) = get_Sa_track_backward(
             latitude,
@@ -631,50 +553,50 @@ for date in datelist[1:]:
             divt,
             Kvf,
             Region,
-            Fa_E_top,
-            Fa_N_top,
-            Fa_E_down,
-            Fa_N_down,
+            Fa_E_upper,
+            Fa_N_upper,
+            Fa_E_lower,
+            Fa_N_lower,
             Fa_Vert,
             E,
             P,
-            W_top,
-            W_down,
-            Sa_track_top_last,
-            Sa_track_down_last,
+            W_upper,
+            W_lower,
+            Sa_track_upper_last,
+            Sa_track_lower_last,
         )
 
     # compute tracked evaporation
-    E_track = E[:, :, :] * (Sa_track_down[1:, :, :] / W_down[1:, :, :])
+    E_track = E[:, :, :] * (Sa_track_lower[1:, :, :] / W_lower[1:, :, :])
 
     # save per day
     E_per_day = np.sum(E, axis=0)
     E_track_per_day = np.sum(E_track, axis=0)
     P_per_day = np.sum(P, axis=0)
-    Sa_track_down_per_day = np.mean(Sa_track_down[1:, :, :], axis=0)
-    Sa_track_top_per_day = np.mean(Sa_track_top[1:, :, :], axis=0)
-    W_down_per_day = np.mean(W_down[1:, :, :], axis=0)
-    W_top_per_day = np.mean(W_top[1:, :, :], axis=0)
+    Sa_track_lower_per_day = np.mean(Sa_track_lower[1:, :, :], axis=0)
+    Sa_track_upper_per_day = np.mean(Sa_track_upper[1:, :, :], axis=0)
+    W_lower_per_day = np.mean(W_lower[1:, :, :], axis=0)
+    W_upper_per_day = np.mean(W_upper[1:, :, :], axis=0)
 
     north_loss_per_day = np.sum(north_loss, axis=0)
     south_loss_per_day = np.sum(south_loss, axis=0)
     east_loss_per_day = np.sum(east_loss, axis=0)
     west_loss_per_day = np.sum(west_loss, axis=0)
-    down_to_top_per_day = np.sum(down_to_top, axis=0)
-    top_to_down_per_day = np.sum(top_to_down, axis=0)
+    down_to_upper_per_day = np.sum(down_to_upper, axis=0)
+    top_to_lower_per_day = np.sum(top_to_lower, axis=0)
     water_lost_per_day = np.sum(water_lost, axis=0)
 
     np.savez_compressed(
         datapath[3],
-        Sa_track_top_last=Sa_track_top[0, :, :],
-        Sa_track_down_last=Sa_track_down[0, :, :],
+        Sa_track_upper_last=Sa_track_upper[0, :, :],
+        Sa_track_lower_last=Sa_track_lower[0, :, :],
         E_per_day=E_per_day,
         E_track_per_day=E_track_per_day,
         P_per_day=P_per_day,
-        Sa_track_top_per_day=Sa_track_top_per_day,
-        Sa_track_down_per_day=Sa_track_down_per_day,
-        W_down_per_day=W_down_per_day,
-        W_top_per_day=W_top_per_day,
+        Sa_track_upper_per_day=Sa_track_upper_per_day,
+        Sa_track_lower_per_day=Sa_track_lower_per_day,
+        W_lower_per_day=W_lower_per_day,
+        W_upper_per_day=W_upper_per_day,
         north_loss_per_day=north_loss_per_day,
         south_loss_per_day=south_loss_per_day,
         east_loss_per_day=east_loss_per_day,
