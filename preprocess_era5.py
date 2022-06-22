@@ -92,30 +92,27 @@ for date in datelist[:]:
         (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values,
     )
 
-    # Change units to m3
-    # TODO: Check this! Change units before interp is tricky, if not wrong
-    total_seconds = config["timestep"] / config["divt"]
+    # Change units to m3, based on target frequency (not incoming frequency!)
+    target_freq = config['target_frequency']
+    total_seconds = pd.Timedelta(target_freq).total_seconds()
     fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
     fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
     fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
     fa_n_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
 
-    # Put data on a smaller time step...
-    time = w_upper.time.values
-    newtime = pd.date_range(time[0], time[-1], freq="15Min")[:-1]
-    w_upper = w_upper.interp(time=newtime).values
-    w_lower = w_lower.interp(time=newtime).values
+    # Increased time resolution; states at midpoints, fluxes at the edges
+    old_time = w_upper.time.values
+    newtime_states = pd.date_range(old_time[0], old_time[-1], freq=target_freq)
+    newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
 
-    # ... fluxes on the edges instead of midpoints
-    newtime = newtime[:-1] + pd.Timedelta("6Min") / 2
-    fa_e_upper = fa_e_upper.interp(time=newtime).values
-    fa_n_upper = fa_n_upper.interp(time=newtime).values
-
-    fa_e_lower = fa_e_lower.interp(time=newtime).values
-    fa_n_lower = fa_n_lower.interp(time=newtime).values
-
-    precip = (precip.reindex(time=newtime, method="bfill") / 4).values
-    evap = (evap.reindex(time=newtime, method="bfill") / 4).values
+    w_upper = w_upper.interp(time=newtime_states).values
+    w_lower = w_lower.interp(time=newtime_states).values
+    fa_e_upper = fa_e_upper.interp(time=newtime_fluxes).values
+    fa_n_upper = fa_n_upper.interp(time=newtime_fluxes).values
+    fa_e_lower = fa_e_lower.interp(time=newtime_fluxes).values
+    fa_n_lower = fa_n_lower.interp(time=newtime_fluxes).values
+    precip = (precip.reindex(time=newtime_fluxes, method="bfill") / 4).values
+    evap = (evap.reindex(time=newtime_fluxes, method="bfill") / 4).values
 
     # Stabilize horizontal fluxes
     fa_e_upper, fa_n_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
@@ -141,14 +138,20 @@ for date in datelist[:]:
     output_path = os.path.join(config["interdata_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "fa_e_upper": (["time", "lat", "lon"], fa_e_upper),
-            "fa_n_upper": (["time", "lat", "lon"], fa_n_upper),
-            "fa_e_lower": (["time", "lat", "lon"], fa_e_lower),
-            "fa_n_lower": (["time", "lat", "lon"], fa_n_lower),
-            "w_upper": (["time2", "lat", "lon"], w_upper),
-            "w_lower": (["time2", "lat", "lon"], w_lower),
-            "fa_vert": (["time", "lat", "lon"], fa_vert),
-            "evap": (["time", "lat", "lon"], evap),
-            "precip": (["time", "lat", "lon"], precip),
+            "fa_e_upper": (["time_fluxes", "lat", "lon"], fa_e_upper),
+            "fa_n_upper": (["time_fluxes", "lat", "lon"], fa_n_upper),
+            "fa_e_lower": (["time_fluxes", "lat", "lon"], fa_e_lower),
+            "fa_n_lower": (["time_fluxes", "lat", "lon"], fa_n_lower),
+            "w_upper": (["time_states", "lat", "lon"], w_upper),
+            "w_lower": (["time_states", "lat", "lon"], w_lower),
+            "fa_vert": (["time_fluxes", "lat", "lon"], fa_vert),
+            "evap": (["time_fluxes", "lat", "lon"], evap),
+            "precip": (["time_fluxes", "lat", "lon"], precip),
+        },
+        coords={
+            'time_fluxes': newtime_fluxes,
+            'time_states': newtime_states,
+            'lat': u.latitude.values,
+            'lon': u.longitude.values
         }
     ).to_netcdf(output_path)
