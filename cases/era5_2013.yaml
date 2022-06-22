@@ -1,5 +1,5 @@
 # Settings needed for the data preprocessing (used by preprocess_XXXXXX.py)
-input_folder: ../era5_2013
+input_folder: /data/volume_2/era5_2013
 preprocess_start_date: '20130521' #YYYYMMDD
 preprocess_end_date: '20130604' #YYYYMMDD
 
@@ -10,10 +10,10 @@ divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 =
 ########################
 
 # Settings shared by preprocessing and backtracking
-preprocessed_data_folder: ../preprocessed_data
+preprocessed_data_folder: ~/preprocessed_data
 
 # Settings needed to define the tracking region (in space and time)
-region: ../era5_2013/FloodCase_201305_lsm.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
+region: data/volume_2/era5_2013/FloodCase_201305_lsm.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
 track_start_date: '20130521' #YYYYMMDD
 track_end_date: '20130604' #YYYYMMDD
 
