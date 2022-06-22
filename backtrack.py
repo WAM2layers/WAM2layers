@@ -1,32 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 16 13:24:45 2016
-
-@author: Ent00002
-"""
-
-"""
-Created on Mon Feb 18 15:30:43 2019
-
-@author: bened003
-"""
-
-# This Backtrack script is based on the Con_E_Recyc_Masterscript.py from the WAM-2layers model from Ruud van der Ent but adapted to fit the purposes of the study by Imme Benedict
-
-# We have removed the water_lost statement to conserve water mass
-# We have implemented a datelist function so the model can run for multiple years without having problems with leap years
-# Timetracking was not implemented in this code
-
-# We save daily data instead of data at every timestep to reduce storage
-
 import calendar
 import datetime as dt
 import os
 import yaml
-from datetime import timedelta
-from timeit import default_timer as timer
 
-# Import libraries
 import numpy as np
 import scipy.io as sio
 
@@ -559,15 +535,6 @@ def get_Sa_track_backward(
     )
 
 
-# Code
-# def get_Sa_track_backward_TIME(latitude,longitude,count_time,divt,timestep,Kvf,Region,Fa_E_top,Fa_N_top,Fa_E_down,Fa_N_down,Fa_Vert,E,P,
-#                                            W_top,W_down,Sa_track_top_last,Sa_track_down_last,Sa_time_top_last,Sa_time_down_last):
-
-# I didn't use this piece of code in this study
-
-# create empty array for track and time
-
-
 def create_empty_array(count_time, divt, latitude, longitude, years):
     Sa_time_top = np.zeros(
         (np.int(count_time * divt) + 1, len(latitude), len(longitude))
@@ -598,8 +565,6 @@ def create_empty_array(count_time, divt, latitude, longitude, years):
 
 # Runtime & Results
 
-start1 = timer()
-
 # The two lines below create empty arrays for first runs/initial values are zero.
 previous_data_to_load = datelist[1:][0] + dt.timedelta(days=1)
 datapathea = data_path_ea(
@@ -612,7 +577,7 @@ if config["veryfirstrun"]:
     # so in this specific case for 2011 0 an empty array is created with zeros
 
 for date in datelist[1:]:
-    start = timer()
+
 
     a = date.day
     yearnumber = date.year
@@ -678,19 +643,6 @@ for date in datelist[1:]:
             Sa_track_top_last,
             Sa_track_down_last,
         )
-    #    elif config["timetracking"]:
-    #        loading_STT = sio.loadmat(datapath[2],verify_compressed_data_integrity=False)
-    #        Sa_time_top = loading_STT['Sa_time_top'] # [seconds]
-    #        Sa_time_down = loading_STT['Sa_time_down']
-    #        Sa_time_top_last_1 = Sa_time_top[0,:,:]
-    #        Sa_time_down_last_1 = Sa_time_down[0,:,:]
-    #        Sa_time_top_last =  np.reshape(Sa_time_top_last_1, (1,len(latitude),len(longitude)))
-    #        Sa_time_down_last =  np.reshape(Sa_time_down_last_1, (1,len(latitude),len(longitude)))
-    #
-    #        Sa_time_top,Sa_time_down,Sa_track_top,Sa_track_down,north_loss,south_loss,down_to_top,top_to_down,water_lost = get_Sa_track_backward_TIME(latitude,longitude,count_time,divt,
-    #                                        timestep,Kvf,Region,Fa_E_top,Fa_N_top,Fa_E_down,Fa_N_down,Fa_Vert,E,P,W_top,W_down,Sa_track_top_last,Sa_track_down_last,Sa_time_top_last,Sa_time_down_last)
-    # save this data
-    # sio.savemat(datapath[3], {'Sa_track_top':Sa_track_top,'Sa_track_down':Sa_track_down,'north_loss':north_loss, 'south_loss':south_loss,'down_to_top':down_to_top,'top_to_down':top_to_down,'water_lost':water_lost},do_compression=True)
 
     # compute tracked evaporation
     E_track = E[:, :, :] * (Sa_track_down[1:, :, :] / W_down[1:, :, :])
@@ -729,22 +681,3 @@ for date in datelist[1:]:
         west_loss_per_day=west_loss_per_day,
         water_lost_per_day=water_lost_per_day,
     )
-
-    #    if config["timetracking"]:
-    #        sio.savemat(datapath[4], {'Sa_time_top':Sa_time_top,'Sa_time_down':Sa_time_down},do_compression=True)
-
-    end = timer()
-    print(
-        "Runtime Sa_track for day "
-        + str(a)
-        + " in month "
-        + str(monthnumber)
-        + " in year "
-        + str(yearnumber)
-        + " is",
-        (end - start),
-        " seconds.",
-    )
-
-end1 = timer()
-print("The total runtime of Backtrack_Masterscript is", (end1 - start1), " seconds.")
