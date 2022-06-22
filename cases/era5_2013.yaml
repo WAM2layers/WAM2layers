@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Settings needed for the data preprocessing (used by preprocess_XXXXXX.py)
 input_folder: /data/volume_2/era5_2013
 preprocess_start_date: '20130521' #YYYYMMDD
@@ -27,4 +28,17 @@ distancetracking: false
 
 
 
+=======
+# Data paths
+land_sea_mask: ../era5_2013/FloodCase_201305_lsm.nc
+region:
+input_folder: ../era5_2013
+interdata_folder: ../output_data
+name_of_run: ""
+
+# Time
+start_date: '20130521'
+end_date: '20130604'
+target_frequency: '15min'  # See https://stackoverflow.com/a/35339226 for options
+>>>>>>> origin/master
 
