@@ -56,7 +56,7 @@ for date in datelist[:]:
 
     # Create pressure array
     levels = q.level
-    p = levels.broadcast_like(u)*100  # Pa
+    p = levels.broadcast_like(u) * 100  # Pa
 
     # Interpolate to new levels
     edges = 0.5 * (levels.values[1:] + levels.values[:-1])
@@ -65,7 +65,7 @@ for date in datelist[:]:
     q = q.interp(level=edges)
 
     # Calculate pressure jump
-    dp = p.diff(dim="level") 
+    dp = p.diff(dim="level")
     dp["level"] = edges
 
     # Determine the fluxes and states
