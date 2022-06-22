@@ -29,7 +29,7 @@ def load_data(variable, date):
 
 
 datelist = pd.date_range(
-    start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
+    start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
 for date in datelist[:]:
@@ -135,7 +135,7 @@ for date in datelist[:]:
     # while states (dim: time2) are at the midpoints and include next midnight
     # so the first state from day 2 will overlap with the last flux from day 1
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-    output_path = os.path.join(config["interdata_folder"], filename)
+    output_path = os.path.join(config["preprocessed_data_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fa_e_upper": (["time_fluxes", "lat", "lon"], fa_e_upper),
