@@ -41,8 +41,8 @@ for date in datelist[:]:
     q = load_data("q", date) #in kg kg-1
     sp = load_data("sp", date) #in Pa
     evap = load_data("e", date) #in m (accumulated hourly) 
-    cp = load_data("cp", date) #in m (accumulated hourly)
-    lsp = load_data("lsp", date) #in m (accumulated hourly)
+    cp = load_data("cp", date) #convective precipitation in m (accumulated hourly)
+    lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
 
     # Get grid info
