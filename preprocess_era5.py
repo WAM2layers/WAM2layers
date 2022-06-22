@@ -36,13 +36,13 @@ for date in datelist[:]:
     print(date)
 
     # Load data
-    u = load_data("u", date)
-    v = load_data("v", date)
-    q = load_data("q", date)
-    sp = load_data("sp", date)
-    evap = load_data("e", date)
-    cp = load_data("cp", date)
-    lsp = load_data("lsp", date)
+    u = load_data("u", date) #in m/s
+    v = load_data("v", date) #in m/s
+    q = load_data("q", date) #in kg kg-1
+    sp = load_data("sp", date) #in Pa
+    evap = load_data("e", date) #in m (accumulated hourly) 
+    cp = load_data("cp", date) #in m (accumulated hourly)
+    lsp = load_data("lsp", date) #in m (accumulated hourly)
     precip = cp + lsp
 
     # Get grid info
@@ -55,7 +55,7 @@ for date in datelist[:]:
     precip *= a_gridcell  # m3
 
     # Create pressure array
-    levels = q.level
+    levels = q.level #in hPa
     p = levels.broadcast_like(u) * 100  # Pa
 
     # Interpolate to new levels
@@ -69,8 +69,8 @@ for date in datelist[:]:
     dp["level"] = edges
 
     # Determine the fluxes and states
-    fa_e = u * q * dp / g  # eastward atmospheric moisture flux
-    fa_n = v * q * dp / g  # northward atmospheric moisture flux
+    fa_e = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
+    fa_n = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
     cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
 
     # Split in 2 layers
@@ -79,13 +79,13 @@ for date in datelist[:]:
     upper_layer = dp.level < P_boundary / 100
 
     # Integrate fluxes and state
-    fa_e_lower = fa_e.where(lower_layer).sum(dim="level")
-    fa_n_lower = fa_n.where(lower_layer).sum(dim="level")
-    w_lower = cwv.where(lower_layer).sum(dim="level")
+    fa_e_lower = fa_e.where(lower_layer).sum(dim="level") #kg*m-1*s-1
+    fa_n_lower = fa_n.where(lower_layer).sum(dim="level") #kg*m-1*s-1
+    w_lower = cwv.where(lower_layer).sum(dim="level") #m3
 
-    fa_e_upper = fa_e.where(upper_layer).sum(dim="level")
-    fa_n_upper = fa_n.where(upper_layer).sum(dim="level")
-    w_upper = cwv.where(upper_layer).sum(dim="level")
+    fa_e_upper = fa_e.where(upper_layer).sum(dim="level") #kg*m-1*s-1
+    fa_n_upper = fa_n.where(upper_layer).sum(dim="level") #kg*m-1*s-1
+    w_upper = cwv.where(upper_layer).sum(dim="level") #m3
 
     print(
         "Check calculation water vapor, this value should be zero:",
@@ -95,8 +95,8 @@ for date in datelist[:]:
     # Change units to m3
     # TODO: Check this! Change units before interp is tricky, if not wrong
     total_seconds = config["timestep"] / config["divt"]
-    fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
-    fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
+    fa_e_upper *= total_seconds * (l_ew_gridcell / density_water) 
+    fa_e_lower *= total_seconds * (l_ew_gridcell / density_water) 
     fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
     fa_n_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
 
