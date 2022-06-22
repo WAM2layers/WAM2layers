@@ -63,14 +63,12 @@ def get_stable_fluxes(fa_e, fa_n, w):
     return fa_e, fa_n
 
 
-def divergence_zonal(fa_e, periodic_boundary):
+def divergence_zonal(fa_e):
     """Define the horizontal fluxes over the zonal boundaries."""
     flux = np.asarray(fa_e)
 
     fa_e_boundary = np.zeros_like(flux)
     fa_e_boundary[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
-    if periodic_boundary == True:
-        fa_e_boundary[:, :, -1] = 0.5 * (flux[:, :, -1] + flux[:, :, 0])
 
     fa_w_boundary = np.roll(fa_e_boundary, 1)
     return fa_w_boundary - fa_e_boundary
@@ -96,14 +94,13 @@ def get_vertical_transport(
     p,
     w_top,
     w_down,
-    periodic_boundary
 ):
 
     # total moisture in the column
     w = w_top + w_down
 
-    zonal_divergence_top = divergence_zonal(fa_e_top, periodic_boundary)
-    zonal_divergence_down = divergence_zonal(fa_e_down, periodic_boundary)
+    zonal_divergence_top = divergence_zonal(fa_e_top)
+    zonal_divergence_down = divergence_zonal(fa_e_down)
     meridional_divergence_top = divergence_meridional(fa_n_top)
     meridional_divergence_down = divergence_meridional(fa_n_down)
 
