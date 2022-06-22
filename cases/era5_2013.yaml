@@ -1,19 +1,20 @@
-# Data paths
-land_sea_mask: ../era5_2013/FloodCase_201305_lsm.nc
-region:
-input_folder: ../era5_2013
-interdata_folder: ../output_data
-name_of_run: ""
+# Settings needed for the data preprocessing (used by preprocess_XXXXXX.py)
+input_folder: /data/volume_2/era5_2013
+preprocess_start_date: '20130521' #YYYYMMDD
+preprocess_end_date: '20130604' #YYYYMMDD
+target_frequency: '15min'  # See https://stackoverflow.com/a/35339226 for options
 
-# Time
-start_date: '20130521'
-end_date: '20130604'
+# Settings shared by preprocessing and backtracking
+preprocessed_data_folder: ~/preprocessed_data
 
-# divt & count_time
-timestep: 3600  # s; ERA5 data comes at hourly time steps
-divt: 60  # division of the timestep, 96 means a calculation timestep of 24/96 = 0.25 hours (numerical stability purposes)
+# Settings needed to define the tracking region (in space and time)
+region: data/volume_2/era5_2013/FloodCase_201305_lsm.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
+track_start_date: '20130521' #YYYYMMDD
+track_end_date: '20130604' #YYYYMMDD
 
-# Backtracking options
-Kvf: 3  # vertical dispersion factor (advection only is 0, dispersion the same size of the advective flux is 1, for stability don't make this more than 3)
-timetracking: false  # false for not tracking time and true for tracking time
-veryfirstrun: true  # true if no run has been done before from which can be continued, otherwise false
+# Settings needed for the tracking run
+name_of_run: 'default_run'
+veryfirstrun: true # true: starts from zero tracked water, false: loads tracked water
+Kvf: 3 # Vertical transport parameter for gross vertical transport between the layers during the tracking: "actual exchange = Kvf * F_vertical + F_vertical" in one direction and "-1 * (Kvf * F_vertical)" in opposite direction. # Default = 3.
+timetracking: false
+distancetracking: false
