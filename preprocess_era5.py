@@ -160,4 +160,4 @@ for date in datelist[:]:
             'lat': u.latitude.values,
             'lon': u.longitude.values
         }
-    ).to_netcdf(output_path)
+    ).astype("float32").to_netcdf(output_path)
