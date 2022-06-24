@@ -1,6 +1,7 @@
 import datetime as dt
 from re import X
 import yaml
+import xarray as xr
 
 import numpy as np
 from pathlib import Path
@@ -28,74 +29,16 @@ if not output_dir.exists():
 
 
 def input_path(date):
-    return f"{input_dir}_{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+    return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
 def output_path(date):
-    return f"{output_dir}_{date.strftime('%Y-%m-%d')}_Sa_track.nc"
+    return f"{output_dir}/{date.strftime('%Y-%m-%d')}_Sa_track.nc"
 
 
-def data_path(previous_data_to_load, yearnumber, month, a):
-    load_Sa_track = os.path.join(
-        sub_interdata_folder,
-        str(previous_data_to_load.year)
-        + "-"
-        + str(previous_data_to_load.month).zfill(2)
-        + "-"
-        + str(previous_data_to_load.day).zfill(2)
-        + "Sa_track.npz",
-    )
-
-    load_fluxes_and_storages = os.path.join(
-        config["interdata_folder"],
-        str(yearnumber)
-        + "-"
-        + str(month).zfill(2)
-        + "-"
-        + str(a).zfill(2)
-        + "fluxes_storages.mat",
-    )
-
-    load_Sa_time = os.path.join(
-        sub_interdata_folder,
-        str(previous_data_to_load.year)
-        + "-"
-        + str(previous_data_to_load.month).zfill(2)
-        + "-"
-        + str(previous_data_to_load.day).zfill(2)
-        + "Sa_time.npz",
-    )
-
-    save_path_track = os.path.join(
-        sub_interdata_folder,
-        str(yearnumber)
-        + "-"
-        + str(month).zfill(2)
-        + "-"
-        + str(a).zfill(2)
-        + "Sa_track",
-    )
-    save_path_time = os.path.join(
-        sub_interdata_folder,
-        str(yearnumber) + "-" + str(month).zfill(2) + "-" + str(a).zfill(2) + "Sa_time",
-    )
-    return (
-        load_Sa_track,
-        load_fluxes_and_storages,
-        load_Sa_time,
-        save_path_track,
-        save_path_time,
-    )
-
-
-# Code
-
-
-def get_Sa_track_backward(
+def backtrack(
     latitude,
     longitude,
-    count_time,
-    divt,
     Kvf,
     Region,
     Fa_E_upper,
@@ -194,12 +137,8 @@ def get_Sa_track_backward(
     # find out where the positive and negative fluxes are
     Fa_N_upper_pos = np.ones(np.shape(Fa_N_upper))
     Fa_N_lower_pos = np.ones(np.shape(Fa_N_lower))
-    Fa_N_upper_pos[
-        Fa_N_upper_boundary < 0
-    ] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
-    Fa_N_lower_pos[
-        Fa_N_lower_boundary < 0
-    ] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
+    Fa_N_upper_pos[Fa_N_upper_boundary < 0] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
+    Fa_N_lower_pos[Fa_N_lower_boundary < 0] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
     Fa_N_upper_neg = Fa_N_upper_pos - 1
     Fa_N_lower_neg = Fa_N_lower_pos - 1
 
@@ -252,10 +191,11 @@ def get_Sa_track_backward(
     Sa_S_upper = np.zeros(np.shape(Sa_track_upper_last))
 
     # define variables that find out what happens to the water
-    north_loss = np.zeros((np.int(count_time * divt), 1, len(longitude)))
-    south_loss = np.zeros((np.int(count_time * divt), 1, len(longitude)))
-    east_loss = np.zeros((np.int(count_time * divt), 1, len(latitude)))
-    west_loss = np.zeros((np.int(count_time * divt), 1, len(latitude)))
+    ntime = w_upper.shape[0]
+    north_loss = np.zeros(ntime, 1, len(longitude)))
+    south_loss = np.zeros(ntime, 1, len(longitude)))
+    east_loss = np.zeros(ntime, 1, len(latitude)))
+    west_loss = np.zeros(ntime, 1, len(latitude)))
     down_to_upper = np.zeros(np.shape(P))
     top_to_lower = np.zeros(np.shape(P))
     water_lost = np.zeros(np.shape(P))
@@ -263,7 +203,7 @@ def get_Sa_track_backward(
     water_lost_upper = np.zeros(np.shape(P))
 
     # Sa calculation backward in time
-    for t in np.arange(np.int(count_time * divt), 0, -1):
+    for t in np.arange(ntime, 0, -1):
         # down: define values of total moisture
         Sa_E_lower[0, :, :-1] = W_lower[
             t, :, 1:
@@ -471,112 +411,69 @@ def get_Sa_track_backward(
     )
 
 
-def create_empty_array(count_time, divt, latitude, longitude, ):
-
-
-
-# Runtime & Results
-
-# The two lines below create empty arrays for first runs/initial values are zero.
-previous_data_to_load = datelist[-1] + dt.timedelta(days=1)
-datapathea = data_path_ea(previous_data_to_load)  # define paths for empty arrays
-
-# Load 1 dataset to get grid info
-ds = xr.open_dataset(input_path(datelist[0]))
-
-
 if config["veryfirstrun"]:
-    # Create initial field and store to disk
-    Sa_track_upper = np.zeros_like(ds.w_upper)
-    Sa_track_lower = np.zeros_like(ds.w_upper)
+    # Create initial state (tracked moisture == 0)
 
-    xr.Dataset(
+    # Load 1 dataset to get grid info
+    ds = xr.open_dataset(input_path(datelist[0]))
+
+    s_track_upper = np.zeros_like(ds.w_upper)
+    s_track_lower = np.zeros_like(ds.w_upper)
+
+    states = xr.Dataset(
         {
-            "Sa_track_upper": (["time_states", "lat", "lon"], Sa_track_upper),
-            "Sa_track_lower": (["time_states", "lat", "lon"], Sa_track_lower),
-        },
-    ).to_netcdf(datapathea)
+            "s_track_upper": (["time_states", "lat", "lon"], s_track_upper),
+            "s_track_lower": (["time_states", "lat", "lon"], s_track_lower),
+        }
+    )
 
+for date in reversed(datelist):
+    print(date)
 
-for date in datelist[1:]:
+    s_track_upper = states.s_track_upper
+    s_track_lower = states.s_track_lower
 
+    fluxes = xr.open_dataset(input_path(date))
+    fa_e_upper = fluxes["fa_e_upper"]
+    fa_n_upper = fluxes["fa_n_upper"]
+    fa_e_lower = fluxes["fa_e_lower"]
+    fa_n_lower = fluxes["fa_n_lower"]
+    evap = fluxes["e"]
+    precip = fluxes["p"]
+    w_upper = fluxes["w_upper"]
+    w_lower = fluxes["w_lower"]
+    fa_vert = fluxes["fa_vert"]
 
-    a = date.day
-    yearnumber = date.year
-    monthnumber = date.month
-
-    previous_data_to_load = date + dt.timedelta(days=1)
-    datapath = data_path(previous_data_to_load, yearnumber, monthnumber, a)
-
-    print(date, previous_data_to_load)
-    print(datapath[0])
-    # Imme: Hier laad je de getrackte data van de laatste tijdstap, als de laatste tijdstap er neit was dan is die aangemaakt met create_empty_array en zit ie vol met zeros
-    loading_ST = np.load(datapath[0])
-    # Sa_track_upper = loading_ST['Sa_track_upper'] # array with zeros #Imme moeten dit zeros zijn of al ingevulde data
-    # Sa_track_lower = loading_ST['Sa_track_lower']
-    Sa_track_upper_last_1 = loading_ST["Sa_track_upper_last"]  # Sa_track_upper[0,:,:]
-    Sa_track_lower_last_1 = loading_ST["Sa_track_lower_last"]  # Sa_track_lower[0,:,:]
-    Sa_track_upper_last = np.reshape(
-        Sa_track_upper_last_1, (1, len(latitude), len(longitude))
-    )  # in deze array staan nan en volgens mij hoort dat niet!!
-    Sa_track_lower_last = np.reshape(
-        Sa_track_lower_last_1, (1, len(latitude), len(longitude))
-    )  # in deze array staan nan en volgens mij hoort dat niet!!
-
-    loading_FS = sio.loadmat(datapath[1], verify_compressed_data_integrity=False)
-    Fa_E_upper = loading_FS["Fa_E_upper"]
-    Fa_N_upper = loading_FS["Fa_N_upper"]
-    Fa_E_lower = loading_FS["Fa_E_lower"]
-    Fa_N_lower = loading_FS["Fa_N_lower"]
-    E = loading_FS["E"]
-    P = loading_FS["P"]
-    W_upper = loading_FS["W_upper"]
-    W_lower = loading_FS["W_lower"]
-    Fa_Vert = loading_FS["Fa_Vert"]
-
-    # call the backward tracking function
-    if not config["timetracking"]:  # I use timetracking: false
-        (
-            Sa_track_upper,
-            Sa_track_lower,
-            north_loss,
-            south_loss,
-            east_loss,
-            west_loss,
-            down_to_upper,
-            top_to_lower,
-            water_lost,
-        ) = get_Sa_track_backward(
-            latitude,
-            longitude,
-            count_time,
-            divt,
-            Kvf,
-            Region,
-            Fa_E_upper,
-            Fa_N_upper,
-            Fa_E_lower,
-            Fa_N_lower,
-            Fa_Vert,
-            E,
-            P,
-            W_upper,
-            W_lower,
-            Sa_track_upper_last,
-            Sa_track_lower_last,
-        )
+    (s_track_upper, s_track_lower, north_loss, south_loss, east_loss, west_loss,
+        down_to_upper, top_to_lower, water_lost) = backtrack(
+        ds.lat,
+        ds.lon,
+        config['kvf'],
+        config['region'],
+        fa_e_upper,
+        fa_n_upper,
+        fa_e_lower,
+        fa_n_lower,
+        fa_vert,
+        evap,
+        precip,
+        w_upper,
+        w_lower,
+        s_track_upper,
+        s_track_lower,
+    )
 
     # compute tracked evaporation
-    E_track = E[:, :, :] * (Sa_track_lower[1:, :, :] / W_lower[1:, :, :])
+    e_track = evap[:, :, :] * (s_track_lower[1:, :, :] / w_lower[1:, :, :])
 
-    # save per day
-    E_per_day = np.sum(E, axis=0)
-    E_track_per_day = np.sum(E_track, axis=0)
-    P_per_day = np.sum(P, axis=0)
-    Sa_track_lower_per_day = np.mean(Sa_track_lower[1:, :, :], axis=0)
-    Sa_track_upper_per_day = np.mean(Sa_track_upper[1:, :, :], axis=0)
-    W_lower_per_day = np.mean(W_lower[1:, :, :], axis=0)
-    W_upper_per_day = np.mean(W_upper[1:, :, :], axis=0)
+    # Save per day
+    e_per_day = np.sum(evap, axis=0)
+    e_track_per_day = np.sum(e_track, axis=0)
+    p_per_day = np.sum(precip, axis=0)
+    s_track_lower_per_day = np.mean(s_track_lower[1:, :, :], axis=0)
+    s_track_upper_per_day = np.mean(s_track_upper[1:, :, :], axis=0)
+    w_lower_per_day = np.mean(w_lower[1:, :, :], axis=0)
+    w_upper_per_day = np.mean(w_upper[1:, :, :], axis=0)
 
     north_loss_per_day = np.sum(north_loss, axis=0)
     south_loss_per_day = np.sum(south_loss, axis=0)
@@ -586,20 +483,22 @@ for date in datelist[1:]:
     top_to_lower_per_day = np.sum(top_to_lower, axis=0)
     water_lost_per_day = np.sum(water_lost, axis=0)
 
-    np.savez_compressed(
-        datapath[3],
-        Sa_track_upper_last=Sa_track_upper[0, :, :],
-        Sa_track_lower_last=Sa_track_lower[0, :, :],
-        E_per_day=E_per_day,
-        E_track_per_day=E_track_per_day,
-        P_per_day=P_per_day,
-        Sa_track_upper_per_day=Sa_track_upper_per_day,
-        Sa_track_lower_per_day=Sa_track_lower_per_day,
-        W_lower_per_day=W_lower_per_day,
-        W_upper_per_day=W_upper_per_day,
-        north_loss_per_day=north_loss_per_day,
-        south_loss_per_day=south_loss_per_day,
-        east_loss_per_day=east_loss_per_day,
-        west_loss_per_day=west_loss_per_day,
-        water_lost_per_day=water_lost_per_day,
-    )
+    # Write output to file
+    xr.Dataset(
+        {
+            "s_track_upper_last": s_track_upper[0, :, :],  # Store intermediate state for the next iteration or for a restart
+            "s_track_lower_last": s_track_lower[0, :, :],
+            "e_per_day": e_per_day,
+            "e_track_per_day": e_track_per_day,
+            "p_per_day": p_per_day,
+            "s_track_upper_per_day": s_track_upper_per_day,
+            "s_track_lower_per_day": s_track_lower_per_day,
+            "w_lower_per_day": w_lower_per_day,
+            "w_upper_per_day": w_upper_per_day,
+            "north_loss_per_day": north_loss_per_day,
+            "south_loss_per_day": south_loss_per_day,
+            "east_loss_per_day": east_loss_per_day,
+            "west_loss_per_day": west_loss_per_day,
+            "water_lost_per_day": water_lost_per_day,
+        }
+    ).to_netcdf(output_path(date))
