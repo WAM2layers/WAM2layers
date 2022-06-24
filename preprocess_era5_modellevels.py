@@ -41,9 +41,8 @@ def load_modellevel_data(variable, date):
     extra = date + pd.Timedelta(days=1)
     return da.sel(time=slice(date, extra)).sel(lev=modellevels)
 
-
 datelist = pd.date_range(
-    start=config["start_date"], end=config["end_date"], freq="d", inclusive="left"
+start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
 for date in datelist[:1]:
@@ -116,9 +115,9 @@ for date in datelist[:1]:
     )
     # is niet hetzelfde.. hoe erg is dat?
     
-    # Change units to m3
-    # TODO: Check this! Change units before interp is tricky, if not wrong
-    total_seconds = config["timestep"] / config["divt"]
+    # Change units to m3, based on target frequency (not incoming frequency!)
+    target_freq = config['target_frequency']
+    total_seconds = pd.Timedelta(target_freq).total_seconds()
     fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
     fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
     fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
@@ -162,7 +161,7 @@ for date in datelist[:1]:
     # while states (dim: time2) are at the midpoints and include next midnight
     # so the first state from day 2 will overlap with the last flux from day 1
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-    output_path = os.path.join(config["interdata_folder"], filename)
+    output_path = os.path.join(config["preprocessed_data_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fa_e_upper": (["time", "lat", "lon"], fa_e_upper),
