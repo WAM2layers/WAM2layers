@@ -128,6 +128,7 @@ for date in datelist[:]:
         precip,
         w_upper,
         w_lower,
+        config["periodic_boundary"]
     )
 
     # Save preprocessed data
