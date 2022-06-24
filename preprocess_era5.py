@@ -1,5 +1,5 @@
 import os
-
+import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
@@ -40,7 +40,7 @@ for date in datelist[:]:
     v = load_data("v", date) #in m/s
     q = load_data("q", date) #in kg kg-1
     sp = load_data("sp", date) #in Pa
-    evap = load_data("e", date) #in m (accumulated hourly) 
+    evap = load_data("e", date) #in m (accumulated hourly)
     cp = load_data("cp", date) #convective precipitation in m (accumulated hourly)
     lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
@@ -53,6 +53,11 @@ for date in datelist[:]:
     # Calculate volumes
     evap *= a_gridcell  # m3
     precip *= a_gridcell  # m3
+
+    # Transfer negative (originally positive) values of evap to precip
+    precip = np.maximum(precip, 0) + np.maximum(evap, 0)
+    # Change sign convention to all positive,
+    evap = np.abs(np.minimum(evap, 0))
 
     # Create pressure array
     levels = q.level #in hPa
