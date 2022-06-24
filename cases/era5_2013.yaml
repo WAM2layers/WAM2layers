@@ -19,3 +19,4 @@ veryfirstrun: true # true: starts from zero tracked water, false: loads tracked 
 kvf: 3 # Vertical transport parameter for gross vertical transport between the layers during the tracking: "actual exchange = Kvf * F_vertical + F_vertical" in one direction and "-1 * (Kvf * F_vertical)" in opposite direction. # Default = 3.
 timetracking: false
 distancetracking: false
+periodic: false

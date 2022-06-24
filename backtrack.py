@@ -61,8 +61,8 @@ def backtrack(
     Fa_upward[Fa_Vert <= 0] = Fa_Vert[
         Fa_Vert <= 0
     ]  # in 4th timestep: __main__:1: RuntimeWarning: invalid value encountered in less_equal # not a problem
-    Fa_lowerward = np.zeros(np.shape(Fa_Vert))
-    Fa_lowerward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0]
+    Fa_downward = np.zeros(np.shape(Fa_Vert))
+    Fa_downward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0]
     Fa_upward = np.abs(Fa_upward)
 
     # include the vertical dispersion
@@ -72,18 +72,18 @@ def backtrack(
     else:
         Fa_upward = (1.0 + Kvf) * Fa_upward
         Fa_upward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0] * Kvf
-        Fa_lowerward = (1.0 + Kvf) * Fa_lowerward
-        Fa_lowerward[Fa_Vert <= 0] = np.abs(Fa_Vert[Fa_Vert <= 0]) * Kvf
+        Fa_downward = (1.0 + Kvf) * Fa_downward
+        Fa_downward[Fa_Vert <= 0] = np.abs(Fa_Vert[Fa_Vert <= 0]) * Kvf
 
     # define the horizontal fluxes over the boundaries
     # fluxes over the eastern boundary
     Fa_E_upper_boundary = np.zeros(np.shape(Fa_E_upper))
     Fa_E_upper_boundary[:, :, :-1] = 0.5 * (Fa_E_upper[:, :, :-1] + Fa_E_upper[:, :, 1:])
-    if config["isglobal"]:
+    if config["periodic"]:
         Fa_E_upper_boundary[:, :, -1] = 0.5 * (Fa_E_upper[:, :, -1] + Fa_E_upper[:, :, 0])
     Fa_E_lower_boundary = np.zeros(np.shape(Fa_E_lower))
     Fa_E_lower_boundary[:, :, :-1] = 0.5 * (Fa_E_lower[:, :, :-1] + Fa_E_lower[:, :, 1:])
-    if config["isglobal"]:
+    if config["periodic"]:
         Fa_E_lower_boundary[:, :, -1] = 0.5 * (Fa_E_lower[:, :, -1] + Fa_E_lower[:, :, 0])
 
     # find out where the positive and negative fluxes are
@@ -195,14 +195,14 @@ def backtrack(
     water_lost = np.zeros(np.shape(P))
 
     # Sa calculation backward in time
-    for t in np.arange(ntime, 0, -1):
+    for t in np.arange(ntime-1, 0, -1):
 
         # Upper layer: define values of total moisture
         Sa_N_lower[0, 1:, :] = W_lower[t, 0:-1, :]
         Sa_S_lower[0, :-1, :] = W_lower[t, 1:, :]
         Sa_E_lower[0, :, :-1] = W_lower[t, :, 1:]
         Sa_W_lower[0, :, 1:] = W_lower[t, :, :-1]
-        # TODO: fix div by zero issue for isglobal
+        # TODO: fix div by zero issue for periodic
         # Sa_E_lower[0,:,-1] = W_lower[t,:,0]
         # Sa_W_lower[0,:,0] = W_lower[t,:,-1]
 
@@ -211,7 +211,7 @@ def backtrack(
         Sa_S_upper[0, :-1, :] = W_upper[t, 1:, :]
         Sa_E_upper[0, :, :-1] = W_upper[t, :, 1:]
         Sa_W_upper[0, :, 1:] = W_upper[t, :, :-1]
-        # TODO: fix div by zero issue for isglobal
+        # TODO: fix div by zero issue for periodic
         # Sa_E_upper[0,:,-1] = W_upper[t,:,0]
         # Sa_W_upper[0,:,0] = W_upper[t,:,-1]
 
@@ -220,7 +220,7 @@ def backtrack(
         Sa_track_S_lower[0, :-1, :] = Sa_track_lower[t, 1:, :]
         Sa_track_E_lower[0, :, :-1] = Sa_track_lower[t, :, 1:]
         Sa_track_W_lower[0, :, 1:] = Sa_track_lower[t, :, :-1]
-        if config["isglobal"]:
+        if config["periodic"]:
             Sa_track_E_lower[0, :, -1] = Sa_track_lower[t, :, 0]
             Sa_track_W_lower[0, :, 0] = Sa_track_lower[t, :, -1]
 
@@ -254,7 +254,7 @@ def backtrack(
         Sa_track_S_upper[0, :-1, :] = Sa_track_upper[t, 1:, :]
         Sa_track_E_upper[0, :, :-1] = Sa_track_upper[t, :, 1:]
         Sa_track_W_upper[0, :, 1:] = Sa_track_upper[t, :, :-1]
-        if config["isglobal"]:
+        if config["periodic"]:
             Sa_track_E_upper[0, :, -1] = Sa_track_upper[t, :, 0]
             Sa_track_W_upper[0, :, 0] = Sa_track_upper[t, :, -1]
 
@@ -372,26 +372,26 @@ if config["veryfirstrun"]:
             "s_track_upper": (["time_states", "lat", "lon"], s_track_upper),
             "s_track_lower": (["time_states", "lat", "lon"], s_track_lower),
         }
-    )
+    ).isel(time_states=[0])
 
-region = xr.open_dataset(config['region']).isel(time=0).lsm.rename(latitude='lat', longitude='lon')
+region = xr.open_dataset(config['region']).isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
 
 for date in reversed(datelist):
     print(date)
 
-    s_track_upper = states.s_track_upper
-    s_track_lower = states.s_track_lower
+    s_track_upper = states.s_track_upper.values
+    s_track_lower = states.s_track_lower.values
 
     fluxes = xr.open_dataset(input_path(date))
-    fa_e_upper = fluxes["fa_e_upper"]
-    fa_n_upper = fluxes["fa_n_upper"]
-    fa_e_lower = fluxes["fa_e_lower"]
-    fa_n_lower = fluxes["fa_n_lower"]
-    evap = fluxes["evap"]
-    precip = fluxes["precip"]
-    w_upper = fluxes["w_upper"]
-    w_lower = fluxes["w_lower"]
-    fa_vert = fluxes["fa_vert"]
+    fa_e_upper = fluxes["fa_e_upper"].values
+    fa_n_upper = fluxes["fa_n_upper"].values
+    fa_e_lower = fluxes["fa_e_lower"].values
+    fa_n_lower = fluxes["fa_n_lower"].values
+    evap = fluxes["evap"].values
+    precip = fluxes["precip"].values
+    w_upper = fluxes["w_upper"].values
+    w_lower = fluxes["w_lower"].values
+    fa_vert = fluxes["fa_vert"].values
 
     (s_track_upper, s_track_lower, north_loss, south_loss, east_loss, west_loss,
         down_to_upper, top_to_lower, water_lost) = backtrack(
@@ -433,21 +433,22 @@ for date in reversed(datelist):
     water_lost_per_day = np.sum(water_lost, axis=0)
 
     # Write output to file
+    # import IPython; IPython.embed(); quit()
     xr.Dataset(
         {
-            "s_track_upper_last": s_track_upper[0, :, :],  # Keep last state for a restart
-            "s_track_lower_last": s_track_lower[0, :, :],
-            "e_per_day": e_per_day,
-            "e_track_per_day": e_track_per_day,
-            "p_per_day": p_per_day,
-            "s_track_upper_per_day": s_track_upper_per_day,
-            "s_track_lower_per_day": s_track_lower_per_day,
-            "w_lower_per_day": w_lower_per_day,
-            "w_upper_per_day": w_upper_per_day,
-            "north_loss_per_day": north_loss_per_day,
-            "south_loss_per_day": south_loss_per_day,
-            "east_loss_per_day": east_loss_per_day,
-            "west_loss_per_day": west_loss_per_day,
-            "water_lost_per_day": water_lost_per_day,
+            # "s_track_upper_last": (["lat", "lon"], s_track_upper[0, :, :]),  # Keep last state for a restart
+            # "s_track_lower_last": (["lat", "lon"], s_track_lower[0, :, :]),
+            # "e_per_day": (["lat", "lon"], e_per_day),
+            # "e_track_per_day": (["lat", "lon"], e_track_per_day),
+            # "p_per_day": (["lat", "lon"], p_per_day),
+            # "s_track_upper_per_day": (["lat", "lon"], s_track_upper_per_day),
+            # "s_track_lower_per_day": (["lat", "lon"], s_track_lower_per_day),
+            # "w_lower_per_day": (["lat", "lon"], w_lower_per_day),
+            # "w_upper_per_day": (["lat", "lon"], w_upper_per_day),
+            # "north_loss_per_day": (["lat", "lon"], north_loss_per_day),
+            # "south_loss_per_day": (["lat", "lon"], south_loss_per_day),
+            # "east_loss_per_day": (["lat", "lon"], east_loss_per_day),
+            # "west_loss_per_day": (["lat", "lon"], west_loss_per_day),
+            "water_lost_per_day": (["lat", "lon"], water_lost_per_day),
         }
     ).to_netcdf(output_path(date))
