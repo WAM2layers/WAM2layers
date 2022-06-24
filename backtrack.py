@@ -433,22 +433,22 @@ for date in reversed(datelist):
     water_lost_per_day = np.sum(water_lost, axis=0)
 
     # Write output to file
-    # import IPython; IPython.embed(); quit()
+    # TODO: add (and cleanup) coordinates and units
     xr.Dataset(
         {
-            # "s_track_upper_last": (["lat", "lon"], s_track_upper[0, :, :]),  # Keep last state for a restart
-            # "s_track_lower_last": (["lat", "lon"], s_track_lower[0, :, :]),
-            # "e_per_day": (["lat", "lon"], e_per_day),
-            # "e_track_per_day": (["lat", "lon"], e_track_per_day),
-            # "p_per_day": (["lat", "lon"], p_per_day),
-            # "s_track_upper_per_day": (["lat", "lon"], s_track_upper_per_day),
-            # "s_track_lower_per_day": (["lat", "lon"], s_track_lower_per_day),
-            # "w_lower_per_day": (["lat", "lon"], w_lower_per_day),
-            # "w_upper_per_day": (["lat", "lon"], w_upper_per_day),
-            # "north_loss_per_day": (["lat", "lon"], north_loss_per_day),
-            # "south_loss_per_day": (["lat", "lon"], south_loss_per_day),
-            # "east_loss_per_day": (["lat", "lon"], east_loss_per_day),
-            # "west_loss_per_day": (["lat", "lon"], west_loss_per_day),
+            "s_track_upper_last": (["lat", "lon"], s_track_upper[0, :, :]),  # Keep last state for a restart
+            "s_track_lower_last": (["lat", "lon"], s_track_lower[0, :, :]),
+            "e_per_day": (["lat", "lon"], e_per_day),
+            "e_track_per_day": (["lat", "lon"], e_track_per_day),
+            "p_per_day": (["lat", "lon"], p_per_day),
+            "s_track_upper_per_day": (["lat", "lon"], s_track_upper_per_day),
+            "s_track_lower_per_day": (["lat", "lon"], s_track_lower_per_day),
+            "w_lower_per_day": (["lat", "lon"], w_lower_per_day),
+            "w_upper_per_day": (["lat", "lon"], w_upper_per_day),
+            "north_loss_per_day": (["lat1", "lon"], north_loss_per_day),
+            "south_loss_per_day": (["lat1", "lon"], south_loss_per_day),
+            "east_loss_per_day": (["lon1", "lat"], east_loss_per_day),
+            "west_loss_per_day": (["lon1", "lat",], west_loss_per_day),
             "water_lost_per_day": (["lat", "lon"], water_lost_per_day),
         }
     ).to_netcdf(output_path(date))
