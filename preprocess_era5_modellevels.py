@@ -21,6 +21,9 @@ density_water = 1000  # [kg/m3]
 modellevels = np.append( np.arange(1,101,20), np.arange(101,138,2)) #[1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
 print('Number of model levels:',len(modellevels))
 
+# Select longitude
+longitudes = [0,0.25,0.5,0.75,1.0]
+
 # Calculate a and b coefficients 
 filenamecsv = 'tableERA5model_to_pressure.csv'
 df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
@@ -43,7 +46,7 @@ def load_surface_data(variable, date):
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra),longitude=[0,0.25,0.5,0.75,1.0])
+    return da.sel(time=slice(date, extra),longitude=longitudes)
 
 def load_modellevel_data(variable, date):
     """Load model level data for given variable and date."""
@@ -53,13 +56,13 @@ def load_modellevel_data(variable, date):
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra)).sel(lev=modellevels,longitude=[0,0.25,0.5,0.75,1.0])
+    return da.sel(time=slice(date, extra)).sel(lev=modellevels,longitude=longitudes)
 
 datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:1]:
+for date in datelist:
     print(date)
 
     # Load data
