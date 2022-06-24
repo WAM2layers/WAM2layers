@@ -9,17 +9,31 @@ from preprocessing import (get_grid_info, get_stable_fluxes,
                            get_vertical_transport)
 
 
+# Read case configuration
+with open("cases/era5_2013.yaml") as f:
+    config = yaml.safe_load(f)
+
 # Set constants
 g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
 # Select model levels
-modellevels = np.append( np.arange(1,100,10), np.arange(101,138,1)) #[1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
+modellevels = np.append( np.arange(1,101,20), np.arange(101,138,2)) #[1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
 print('Number of model levels:',len(modellevels))
 
-# Read case configuration
-with open("cases/era5_2013.yaml") as f:
-    config = yaml.safe_load(f)
+# Calculate a and b coefficients 
+filenamecsv = 'tableERA5model_to_pressure.csv'
+df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
+a = df['a [Pa]'].to_xarray().rename(index='lev') #.sel(lev=modellevels_edge)
+b = df['b'].to_xarray().rename(index='lev') #.sel(lev=modellevels_edge)
+
+# Calculate a and b at mid levels
+a_full = ((a[1:] + a[:-1].values)/2.0).sel(lev=modellevels)
+b_full = ((b[1:] + b[:-1].values)/2.0).sel(lev=modellevels)
+
+#Construct a and b at edges for selected levels
+a_edge = xr.concat([a[0],(a_full[1:].values + a_full[:-1])/2.0,a[-1]],dim='lev')
+b_edge = xr.concat([b[0],(b_full[1:].values + b_full[:-1])/2.0,b[-1]],dim='lev')
 
 def load_surface_data(variable, date):
     """Load data for given variable and date."""
@@ -29,7 +43,7 @@ def load_surface_data(variable, date):
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra))
+    return da.sel(time=slice(date, extra),longitude=[0,0.25,0.5,0.75,1.0])
 
 def load_modellevel_data(variable, date):
     """Load model level data for given variable and date."""
@@ -39,7 +53,7 @@ def load_modellevel_data(variable, date):
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra)).sel(lev=modellevels)
+    return da.sel(time=slice(date, extra)).sel(lev=modellevels,longitude=[0,0.25,0.5,0.75,1.0])
 
 datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
@@ -70,13 +84,8 @@ for date in datelist[:1]:
     precip *= a_gridcell  # m3
 
     # Convert model levels to pressure values
-    filenamecsv = 'tableERA5model_to_pressure.csv'
-    df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
-    a = df['a [Pa]'].to_xarray().rename(index='lev').sel(lev=modellevels)
-    b = df['b'].to_xarray().rename(index='lev').sel(lev=modellevels)
-    
     sp_modellevels2 = sp.expand_dims({'lev':modellevels},axis=1)
-    p_modellevels = a + b*sp_modellevels2 # in Pa
+    p_modellevels = a_edge + b_edge*sp_modellevels2 # in Pa
 
     #calculate the difference between the pressure levels
     dp_modellevels = p_modellevels.diff(dim="lev") # in Pa
@@ -108,10 +117,10 @@ for date in datelist[:1]:
     )
 
     tcwm3 = tcw* a_gridcell[np.newaxis,:] / density_water # m3
-    
+        
     print(
         "Check calculation water vapor with column water vapour, this value should be close to zero:",
-        (cwv.sum(dim="lev") - (tcwm3)).sum().values,
+        np.nanmean((cwv.sum(dim="lev") - (tcwm3)).values/tcwm3),
     )
     # is niet hetzelfde.. hoe erg is dat?
     
