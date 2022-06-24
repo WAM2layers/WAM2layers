@@ -57,13 +57,23 @@ def backtrack(
     W = W_upper + W_lower
 
     # separate the direction of the vertical flux and make it absolute
-    Fa_upward = np.abs(Fa_Vert.where(Fa_Vert < 0, 0))
-    Fa_downward = Fa_Vert.where(Fa_Vert > 0, 0)
-    if Kvf != 0:
-        Fa_upward *= (1.0 + Kvf)
-        Fa_upward = Fa_upward.where(Fa_Vert < 0, Fa_Vert * Kvf)
-        Fa_downward *= (1.0 + Kvf)
-        Fa_downward = Fa_downward.where(Fa_Vert > 0, np.abs(Fa_Vert) * Kvf)
+    Fa_upward = np.zeros(np.shape(Fa_Vert))
+    Fa_upward[Fa_Vert <= 0] = Fa_Vert[
+        Fa_Vert <= 0
+    ]  # in 4th timestep: __main__:1: RuntimeWarning: invalid value encountered in less_equal # not a problem
+    Fa_lowerward = np.zeros(np.shape(Fa_Vert))
+    Fa_lowerward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0]
+    Fa_upward = np.abs(Fa_upward)
+
+    # include the vertical dispersion
+    if Kvf == 0:
+        pass
+        # do nothing
+    else:
+        Fa_upward = (1.0 + Kvf) * Fa_upward
+        Fa_upward[Fa_Vert >= 0] = Fa_Vert[Fa_Vert >= 0] * Kvf
+        Fa_lowerward = (1.0 + Kvf) * Fa_lowerward
+        Fa_lowerward[Fa_Vert <= 0] = np.abs(Fa_Vert[Fa_Vert <= 0]) * Kvf
 
     # define the horizontal fluxes over the boundaries
     # fluxes over the eastern boundary
