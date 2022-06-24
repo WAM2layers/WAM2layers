@@ -31,7 +31,7 @@ For ERA-5 the following variables are read in and converted to the flux and mois
     - v: meridonal wind in m/s
     - q: specific humidity in kg kg-1
     - sp: surface pressure in Pa
-    - evap: evaporation in m (accumulated hourly)
+    - evap: evaporation in m (accumulated hourly): Be aware evaporation in ERA5 has a negative sign
     - cp: convective precipitation in m (accumulated hourly)
     - lsp: large scale precipitation in m (accumulated hourly)
 If you want to apply WAM2layers to a different data set, please use `preprocess_era5.py` as a basis and change accordingly to your data set.
