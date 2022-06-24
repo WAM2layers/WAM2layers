@@ -79,11 +79,11 @@ def backtrack(
     # fluxes over the eastern boundary
     Fa_E_upper_boundary = np.zeros(np.shape(Fa_E_upper))
     Fa_E_upper_boundary[:, :, :-1] = 0.5 * (Fa_E_upper[:, :, :-1] + Fa_E_upper[:, :, 1:])
-    if config["periodic"]:
+    if config["periodic_boundary"]:
         Fa_E_upper_boundary[:, :, -1] = 0.5 * (Fa_E_upper[:, :, -1] + Fa_E_upper[:, :, 0])
     Fa_E_lower_boundary = np.zeros(np.shape(Fa_E_lower))
     Fa_E_lower_boundary[:, :, :-1] = 0.5 * (Fa_E_lower[:, :, :-1] + Fa_E_lower[:, :, 1:])
-    if config["periodic"]:
+    if config["periodic_boundary"]:
         Fa_E_lower_boundary[:, :, -1] = 0.5 * (Fa_E_lower[:, :, -1] + Fa_E_lower[:, :, 0])
 
     # find out where the positive and negative fluxes are
@@ -202,7 +202,7 @@ def backtrack(
         Sa_S_lower[0, :-1, :] = W_lower[t, 1:, :]
         Sa_E_lower[0, :, :-1] = W_lower[t, :, 1:]
         Sa_W_lower[0, :, 1:] = W_lower[t, :, :-1]
-        # TODO: fix div by zero issue for periodic
+        # TODO: fix div by zero issue for periodic_boundary
         # Sa_E_lower[0,:,-1] = W_lower[t,:,0]
         # Sa_W_lower[0,:,0] = W_lower[t,:,-1]
 
@@ -211,7 +211,7 @@ def backtrack(
         Sa_S_upper[0, :-1, :] = W_upper[t, 1:, :]
         Sa_E_upper[0, :, :-1] = W_upper[t, :, 1:]
         Sa_W_upper[0, :, 1:] = W_upper[t, :, :-1]
-        # TODO: fix div by zero issue for periodic
+        # TODO: fix div by zero issue for periodic_boundary
         # Sa_E_upper[0,:,-1] = W_upper[t,:,0]
         # Sa_W_upper[0,:,0] = W_upper[t,:,-1]
 
@@ -220,7 +220,7 @@ def backtrack(
         Sa_track_S_lower[0, :-1, :] = Sa_track_lower[t, 1:, :]
         Sa_track_E_lower[0, :, :-1] = Sa_track_lower[t, :, 1:]
         Sa_track_W_lower[0, :, 1:] = Sa_track_lower[t, :, :-1]
-        if config["periodic"]:
+        if config["periodic_boundary"]:
             Sa_track_E_lower[0, :, -1] = Sa_track_lower[t, :, 0]
             Sa_track_W_lower[0, :, 0] = Sa_track_lower[t, :, -1]
 
@@ -254,7 +254,7 @@ def backtrack(
         Sa_track_S_upper[0, :-1, :] = Sa_track_upper[t, 1:, :]
         Sa_track_E_upper[0, :, :-1] = Sa_track_upper[t, :, 1:]
         Sa_track_W_upper[0, :, 1:] = Sa_track_upper[t, :, :-1]
-        if config["periodic"]:
+        if config["periodic_boundary"]:
             Sa_track_E_upper[0, :, -1] = Sa_track_upper[t, :, 0]
             Sa_track_W_upper[0, :, 0] = Sa_track_upper[t, :, -1]
 
