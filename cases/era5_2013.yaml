@@ -8,7 +8,7 @@ target_frequency: '15min'  # See https://stackoverflow.com/a/35339226 for option
 preprocessed_data_folder: ../preprocessed_data
 
 # Settings needed to define the tracking region (in space and time)
-region: data/volume_2/era5_2013/FloodCase_201305_lsm.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
+region: ../era5_2013/FloodCase_201305_lsm.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
 track_start_date: '20130521' #YYYYMMDD
 track_end_date: '20130604' #YYYYMMDD
 
@@ -16,6 +16,6 @@ track_end_date: '20130604' #YYYYMMDD
 output_folder: ../output_data
 name_of_run: 'default_run'
 veryfirstrun: true # true: starts from zero tracked water, false: loads tracked water
-Kvf: 3 # Vertical transport parameter for gross vertical transport between the layers during the tracking: "actual exchange = Kvf * F_vertical + F_vertical" in one direction and "-1 * (Kvf * F_vertical)" in opposite direction. # Default = 3.
+kvf: 3 # Vertical transport parameter for gross vertical transport between the layers during the tracking: "actual exchange = Kvf * F_vertical + F_vertical" in one direction and "-1 * (Kvf * F_vertical)" in opposite direction. # Default = 3.
 timetracking: false
 distancetracking: false

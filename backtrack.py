@@ -1,5 +1,3 @@
-import datetime as dt
-from re import X
 import yaml
 import xarray as xr
 
@@ -40,7 +38,7 @@ def backtrack(
     latitude,
     longitude,
     Kvf,
-    Region,
+    region,
     Fa_E_upper,
     Fa_N_upper,
     Fa_E_lower,
@@ -53,12 +51,7 @@ def backtrack(
     Sa_track_upper_last,
     Sa_track_lower_last,
 ):
-
-    # make P_region matrix
-    Region3D = np.tile(
-        np.reshape(Region, [1, len(latitude), len(longitude)]), [len(P[:, 0, 0]), 1, 1]
-    )
-    P_region = Region3D * P
+    P_region = region * P
 
     # Total moisture in the column
     W = W_upper + W_lower
@@ -122,7 +115,8 @@ def backtrack(
     Fa_W_lower_EW[:, :, 0] = Fa_E_lower_EW[:, :, -1]
 
     # fluxes over the northern boundary
-    # Fa_N_upper_boundary = np.nan*np.zeros(np.shape(Fa_N_upper)); #Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_upper_boundary
+    # Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_upper_boundary
+    # Fa_N_upper_boundary = np.nan*np.zeros(np.shape(Fa_N_upper));
     # Adapted by Imme
     Fa_N_upper_boundary = np.zeros(np.shape(Fa_N_upper))
     # Imme: why do you multiply here your zeros with nans ?!?!?!? you do not do that for Fa_E_upper_boundary
@@ -137,8 +131,8 @@ def backtrack(
     # find out where the positive and negative fluxes are
     Fa_N_upper_pos = np.ones(np.shape(Fa_N_upper))
     Fa_N_lower_pos = np.ones(np.shape(Fa_N_lower))
-    Fa_N_upper_pos[Fa_N_upper_boundary < 0] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
-    Fa_N_lower_pos[Fa_N_lower_boundary < 0] = 0  # Invalid value encountered in less, omdat er nan in Fa_N_upper_boundary staan
+    Fa_N_upper_pos[Fa_N_upper_boundary < 0] = 0  # Invalid value encountered in less
+    Fa_N_lower_pos[Fa_N_lower_boundary < 0] = 0  # Invalid value encountered in less
     Fa_N_upper_neg = Fa_N_upper_pos - 1
     Fa_N_lower_neg = Fa_N_lower_pos - 1
 
@@ -192,75 +186,43 @@ def backtrack(
 
     # define variables that find out what happens to the water
     ntime = w_upper.shape[0]
-    north_loss = np.zeros(ntime, 1, len(longitude)))
-    south_loss = np.zeros(ntime, 1, len(longitude)))
-    east_loss = np.zeros(ntime, 1, len(latitude)))
-    west_loss = np.zeros(ntime, 1, len(latitude)))
+    north_loss = np.zeros((ntime, 1, len(longitude)))
+    south_loss = np.zeros((ntime, 1, len(longitude)))
+    east_loss = np.zeros((ntime, 1, len(latitude)))
+    west_loss = np.zeros((ntime, 1, len(latitude)))
     down_to_upper = np.zeros(np.shape(P))
     top_to_lower = np.zeros(np.shape(P))
     water_lost = np.zeros(np.shape(P))
-    water_lost_lower = np.zeros(np.shape(P))
-    water_lost_upper = np.zeros(np.shape(P))
 
     # Sa calculation backward in time
     for t in np.arange(ntime, 0, -1):
-        # down: define values of total moisture
-        Sa_E_lower[0, :, :-1] = W_lower[
-            t, :, 1:
-        ]  # Atmospheric storage of the cell to the east [m3]
-        # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_E_lower[0,:,-1] = W_lower[t,:,0] # Atmospheric storage of the cell to the east [m3]
-        Sa_W_lower[0, :, 1:] = W_lower[
-            t, :, :-1
-        ]  # Atmospheric storage of the cell to the west [m3]
-        # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_W_lower[0,:,0] = W_lower[t,:,-1] # Atmospheric storage of the cell to the west [m3]
-        Sa_N_lower[0, 1:, :] = W_lower[
-            t, 0:-1, :
-        ]  # Atmospheric storage of the cell to the north [m3]
-        Sa_S_lower[0, :-1, :] = W_lower[
-            t, 1:, :
-        ]  # Atmospheric storage of the cell to the south [m3]
 
-        # top: define values of total moisture
-        Sa_E_upper[0, :, :-1] = W_upper[
-            t, :, 1:
-        ]  # Atmospheric storage of the cell to the east [m3]
-        # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_E_upper[0,:,-1] = W_upper[t,:,0] # Atmospheric storage of the cell to the east [m3]
-        Sa_W_upper[0, :, 1:] = W_upper[
-            t, :, :-1
-        ]  # Atmospheric storage of the cell to the west [m3]
-        # to make dependent on isglobal but for now kept to avoid division by zero errors
-        # Sa_W_upper[0,:,0] = W_upper[t,:,-1] # Atmospheric storage of the cell to the west [m3]
-        Sa_N_upper[0, 1:, :] = W_upper[
-            t, :-1, :
-        ]  # Atmospheric storage of the cell to the north [m3]
-        Sa_S_upper[0, :-1, :] = W_upper[
-            t, 1:, :
-        ]  # Atmospheric storage of the cell to the south [m3]
+        # Upper layer: define values of total moisture
+        Sa_N_lower[0, 1:, :] = W_lower[t, 0:-1, :]
+        Sa_S_lower[0, :-1, :] = W_lower[t, 1:, :]
+        Sa_E_lower[0, :, :-1] = W_lower[t, :, 1:]
+        Sa_W_lower[0, :, 1:] = W_lower[t, :, :-1]
+        # TODO: fix div by zero issue for isglobal
+        # Sa_E_lower[0,:,-1] = W_lower[t,:,0]
+        # Sa_W_lower[0,:,0] = W_lower[t,:,-1]
 
-        # down: define values of tracked moisture of neighbouring grid cells
-        Sa_track_E_lower[0, :, :-1] = Sa_track_lower[
-            t, :, 1:
-        ]  # Atmospheric tracked storage of the cell to the east [m3]
+        # Lower layer: define values of total moisture
+        Sa_N_upper[0, 1:, :] = W_upper[t, :-1, :]
+        Sa_S_upper[0, :-1, :] = W_upper[t, 1:, :]
+        Sa_E_upper[0, :, :-1] = W_upper[t, :, 1:]
+        Sa_W_upper[0, :, 1:] = W_upper[t, :, :-1]
+        # TODO: fix div by zero issue for isglobal
+        # Sa_E_upper[0,:,-1] = W_upper[t,:,0]
+        # Sa_W_upper[0,:,0] = W_upper[t,:,-1]
+
+        # Lower layer: define values of tracked moisture of neighbouring grid cells
+        Sa_track_N_lower[0, 1:, :] = Sa_track_lower[t, :-1, :]
+        Sa_track_S_lower[0, :-1, :] = Sa_track_lower[t, 1:, :]
+        Sa_track_E_lower[0, :, :-1] = Sa_track_lower[t, :, 1:]
+        Sa_track_W_lower[0, :, 1:] = Sa_track_lower[t, :, :-1]
         if config["isglobal"]:
-            Sa_track_E_lower[0, :, -1] = Sa_track_lower[
-                t, :, 0
-            ]  # Atmospheric tracked storage of the cell to the east [m3]
-        Sa_track_W_lower[0, :, 1:] = Sa_track_lower[
-            t, :, :-1
-        ]  # Atmospheric storage of the cell to the west [m3]
-        if config["isglobal"]:
-            Sa_track_W_lower[0, :, 0] = Sa_track_lower[
-                t, :, -1
-            ]  # Atmospheric storage of the cell to the west [m3]
-        Sa_track_N_lower[0, 1:, :] = Sa_track_lower[
-            t, :-1, :
-        ]  # Atmospheric storage of the cell to the north [m3]
-        Sa_track_S_lower[0, :-1, :] = Sa_track_lower[
-            t, 1:, :
-        ]  # Atmospheric storage of the cell to the south [m3]
+            Sa_track_E_lower[0, :, -1] = Sa_track_lower[t, :, 0]
+            Sa_track_W_lower[0, :, 0] = Sa_track_lower[t, :, -1]
 
         # down: calculate with moisture fluxes
         Sa_track_after_Fa_lower[0, 1:-1, 1:-1] = (
@@ -281,36 +243,21 @@ def backtrack(
             * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
             + Fa_S_lower_NS[t - 1, 1:-1, 1:-1]
             * (Sa_track_S_lower[0, 1:-1, 1:-1] / Sa_S_lower[0, 1:-1, 1:-1])
-            - Fa_lowerward[t - 1, 1:-1, 1:-1]
+            - Fa_downward[t - 1, 1:-1, 1:-1]
             * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
             + Fa_upward[t - 1, 1:-1, 1:-1]
             * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
         )
-        # sometimes you get a Runtimewarning: invalid value encountered in less
-        # RuntimeWarning: invalid value encountered in divide
-        # ik kan me voorstellen dat die error er komt als er een nan in Sa_track_lower zit en dat je daar dan door moet gaan delen..
 
         # top: define values of tracked moisture of neighbouring grid cells
-        Sa_track_E_upper[0, :, :-1] = Sa_track_upper[
-            t, :, 1:
-        ]  # Atmospheric tracked storage of the cell to the east [m3]
+        Sa_track_N_upper[0, 1:, :] = Sa_track_upper[t, :-1, :]
+        Sa_track_S_upper[0, :-1, :] = Sa_track_upper[t, 1:, :]
+        Sa_track_E_upper[0, :, :-1] = Sa_track_upper[t, :, 1:]
+        Sa_track_W_upper[0, :, 1:] = Sa_track_upper[t, :, :-1]
         if config["isglobal"]:
-            Sa_track_E_upper[0, :, -1] = Sa_track_upper[
-                t, :, 0
-            ]  # Atmospheric tracked storage of the cell to the east [m3]
-        Sa_track_W_upper[0, :, 1:] = Sa_track_upper[
-            t, :, :-1
-        ]  # Atmospheric tracked storage of the cell to the west [m3]
-        if config["isglobal"]:
-            Sa_track_W_upper[0, :, 0] = Sa_track_upper[
-                t, :, -1
-            ]  # Atmospheric tracked storage of the cell to the west [m3]
-        Sa_track_N_upper[0, 1:, :] = Sa_track_upper[
-            t, :-1, :
-        ]  # Atmospheric tracked storage of the cell to the north [m3]
-        Sa_track_S_upper[0, :-1, :] = Sa_track_upper[
-            t, 1:, :
-        ]  # Atmospheric tracked storage of the cell to the south [m3]
+            Sa_track_E_upper[0, :, -1] = Sa_track_upper[t, :, 0]
+            Sa_track_W_upper[0, :, 0] = Sa_track_upper[t, :, -1]
+
 
         # top: calculate with moisture fluxes
         Sa_track_after_Fa_upper[0, 1:-1, 1:-1] = (
@@ -331,7 +278,7 @@ def backtrack(
             * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
             + Fa_S_upper_NS[t - 1, 1:-1, 1:-1]
             * (Sa_track_S_upper[0, 1:-1, 1:-1] / Sa_S_upper[0, 1:-1, 1:-1])
-            + Fa_lowerward[t - 1, 1:-1, 1:-1]
+            + Fa_downward[t - 1, 1:-1, 1:-1]
             * (Sa_track_lower[t, 1:-1, 1:-1] / W_lower[t, 1:-1, 1:-1])
             - Fa_upward[t - 1, 1:-1, 1:-1]
             * (Sa_track_upper[t, 1:-1, 1:-1] / W_upper[t, 1:-1, 1:-1])
@@ -427,6 +374,8 @@ if config["veryfirstrun"]:
         }
     )
 
+region = xr.open_dataset(config['region']).isel(time=0).lsm.rename(latitude='lat', longitude='lon')
+
 for date in reversed(datelist):
     print(date)
 
@@ -438,8 +387,8 @@ for date in reversed(datelist):
     fa_n_upper = fluxes["fa_n_upper"]
     fa_e_lower = fluxes["fa_e_lower"]
     fa_n_lower = fluxes["fa_n_lower"]
-    evap = fluxes["e"]
-    precip = fluxes["p"]
+    evap = fluxes["evap"]
+    precip = fluxes["precip"]
     w_upper = fluxes["w_upper"]
     w_lower = fluxes["w_lower"]
     fa_vert = fluxes["fa_vert"]
@@ -449,7 +398,7 @@ for date in reversed(datelist):
         ds.lat,
         ds.lon,
         config['kvf'],
-        config['region'],
+        region,
         fa_e_upper,
         fa_n_upper,
         fa_e_lower,
@@ -486,7 +435,7 @@ for date in reversed(datelist):
     # Write output to file
     xr.Dataset(
         {
-            "s_track_upper_last": s_track_upper[0, :, :],  # Store intermediate state for the next iteration or for a restart
+            "s_track_upper_last": s_track_upper[0, :, :],  # Keep last state for a restart
             "s_track_lower_last": s_track_lower[0, :, :],
             "e_per_day": e_per_day,
             "e_track_per_day": e_track_per_day,
