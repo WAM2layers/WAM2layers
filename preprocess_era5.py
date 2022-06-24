@@ -1,8 +1,10 @@
 import os
 
 import pandas as pd
+import numpy as np
 import xarray as xr
 import yaml
+
 
 from preprocessing import (get_grid_info, get_stable_fluxes,
                            get_vertical_transport)
@@ -40,10 +42,11 @@ for date in datelist[:]:
     v = load_data("v", date) #in m/s
     q = load_data("q", date) #in kg kg-1
     sp = load_data("sp", date) #in Pa
-    evap = load_data("e", date) #in m (accumulated hourly) 
+    evap = load_data("e", date) #in m (accumulated hourly)
     cp = load_data("cp", date) #convective precipitation in m (accumulated hourly)
     lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
+    tcw = load_data("tcw", date) # kg/m2
 
     # Get grid info
     lat = u.latitude.values
@@ -91,6 +94,8 @@ for date in datelist[:]:
         "Check calculation water vapor, this value should be zero:",
         (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values,
     )
+
+    tcwm3 = tcw * a_gridcell[np.newaxis, :] / density_water  # m3
 
     # Change units to m3, based on target frequency (not incoming frequency!)
     target_freq = config['target_frequency']
