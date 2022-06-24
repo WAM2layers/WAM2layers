@@ -14,8 +14,8 @@ datelist = pd.date_range(
     start=config["track_start_date"], end=config["track_end_date"], freq="d", inclusive="left"
 )
 
-input_dir = Path(config['preprocessed_data_folder'])
-output_dir = Path(config['output_folder']) / "backtrack"
+input_dir = Path(config['preprocessed_data_folder']).expanduser()
+output_dir = Path(config['output_folder']).expanduser() / "backtrack"
 
 # Check if input dir exists
 if not input_dir.exists():
