@@ -96,7 +96,8 @@ def get_vertical_transport(
     p,
     w_top,
     w_down,
-    periodic_boundary
+    periodic_boundary,
+    kvf
 ):
 
     # total moisture in the column
@@ -137,7 +138,7 @@ def get_vertical_transport(
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
-    stab = 1.0 / 4.0
+    stab = 1.0 / (kvf + 1)
     fa_vert_stable = np.minimum(
         np.abs(fa_vert_raw), np.minimum(stab * w_top[1:, :, :], stab * w_down[1:, :, :])
     )
