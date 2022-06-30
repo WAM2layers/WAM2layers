@@ -138,7 +138,8 @@ for date in datelist[:]:
         precip,
         w_upper,
         w_lower,
-        config["periodic_boundary"]
+        config["periodic_boundary"],
+        config["kvf"]
     )
 
     # Save preprocessed data
