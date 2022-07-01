@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-import numpy as np
 import xarray as xr
 import yaml
 from pathlib import Path
@@ -19,11 +18,9 @@ density_water = 1000  # [kg/m3]
 with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
-
 # Create the preprocessed data folder if it does not exist yet
-output_dir = Path(config['preprocessed_data_folder'])
-if not output_dir.exists():
-    output_dir.expanduser().mkdir()
+output_dir = Path(config['preprocessed_data_folder']).expanduser()
+output_dir.mkdir(exist_ok=True, parents=True)
 
 
 def load_data(variable, date):
