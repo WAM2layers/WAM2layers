@@ -1,4 +1,3 @@
-from optparse import Values
 import yaml
 import xarray as xr
 
@@ -165,23 +164,20 @@ def backtrack(
         s_track_relative_upper = s_track_upper / s_upper[t]
         inner = np.s_[1:-1, 1:-1]
 
-        # Actual tracking
+        # Actual tracking (note: backtracking, all terms have been negated)
         s_track_lower[inner] += (
-            # TODO: Looks like I'm messing up my interpretation of incoming/outgoing here...
-            # e.g. I think fx_e_we should be an outgoing flux, but I'm not sure.
-            # Similarly, shouldn't upward be a loss term, and scaled with self instead of upper?
-            + fx_e_lower_we * shift_east(s_track_relative_lower)  # in from the east
-            + fx_w_lower_ew * shift_west(s_track_relative_lower)  # in from the west
-            + fy_n_lower_sn * shift_north(s_track_relative_lower)  # in from the north
-            + fy_s_lower_ns * shift_south(s_track_relative_lower)  # in from the south
-            + f_upward * s_track_relative_upper  # in from upper layer
-            - f_downward * s_track_relative_lower  # out to the upper layer
-            - fy_s_lower_sn * s_track_relative_lower  # out to the south
-            - fy_n_lower_ns * s_track_relative_lower  # out to the north
-            - fx_e_lower_ew * s_track_relative_lower  # out to the west
-            - fx_w_lower_we * s_track_relative_lower  # out to the east
-            + P_region * (s_lower[t] / s_total)  # gained from precipitation?
-            - evap[t-1] * s_track_relative_lower  # lost to evaporation?
+            + fx_e_lower_we * shift_east(s_track_relative_lower)
+            + fx_w_lower_ew * shift_west(s_track_relative_lower)
+            + fy_n_lower_sn * shift_north(s_track_relative_lower)
+            + fy_s_lower_ns * shift_south(s_track_relative_lower)
+            + f_upward * s_track_relative_upper
+            - f_downward * s_track_relative_lower
+            - fy_s_lower_sn * s_track_relative_lower
+            - fy_n_lower_ns * s_track_relative_lower
+            - fx_e_lower_ew * s_track_relative_lower
+            - fx_w_lower_we * s_track_relative_lower
+            + P_region * (s_lower[t] / s_total)
+            - evap[t-1] * s_track_relative_lower
         )[inner]
 
         s_track_upper[inner] += (
