@@ -124,15 +124,15 @@ def backtrack(
 ):
 
     # Unpack preprocessed data  # TODO: change names in preproc
-    fx_upper = preprocessed_data["fa_e_upper"].values
-    fy_upper = preprocessed_data["fa_n_upper"].values
-    fx_lower = preprocessed_data["fa_e_lower"].values
-    fy_lower = preprocessed_data["fa_n_lower"].values
+    fx_upper = preprocessed_data["fx_upper"].values
+    fy_upper = preprocessed_data["fy_upper"].values
+    fx_lower = preprocessed_data["fx_lower"].values
+    fy_lower = preprocessed_data["fy_lower"].values
     evap = preprocessed_data["evap"].values
     precip = preprocessed_data["precip"].values
-    s_upper = preprocessed_data["w_upper"].values
-    s_lower = preprocessed_data["w_lower"].values
-    f_vert = preprocessed_data["fa_vert"].values
+    s_upper = preprocessed_data["s_upper"].values
+    s_lower = preprocessed_data["s_lower"].values
+    f_vert = preprocessed_data["f_vert"].values
 
     # Allocate arrays for daily accumulations
     ntime, nlat, nlon = s_upper.shape

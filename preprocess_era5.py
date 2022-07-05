@@ -51,7 +51,7 @@ for date in datelist[:]:
     # Get grid info
     lat = u.latitude.values
     lon = u.longitude.values
-    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
+    a_gridcell, l_es_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
 
     # Calculate volumes
     evap *= a_gridcell  # m3
@@ -77,8 +77,8 @@ for date in datelist[:]:
     dp["level"] = edges
 
     # Determine the fluxes and states
-    fa_e = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
-    fa_n = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
+    fx = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
+    fy = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
     cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
 
     # Split in 2 layers
@@ -87,17 +87,17 @@ for date in datelist[:]:
     upper_layer = dp.level < P_boundary / 100
 
     # Integrate fluxes and state
-    fa_e_lower = fa_e.where(lower_layer).sum(dim="level") #kg*m-1*s-1
-    fa_n_lower = fa_n.where(lower_layer).sum(dim="level") #kg*m-1*s-1
-    w_lower = cwv.where(lower_layer).sum(dim="level") #m3
+    fx_lower = fx.where(lower_layer).sum(dim="level") #kg*m-1*s-1
+    fy_lower = fy.where(lower_layer).sum(dim="level") #kg*m-1*s-1
+    s_lower = cwv.where(lower_layer).sum(dim="level") #m3
 
-    fa_e_upper = fa_e.where(upper_layer).sum(dim="level") #kg*m-1*s-1
-    fa_n_upper = fa_n.where(upper_layer).sum(dim="level") #kg*m-1*s-1
-    w_upper = cwv.where(upper_layer).sum(dim="level") #m3
+    fx_upper = fx.where(upper_layer).sum(dim="level") #kg*m-1*s-1
+    fy_upper = fy.where(upper_layer).sum(dim="level") #kg*m-1*s-1
+    s_upper = cwv.where(upper_layer).sum(dim="level") #m3
 
     print(
         "Check calculation water vapor, this value should be zero:",
-        (cwv.sum(dim="level") - (w_upper + w_lower)).sum().values,
+        (cwv.sum(dim="level") - (s_upper + s_lower)).sum().values,
     )
 
     tcwm3 = tcw * a_gridcell[np.newaxis, :] / density_water  # m3
@@ -105,39 +105,39 @@ for date in datelist[:]:
     # Change units to m3, based on target frequency (not incoming frequency!)
     target_freq = config['target_frequency']
     total_seconds = pd.Timedelta(target_freq).total_seconds()
-    fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
-    fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
-    fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
-    fa_n_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
+    fx_upper *= total_seconds * (l_es_gridcell / density_water)
+    fx_lower *= total_seconds * (l_es_gridcell / density_water)
+    fy_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
+    fy_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
 
     # Increased time resolution; states at midpoints, fluxes at the edges
-    old_time = w_upper.time.values
+    old_time = s_upper.time.values
     newtime_states = pd.date_range(old_time[0], old_time[-1], freq=target_freq)
     newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
 
-    w_upper = w_upper.interp(time=newtime_states).values
-    w_lower = w_lower.interp(time=newtime_states).values
-    fa_e_upper = fa_e_upper.interp(time=newtime_fluxes).values
-    fa_n_upper = fa_n_upper.interp(time=newtime_fluxes).values
-    fa_e_lower = fa_e_lower.interp(time=newtime_fluxes).values
-    fa_n_lower = fa_n_lower.interp(time=newtime_fluxes).values
+    s_upper = s_upper.interp(time=newtime_states).values
+    s_lower = s_lower.interp(time=newtime_states).values
+    fx_upper = fx_upper.interp(time=newtime_fluxes).values
+    fy_upper = fy_upper.interp(time=newtime_fluxes).values
+    fx_lower = fx_lower.interp(time=newtime_fluxes).values
+    fy_lower = fy_lower.interp(time=newtime_fluxes).values
     precip = (precip.reindex(time=newtime_fluxes, method="bfill") / 4).values
     evap = (evap.reindex(time=newtime_fluxes, method="bfill") / 4).values
 
     # Stabilize horizontal fluxes
-    fa_e_upper, fa_n_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
-    fa_e_lower, fa_n_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
+    fx_upper, fy_upper = get_stable_fluxes(fx_upper, fy_upper, s_upper)
+    fx_lower, fy_lower = get_stable_fluxes(fx_lower, fy_lower, s_lower)
 
     # Determine the vertical moisture flux
-    fa_vert = get_vertical_transport(
-        fa_e_upper,
-        fa_e_lower,
-        fa_n_upper,
-        fa_n_lower,
+    f_vert = get_vertical_transport(
+        fx_upper,
+        fx_lower,
+        fy_upper,
+        fy_lower,
         evap,
         precip,
-        w_upper,
-        w_lower,
+        s_upper,
+        s_lower,
         config["periodic_boundary"],
         config["kvf"]
     )
@@ -150,13 +150,13 @@ for date in datelist[:]:
     output_path = os.path.join(config["preprocessed_data_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "fa_e_upper": (["time_fluxes", "lat", "lon"], fa_e_upper, {"units": "m**3"}),
-            "fa_n_upper": (["time_fluxes", "lat", "lon"], fa_n_upper, {"units": "m**3"}),
-            "fa_e_lower": (["time_fluxes", "lat", "lon"], fa_e_lower, {"units": "m**3"}),
-            "fa_n_lower": (["time_fluxes", "lat", "lon"], fa_n_lower, {"units": "m**3"}),
-            "w_upper": (["time_states", "lat", "lon"], w_upper, {"units": "m**3"}),
-            "w_lower": (["time_states", "lat", "lon"], w_lower, {"units": "m**3"}),
-            "fa_vert": (["time_fluxes", "lat", "lon"], fa_vert, {"units": "m**3"}),
+            "fx_upper": (["time_fluxes", "lat", "lon"], fx_upper, {"units": "m**3"}),
+            "fy_upper": (["time_fluxes", "lat", "lon"], fy_upper, {"units": "m**3"}),
+            "fx_lower": (["time_fluxes", "lat", "lon"], fx_lower, {"units": "m**3"}),
+            "fy_lower": (["time_fluxes", "lat", "lon"], fy_lower, {"units": "m**3"}),
+            "s_upper": (["time_states", "lat", "lon"], s_upper, {"units": "m**3"}),
+            "s_lower": (["time_states", "lat", "lon"], s_lower, {"units": "m**3"}),
+            "f_vert": (["time_fluxes", "lat", "lon"], f_vert, {"units": "m**3"}),
             "evap": (["time_fluxes", "lat", "lon"], evap, {"units": "m**3"}),
             "precip": (["time_fluxes", "lat", "lon"], precip, {"units": "m**3"}),
         },
