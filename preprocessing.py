@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 import xarray as xr
 
 
-def resample(variable, divt, count_time, method='interp'):
+def resample_ec_earth(variable, divt, count_time, method='interp'):
     """Resample the variable to a given number of timesteps."""
 
     _, nlat, nlon = variable.shape
@@ -33,7 +33,7 @@ def resample(variable, divt, count_time, method='interp'):
     return new_var
 
 
-def get_stable_fluxes(fx, fy, s):
+def stabilize_fluxes(fx, fy, s):
     """Stabilize the outfluxes / influxes.
 
     During the reduced timestep the water cannot move further than 1/x * the
@@ -42,14 +42,13 @@ def get_stable_fluxes(fx, fy, s):
     """
     fx_abs = np.abs(fx)
     fy_abs = np.abs(fy)
-
-    stab = 1.0 / 2.0
+    ft_abs = fx_abs + fy_abs
 
     # TODO: Check; I don't really understand what's happening here
-    fx_corrected = (fx_abs / (fx_abs + fy_abs)) * stab * s[:-1, :, :]
+    fx_corrected = 1/2 * fx_abs / ft_abs * s[:-1, :, :]
     fx_stable = np.minimum(fx_abs, fx_corrected)
 
-    fy_corrected = (fy_abs / (fx_abs + fy_abs)) * stab * s[:-1, :, :]
+    fy_corrected = 1/2 * fy_abs / ft_abs * s[:-1, :, :]
     fy_stable = np.minimum(fy_abs, fy_corrected)
 
     # get rid of any nan values
@@ -149,35 +148,29 @@ def get_vertical_transport(
     return fa_vert
 
 
-def get_grid_info(latitude, longitude):
-    """Return grid cell area and lenght sides."""
+def get_grid_info(ds):
+    """Return grid cell area and lenght of the sides."""
     dg = 111089.56  # [m] length of 1 degree latitude
     erad = 6.371e6  # [m] Earth radius
 
-    gridcell = np.abs(longitude[1] - longitude[0])  # [degrees] grid cell size
+    latitude = ds.latitude.values
+    longitude = ds.longitude.values
+    grid_spacing = np.abs(longitude[1] - longitude[0])  # [degrees]
 
-    # new area size calculation:
-    lat_n_bound = np.minimum(90.0, latitude + 0.5 * gridcell)
-    lat_s_bound = np.maximum(-90.0, latitude - 0.5 * gridcell)
+    # Calculate area TODO check this calculation!
+    lat_n = np.minimum(90.0, latitude + 0.5 * grid_spacing)
+    lat_s = np.maximum(-90.0, latitude - 0.5 * grid_spacing)
 
-    # TODO check this calculation!
-    a_gridcell = np.zeros([len(latitude), 1])
-    a_gridcell[:, 0] = (
-        (np.pi / 180.0)
-        * erad ** 2
-        * abs(np.sin(lat_s_bound * np.pi / 180.0) - np.sin(lat_n_bound * np.pi / 180.0))
-        * gridcell
+    a = np.pi / 180.0 * erad ** 2 * grid_spacing * abs(
+        np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0)
     )
 
-    l_ew_gridcell = gridcell * dg  # [m] length eastern/western boundary of a cell
-    l_n_gridcell = (
-        dg * gridcell * np.cos((latitude + gridcell / 2) * np.pi / 180)
-    )  # [m] length northern boundary of a cell
-    l_s_gridcell = (
-        dg * gridcell * np.cos((latitude - gridcell / 2) * np.pi / 180)
-    )  # [m] length southern boundary of a cell
-    l_mid_gridcell = 0.5 * (l_n_gridcell + l_s_gridcell)
-    return a_gridcell, l_ew_gridcell, l_mid_gridcell
+    # Calculate faces
+    ly = grid_spacing * dg  # [m] length eastern/western boundary of a cell
+    lx_n_gridcell = ly * np.cos((latitude + grid_spacing / 2) * np.pi / 180)
+    lx_s_gridcell = ly * np.cos((latitude - grid_spacing / 2) * np.pi / 180)
+    lx = 0.5 * (lx_n_gridcell + lx_s_gridcell)
+    return a, ly, lx
 
 
 def join_levels(pressure_level_data, surface_level_data):

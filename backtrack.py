@@ -5,8 +5,10 @@ import numpy as np
 from pathlib import Path
 import pandas as pd
 
+from preprocessing import get_grid_info, stabilize_fluxes
+
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("cases/era5_2013_local.yaml") as f:
     config = yaml.safe_load(f)
 
 
@@ -32,6 +34,44 @@ def input_path(date):
 
 def output_path(date):
     return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
+
+
+def resample(ds, target_freq):
+    """Increase time resolution; states at midpoints, fluxes at the edges."""
+    target_seconds = pd.Timedelta(target_freq).total_seconds()
+    current_seconds = ds.time.diff('time').dt.seconds.values[0]
+    resample_ratio = current_seconds / target_seconds
+
+    time = ds.time.values
+    newtime_states = pd.date_range(time[0], time[-1], freq=target_freq)
+    newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
+
+    states = ds[['s_upper', 's_lower']].interp(time=newtime_states)
+    fluxes = ds[['fx_upper', 'fx_lower', 'fy_upper', 'fy_lower']].interp(time=newtime_fluxes)
+    surface = ds[['precip', 'evap']].reindex(time=newtime_fluxes, method="bfill") / resample_ratio
+    return fluxes.merge(surface), states
+
+
+def change_units(fluxes, target_freq):
+    """Change units to m3.
+
+    Multiply by edge length to get flux in m3
+    Multiply by time to get accumulation instead of flux
+    Divide by density of water to go from kg to m3
+    """
+    density = 1000  # [kg/m3]
+    a, ly, lx = get_grid_info(fluxes)
+
+    total_seconds = pd.Timedelta(target_freq).total_seconds()
+    fluxes.fx_upper *= total_seconds / density * ly
+    fluxes.fx_lower *= total_seconds / density * ly
+    fluxes.fy_upper *= total_seconds / density * lx[None, :, None]
+    fluxes.fy_lower *= total_seconds / density * lx[None, :, None]
+    fluxes.evap *= a
+    fluxes.precip *= a
+
+    for variable in fluxes.data_vars:
+        fluxes[variable].assign_units("m**3")
 
 
 def to_edges_zonal(fx):
@@ -255,10 +295,26 @@ for i, date in enumerate(reversed(datelist)):
         else:
             # Allocate empty arrays based on shape of input data
             ds = xr.open_dataset(input_path(datelist[0]))
-            s_track_upper = np.zeros_like(ds.w_upper[0])
-            s_track_lower = np.zeros_like(ds.w_upper[0])
+            s_track_upper = np.zeros_like(ds.s_upper[0])
+            s_track_lower = np.zeros_like(ds.s_upper[0])
 
     preprocessed_data = xr.open_dataset(input_path(date))
+
+    # Resample to (higher) target frequency
+    # After this, the fluxes will be "in between" the states
+    fluxes, states = resample(preprocessed_data, config['target_frequency'])
+
+    # Convert flux data to volumes
+    change_units(fluxes, config["target_frequency"])
+
+    # TODO: Try stacking upper and lower into a single array with new dim
+    # Stabilize horizontal fluxes # TODO reinsert in datasets
+    fx_upper, fy_upper = stabilize_fluxes(fluxes.fx_upper, fluxes.fy_upper, states.s_upper)
+    fx_lower, fy_lower = stabilize_fluxes(fx_lower, fy_lower, s_lower)
+
+    # Determine the vertical moisture flux
+    f_vert = get_vertical_transport(ds_fluxes, ds_accumulations, ds_states,
+                                    config["periodic_boundary"], config["kvf"])
 
     (s_track_upper, s_track_lower, processed_data) = backtrack(
         preprocessed_data,

@@ -1,13 +1,10 @@
 import os
 import numpy as np
 import pandas as pd
-import numpy as np
 import xarray as xr
 import yaml
 
-
-from preprocessing import (get_grid_info, get_stable_fluxes,
-                           get_vertical_transport)
+from preprocessing import get_grid_info
 
 
 # Set constants
@@ -15,7 +12,7 @@ g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("cases/era5_2013_local.yaml") as f:
     config = yaml.safe_load(f)
 
 
@@ -31,31 +28,30 @@ def load_data(variable, date):
 
 
 datelist = pd.date_range(
-    start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
+    start=config["preprocess_start_date"],
+    end=config["preprocess_end_date"],
+    freq="d",
+    inclusive="left",
 )
 
 for date in datelist[:]:
     print(date)
 
     # Load data
-    u = load_data("u", date) #in m/s
-    v = load_data("v", date) #in m/s
-    q = load_data("q", date) #in kg kg-1
-    sp = load_data("sp", date) #in Pa
-    evap = load_data("e", date) #in m (accumulated hourly)
-    cp = load_data("cp", date) #convective precipitation in m (accumulated hourly)
-    lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
-    precip = cp + lsp
+    u = load_data("u", date)  # m/s
+    v = load_data("v", date)  # m/s
+    q = load_data("q", date)  # kg kg-1
+    sp = load_data("sp", date)  # Pa
     tcw = load_data("tcw", date) # kg/m2
 
-    # Get grid info
-    lat = u.latitude.values
-    lon = u.longitude.values
-    a_gridcell, l_es_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
+    # Get grid cell area
+    a_gridcell, _, _ = get_grid_info(u)
 
-    # Calculate volumes
-    evap *= a_gridcell  # m3
-    precip *= a_gridcell  # m3
+    # Load evap & precip
+    evap = load_data("e", date)  # m (accumulated hourly)
+    cp = load_data("cp", date)  # convective precipitation in m (accumulated hourly)
+    lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
+    precip = cp + lsp
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
@@ -87,13 +83,13 @@ for date in datelist[:]:
     upper_layer = dp.level < P_boundary / 100
 
     # Integrate fluxes and state
-    fx_lower = fx.where(lower_layer).sum(dim="level") #kg*m-1*s-1
-    fy_lower = fy.where(lower_layer).sum(dim="level") #kg*m-1*s-1
-    s_lower = cwv.where(lower_layer).sum(dim="level") #m3
+    fx_lower = fx.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
+    fy_lower = fy.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
+    s_lower = cwv.where(lower_layer).sum(dim="level")  # m3
 
-    fx_upper = fx.where(upper_layer).sum(dim="level") #kg*m-1*s-1
-    fy_upper = fy.where(upper_layer).sum(dim="level") #kg*m-1*s-1
-    s_upper = cwv.where(upper_layer).sum(dim="level") #m3
+    fx_upper = fx.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
+    fy_upper = fy.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
+    s_upper = cwv.where(upper_layer).sum(dim="level")  # m3
 
     print(
         "Check calculation water vapor, this value should be zero:",
@@ -102,68 +98,16 @@ for date in datelist[:]:
 
     tcwm3 = tcw * a_gridcell[np.newaxis, :] / density_water  # m3
 
-    # Change units to m3, based on target frequency (not incoming frequency!)
-    target_freq = config['target_frequency']
-    total_seconds = pd.Timedelta(target_freq).total_seconds()
-    fx_upper *= total_seconds * (l_es_gridcell / density_water)
-    fx_lower *= total_seconds * (l_es_gridcell / density_water)
-    fy_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
-    fy_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
-
-    # Increased time resolution; states at midpoints, fluxes at the edges
-    old_time = s_upper.time.values
-    newtime_states = pd.date_range(old_time[0], old_time[-1], freq=target_freq)
-    newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
-
-    s_upper = s_upper.interp(time=newtime_states).values
-    s_lower = s_lower.interp(time=newtime_states).values
-    fx_upper = fx_upper.interp(time=newtime_fluxes).values
-    fy_upper = fy_upper.interp(time=newtime_fluxes).values
-    fx_lower = fx_lower.interp(time=newtime_fluxes).values
-    fy_lower = fy_lower.interp(time=newtime_fluxes).values
-    precip = (precip.reindex(time=newtime_fluxes, method="bfill") / 4).values
-    evap = (evap.reindex(time=newtime_fluxes, method="bfill") / 4).values
-
-    # Stabilize horizontal fluxes
-    fx_upper, fy_upper = get_stable_fluxes(fx_upper, fy_upper, s_upper)
-    fx_lower, fy_lower = get_stable_fluxes(fx_lower, fy_lower, s_lower)
-
-    # Determine the vertical moisture flux
-    f_vert = get_vertical_transport(
-        fx_upper,
-        fx_lower,
-        fy_upper,
-        fy_lower,
-        evap,
-        precip,
-        s_upper,
-        s_lower,
-        config["periodic_boundary"],
-        config["kvf"]
-    )
-
-    # Save preprocessed data
-    # Note: fluxes (dim: time) are at the edges of the timesteps,
-    # while states (dim: time2) are at the midpoints and include next midnight
-    # so the first state from day 2 will overlap with the last flux from day 1
+    # Save preprocessed data as daily files including the following midnight
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = os.path.join(config["preprocessed_data_folder"], filename)
-    xr.Dataset(
-        {  # TODO: would be nice to add coordinates and units as well
-            "fx_upper": (["time_fluxes", "lat", "lon"], fx_upper, {"units": "m**3"}),
-            "fy_upper": (["time_fluxes", "lat", "lon"], fy_upper, {"units": "m**3"}),
-            "fx_lower": (["time_fluxes", "lat", "lon"], fx_lower, {"units": "m**3"}),
-            "fy_lower": (["time_fluxes", "lat", "lon"], fy_lower, {"units": "m**3"}),
-            "s_upper": (["time_states", "lat", "lon"], s_upper, {"units": "m**3"}),
-            "s_lower": (["time_states", "lat", "lon"], s_lower, {"units": "m**3"}),
-            "f_vert": (["time_fluxes", "lat", "lon"], f_vert, {"units": "m**3"}),
-            "evap": (["time_fluxes", "lat", "lon"], evap, {"units": "m**3"}),
-            "precip": (["time_fluxes", "lat", "lon"], precip, {"units": "m**3"}),
-        },
-        coords={
-            'time_fluxes': newtime_fluxes,
-            'time_states': newtime_states,
-            'lat': u.latitude.values,
-            'lon': u.longitude.values
-        }
-    ).to_netcdf(output_path)
+    xr.Dataset({
+        "fx_lower": fx_lower.assign_attrs(units="kg*m-1*s-1"),
+        "fy_lower": fy_lower.assign_attrs(units="kg*m-1*s-1"),
+        "fx_upper": fx_upper.assign_attrs(units="kg*m-1*s-1"),
+        "fy_upper": fy_upper.assign_attrs(units="kg*m-1*s-1"),
+        "s_upper": s_upper.assign_attrs(units="m**3"),
+        "s_lower": s_lower.assign_attrs(units="m**3"),
+        "precip": precip.assign_attrs(units="m"),
+        "evap": evap.assign_attrs(units="m"),
+    }).to_netcdf(output_path)
