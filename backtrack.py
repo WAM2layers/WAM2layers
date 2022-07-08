@@ -154,117 +154,93 @@ def split_vertical_flux(Kvf, fv):
 
 
 def backtrack(
+    s_track,
     preprocessed_data,
-    s_track_upper,
-    s_track_lower,
     region,
     kvf,
 ):
 
     # Unpack preprocessed data  # TODO: change names in preproc
-    fx_upper = preprocessed_data["fx_upper"].values
-    fy_upper = preprocessed_data["fy_upper"].values
-    fx_lower = preprocessed_data["fx_lower"].values
-    fy_lower = preprocessed_data["fy_lower"].values
+    s = preprocessed_data["s"].values
+    fx = preprocessed_data["fx"].values
+    fy = preprocessed_data["fy"].values
+    fz = preprocessed_data["fz"].values
     evap = preprocessed_data["evap"].values
     precip = preprocessed_data["precip"].values
-    s_upper = preprocessed_data["s_upper"].values
-    s_lower = preprocessed_data["s_lower"].values
-    f_vert = preprocessed_data["f_vert"].values
 
     # Allocate arrays for daily accumulations
-    ntime, nlat, nlon = s_upper.shape
+    _, ntime, nlat, nlon = s.shape
 
-    s_track_upper_agg = np.zeros((nlat, nlon))
-    s_track_lower_agg = np.zeros((nlat, nlon))
+    s_track_agg = np.zeros((2, nlat, nlon))
     e_track = np.zeros((nlat, nlon))
 
     north_loss = south_loss = np.zeros(nlon)
     east_loss = west_loss = np.zeros(nlat)
 
     # Sa calculation backward in time
-    ntime = len(s_lower)
     for t in reversed(range(ntime)):
         P_region = region * precip[t-1]
-        s_total = s_upper[t] + s_lower[t]
+        s_total = s.sum(axis=0)[t]
 
         # separate the direction of the vertical flux and make it absolute
-        f_downward, f_upward = split_vertical_flux(kvf, f_vert[t-1])
+        f_downward, f_upward = split_vertical_flux(kvf, fz[t-1])
 
         # Determine horizontal fluxes over the grid-cell boundaries
-        fx_e_lower_we, fx_e_lower_ew, fx_w_lower_we, fx_w_lower_ew = to_edges_zonal(fx_lower[t-1])
-        fx_e_upper_we, fx_e_upper_ew, fx_w_upper_we, fx_w_upper_ew = to_edges_zonal(fx_upper[t-1])
-        fy_n_lower_sn, fy_n_lower_ns, fy_s_lower_sn, fy_s_lower_ns = to_edges_meridional(fy_lower[t-1])
-        fy_n_upper_sn, fy_n_upper_ns, fy_s_upper_sn, fy_s_upper_ns = to_edges_meridional(fy_upper[t-1])
+        fx_e_we, fx_e_ew, fx_w_we, fx_w_ew = to_edges_zonal(fx[:, t-1])
+        fy_n_sn, fy_n_ns, fy_s_sn, fy_s_ns = to_edges_meridional(fy[:, t-1])
 
         # Short name for often used expressions
-        s_track_relative_lower = s_track_lower / s_lower[t]  # fraction of tracked relative to total moisture
-        s_track_relative_upper = s_track_upper / s_upper[t]
-        inner = np.s_[1:-1, 1:-1]
+        s_track_relative = s_track / s[:, t, ...]  # fraction of tracked relative to total moisture
+        inner = np.s_[:, 1:-1, 1:-1]
 
         # Actual tracking (note: backtracking, all terms have been negated)
-        s_track_lower[inner] += (
-            + fx_e_lower_we * shift_east(s_track_relative_lower)
-            + fx_w_lower_ew * shift_west(s_track_relative_lower)
-            + fy_n_lower_sn * shift_north(s_track_relative_lower)
-            + fy_s_lower_ns * shift_south(s_track_relative_lower)
-            + f_upward * s_track_relative_upper
-            - f_downward * s_track_relative_lower
-            - fy_s_lower_sn * s_track_relative_lower
-            - fy_n_lower_ns * s_track_relative_lower
-            - fx_e_lower_ew * s_track_relative_lower
-            - fx_w_lower_we * s_track_relative_lower
-            + P_region * (s_lower[t] / s_total)
-            - evap[t-1] * s_track_relative_lower
+        s_track[inner] += (
+            + fx_e_we * shift_east(s_track_relative)
+            + fx_w_ew * shift_west(s_track_relative)
+            + fy_n_sn * shift_north(s_track_relative)
+            + fy_s_ns * shift_south(s_track_relative)
+            - fy_s_sn * s_track_relative
+            - fy_n_ns * s_track_relative
+            - fx_e_ew * s_track_relative
+            - fx_w_we * s_track_relative
+            + P_region * (s[:, t, ...] / s_total)
         )[inner]
 
-        s_track_upper[inner] += (
-            + fx_e_upper_we * shift_east(s_track_relative_upper)
-            + fx_w_upper_ew * shift_west(s_track_relative_upper)
-            + fy_n_upper_sn * shift_north(s_track_relative_upper)
-            + fy_s_upper_ns * shift_south(s_track_relative_upper)
-            + f_downward * s_track_relative_lower
-            - f_upward * s_track_relative_upper
-            - fy_s_upper_sn * s_track_relative_upper
-            - fy_n_upper_ns * s_track_relative_upper
-            - fx_w_upper_we * s_track_relative_upper
-            - fx_e_upper_ew * s_track_relative_upper
-            + P_region * (s_upper[t] / s_total)
-        )[inner]
+        # Specific to lower layer
+        s_track[0, 1:-1, 1:-1] += (
+            + f_upward * s_track_relative[1]
+            - f_downward * s_track_relative[0]
+            - evap[t-1] * s_track_relative[0]
+        )[1:-1, 1:-1]
+
+        # Specific to upper layer
+        s_track[1, 1:-1, 1:-1] += (
+            - f_upward * s_track_relative[1]
+            + f_downward * s_track_relative[0]
+        )[1:-1, 1:-1]
 
         # down and top: redistribute unaccounted water that is otherwise lost from the sytem
-        lower_to_upper = np.maximum(0, s_track_lower) - s_lower[t - 1]
-        upper_to_lower = np.maximum(0, s_track_upper) - s_upper[t - 1]
-        s_track_lower[inner] = (s_track_lower - lower_to_upper + upper_to_lower)[inner]
-        s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
+        # TODO: friday afternoon, might have messed this up.
+        debet = np.maximum(0, s_track - s[:, t - 1])
+        s_track[inner] = (s_track - debet[::-1])[inner]
 
         # compute tracked evaporation
-        e_track += evap[t-1] * (s_track_lower / s_lower[t])
+        e_track += evap[t-1] * (s_track[0] / s[0][t])
 
         # losses to the north and south
-        north_loss += (fy_n_upper_ns * s_track_relative_upper
-                       + fy_n_lower_ns * s_track_relative_lower)[1, :]
-
-        south_loss += (fy_s_upper_sn * s_track_relative_upper
-                       + fy_s_lower_sn * s_track_relative_lower)[-2, :]
-
-        east_loss += (fx_e_upper_ew * s_track_relative_upper
-                      + fx_e_lower_ew * s_track_relative_lower)[:, -2]
-
-        west_loss += (fx_w_upper_we * s_track_relative_upper
-                      + fx_w_lower_we * s_track_relative_lower)[:, 1]
+        north_loss += (fy_n_ns * s_track_relative).sum(axis=0)[1, :]
+        south_loss += (fy_s_sn * s_track_relative).sum(axis=0)[-2, :]
+        east_loss += (fx_e_ew * s_track_relative).sum(axis=0)[:, -2]
+        west_loss += (fx_w_we * s_track_relative).sum(axis=0)[:, 1]
 
         # Aggregate daily accumulations
-        s_track_lower_agg += s_track_lower
-        s_track_upper_agg += s_track_upper
+        s_track_agg += s_track
 
     # Pack processed data into new dataset
     ds = xr.Dataset(
         {
-            "s_track_upper_last": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
-            "s_track_lower_last": (["lat", "lon"], s_track_lower),
-            "s_track_upper": (["lat", "lon"], s_track_upper_agg),
-            "s_track_lower": (["lat", "lon"], s_track_lower_agg),
+            "s_track_last": (["lev", "lat", "lon"], s_track),  # Keep last state for a restart
+            "s_track": (["lev", "lat", "lon"], s_track_agg),
             "e_track": (["lat", "lon"], e_track),
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
@@ -272,11 +248,7 @@ def backtrack(
             "west_loss": (["lat",], west_loss),
         }
     )
-    return (
-        s_track_upper,
-        s_track_lower,
-        ds
-    )
+    return s_track, ds
 
 
 region = xr.open_dataset(config['region']).isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
@@ -288,11 +260,11 @@ for i, date in enumerate(reversed(datelist)):
         if config["restart"]:
             # Reload last state from existing output
             ds = xr.open_dataset(output_path(date + pd.Timedelta(days=1)))
-            s_track_upper = ds.s_track.values
+            s_track = ds.s_track.values
         else:
             # Allocate empty arrays based on shape of input data
             ds = xr.open_dataset(input_path(datelist[0]))
-            s_track = np.zeros_like(ds.s[0])
+            s_track = np.zeros_like(ds.s[:, 0, ...])
 
     preprocessed_data = xr.open_dataset(input_path(date))
 
@@ -311,15 +283,11 @@ for i, date in enumerate(reversed(datelist)):
     # Determine the vertical moisture flux
     kvf = config['kvf']
     pb = config['periodic_boundary']
-    fz = get_vertical_transport(s, fx, fy, evap, precip, kvf, pb)
 
-    (s_track_upper, s_track_lower, processed_data) = backtrack(
-        preprocessed_data,
-        s_track_upper,
-        s_track_lower,
-        region,
-        config['kvf'],
-    )
+    # Calculate fluxes and add to preprocessed data
+    preprocessed_data['fz'] = get_vertical_transport(s, fx, fy, evap, precip, kvf, pb)
+
+    s_track, processed_data = backtrack(s_track, preprocessed_data, region, config['kvf'])
 
     # Write output to file
     # TODO: add (and cleanup) coordinates and units

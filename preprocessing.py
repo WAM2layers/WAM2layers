@@ -44,11 +44,10 @@ def stabilize_fluxes(fx, fy, s):
     fy_abs = np.abs(fy)
     ft_abs = fx_abs + fy_abs
 
-    # TODO: Check; I don't really understand what's happening here
-    fx_corrected = 1/2 * fx_abs / ft_abs * s[:-1, :, :]
+    fx_corrected = 1/2 * fx_abs / ft_abs * s[:, :-1, ...].values
     fx_stable = np.minimum(fx_abs, fx_corrected)
 
-    fy_corrected = 1/2 * fy_abs / ft_abs * s[:-1, :, :]
+    fy_corrected = 1/2 * fy_abs / ft_abs * s[:, :-1, ...].values
     fy_stable = np.minimum(fy_abs, fy_corrected)
 
     # get rid of any nan values
@@ -64,7 +63,7 @@ def stabilize_fluxes(fx, fy, s):
 
 def divergence_zonal(fx, periodic_boundary):
     """Define the horizontal fluxes over the zonal boundaries."""
-    flux = np.asarray(fx)
+    flux = fx.values
 
     fe_boundary = np.zeros_like(flux)
     fe_boundary[..., :-1] = 0.5 * (flux[..., :-1] + flux[..., 1:])
@@ -77,7 +76,7 @@ def divergence_zonal(fx, periodic_boundary):
 
 def divergence_meridional(fy):
     """Define the horizontal fluxes over the meridional boundaries."""
-    flux = np.asarray(fy)
+    flux = fy.values
 
     fn_boundary = np.zeros_like(flux)
     fn_boundary[..., 1:, :] = 0.5 * (flux[..., :-1, :] + flux[..., 1:, :])
@@ -88,30 +87,31 @@ def divergence_meridional(fy):
 
 def get_vertical_transport(s, fx, fy, evap, precip, kvf, periodic):
 
+    #TODO: make consistent only numpy or only xarray
+
     # relative to total moisture in the column
     s_rel = (s / s.sum(dim='level'))[:, :-1, ...]
 
     zonal_divergence = divergence_zonal(fx, periodic)
     meridional_divergence = divergence_meridional(fy)
 
-    import IPython; IPython.embed(); quit()
     # check the water balance
     residual = np.zeros_like(fx)  # residual factor [m3]
 
     tendency = (
         + zonal_divergence
         + meridional_divergence
-        - precip * s_rel
+        - precip.values * s_rel
     )[:, :, 1:-1, :]
-    tendency.sel(level='lower').values += evap[:, :, 1:-1, :]
+    tendency.sel(level='lower').values += evap[:, 1:-1, :]
 
-    residual[:, :, 1:-1, :] = s[:, 1:, 1:-1, :] - s[:, :-1, 1:-1, :] - tendency
+    residual[:, :, 1:-1, :] = s.values[:, 1:, 1:-1, :] - s.values[:, :-1, 1:-1, :] - tendency
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
     fv = (
         (s.sel(level='lower') / s.sum('level'))[1:, :, :]
-        * residual.sum('level') - residual.sel(level='lower')
+        * residual.sum(axis=0) - residual[0]
     )
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
