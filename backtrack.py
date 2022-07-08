@@ -171,7 +171,7 @@ def backtrack(
     # Allocate arrays for daily accumulations
     _, ntime, nlat, nlon = s.shape
 
-    s_track_agg = np.zeros((2, nlat, nlon))
+    s_track_mean = np.zeros((2, nlat, nlon))
     e_track = np.zeros((nlat, nlon))
 
     north_loss = south_loss = np.zeros(nlon)
@@ -233,14 +233,14 @@ def backtrack(
         east_loss += (fx_e_ew * s_track_relative).sum(axis=0)[:, -2]
         west_loss += (fx_w_we * s_track_relative).sum(axis=0)[:, 1]
 
-        # Aggregate daily accumulations
-        s_track_agg += s_track
+        # Aggregate to eventually get a daily mean accumulations
+        s_track_mean += s_track / ntime
 
     # Pack processed data into new dataset
     ds = xr.Dataset(
         {
-            "s_track_last": (["lev", "lat", "lon"], s_track),  # Keep last state for a restart
-            "s_track": (["lev", "lat", "lon"], s_track_agg),
+            "s_track_restart": (["lev", "lat", "lon"], s_track),  # Keep last state for a restart
+            "s_track": (["lev", "lat", "lon"], s_track_mean),
             "e_track": (["lat", "lon"], e_track),
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
@@ -260,7 +260,7 @@ for i, date in enumerate(reversed(datelist)):
         if config["restart"]:
             # Reload last state from existing output
             ds = xr.open_dataset(output_path(date + pd.Timedelta(days=1)))
-            s_track = ds.s_track.values
+            s_track = ds.s_track_restart.values
         else:
             # Allocate empty arrays based on shape of input data
             ds = xr.open_dataset(input_path(datelist[0]))
