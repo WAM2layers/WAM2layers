@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 import pandas as pd
 
-from preprocessing import get_grid_info, stabilize_fluxes
+from preprocessing import get_grid_info, get_vertical_transport, stabilize_fluxes
 
 # Read case configuration
 with open("cases/era5_2013_local.yaml") as f:
@@ -46,8 +46,8 @@ def resample(ds, target_freq):
     newtime_states = pd.date_range(time[0], time[-1], freq=target_freq)
     newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
 
-    states = ds[['s_upper', 's_lower']].interp(time=newtime_states)
-    fluxes = ds[['fx_upper', 'fx_lower', 'fy_upper', 'fy_lower']].interp(time=newtime_fluxes)
+    states = ds.s.interp(time=newtime_states)
+    fluxes = ds[['fx', 'fy']].interp(time=newtime_fluxes)
     surface = ds[['precip', 'evap']].reindex(time=newtime_fluxes, method="bfill") / resample_ratio
     return fluxes.merge(surface), states
 
@@ -63,15 +63,13 @@ def change_units(fluxes, target_freq):
     a, ly, lx = get_grid_info(fluxes)
 
     total_seconds = pd.Timedelta(target_freq).total_seconds()
-    fluxes.fx_upper *= total_seconds / density * ly
-    fluxes.fx_lower *= total_seconds / density * ly
-    fluxes.fy_upper *= total_seconds / density * lx[None, :, None]
-    fluxes.fy_lower *= total_seconds / density * lx[None, :, None]
-    fluxes.evap *= a
-    fluxes.precip *= a
+    fluxes['fx'] *= total_seconds / density * ly
+    fluxes['fy'] *= total_seconds / density * lx[None, :, None]
+    fluxes['evap'] *= a[None, :, None]
+    fluxes['precip'] *= a[None, :, None]
 
     for variable in fluxes.data_vars:
-        fluxes[variable].assign_units("m**3")
+        fluxes[variable].assign_attrs(units="m**3")
 
 
 def to_edges_zonal(fx):
@@ -290,31 +288,30 @@ for i, date in enumerate(reversed(datelist)):
         if config["restart"]:
             # Reload last state from existing output
             ds = xr.open_dataset(output_path(date + pd.Timedelta(days=1)))
-            s_track_upper = ds.s_track_upper.values
-            s_track_lower = ds.s_track_lower.values
+            s_track_upper = ds.s_track.values
         else:
             # Allocate empty arrays based on shape of input data
             ds = xr.open_dataset(input_path(datelist[0]))
-            s_track_upper = np.zeros_like(ds.s_upper[0])
-            s_track_lower = np.zeros_like(ds.s_upper[0])
+            s_track = np.zeros_like(ds.s[0])
 
     preprocessed_data = xr.open_dataset(input_path(date))
 
     # Resample to (higher) target frequency
     # After this, the fluxes will be "in between" the states
-    fluxes, states = resample(preprocessed_data, config['target_frequency'])
+    fluxes, s = resample(preprocessed_data, config['target_frequency'])
 
     # Convert flux data to volumes
     change_units(fluxes, config["target_frequency"])
 
-    # TODO: Try stacking upper and lower into a single array with new dim
     # Stabilize horizontal fluxes # TODO reinsert in datasets
-    fx_upper, fy_upper = stabilize_fluxes(fluxes.fx_upper, fluxes.fy_upper, states.s_upper)
-    fx_lower, fy_lower = stabilize_fluxes(fx_lower, fy_lower, s_lower)
+    fx, fy = stabilize_fluxes(fluxes.fx, fluxes.fy, s)
+    evap = fluxes.evap
+    precip = fluxes.precip
 
     # Determine the vertical moisture flux
-    f_vert = get_vertical_transport(ds_fluxes, ds_accumulations, ds_states,
-                                    config["periodic_boundary"], config["kvf"])
+    kvf = config['kvf']
+    pb = config['periodic_boundary']
+    fz = get_vertical_transport(s, fx, fy, evap, precip, kvf, pb)
 
     (s_track_upper, s_track_lower, processed_data) = backtrack(
         preprocessed_data,

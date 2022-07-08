@@ -52,8 +52,8 @@ def stabilize_fluxes(fx, fy, s):
     fy_stable = np.minimum(fy_abs, fy_corrected)
 
     # get rid of any nan values
-    fx_stable[np.isnan(fx_stable)] = 0
-    fy_stable[np.isnan(fy_stable)] = 0
+    fx_stable.fillna(0)
+    fy_stable.fillna(0)
 
     # redefine
     fx = np.sign(fx) * fx_stable
@@ -67,11 +67,11 @@ def divergence_zonal(fx, periodic_boundary):
     flux = np.asarray(fx)
 
     fe_boundary = np.zeros_like(flux)
-    fe_boundary[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
+    fe_boundary[..., :-1] = 0.5 * (flux[..., :-1] + flux[..., 1:])
     if periodic_boundary:
-        fe_boundary[:, :, -1] = 0.5 * (flux[:, :, -1] + flux[:, :, 0])
+        fe_boundary[..., -1] = 0.5 * (flux[..., -1] + flux[..., 0])
 
-    fw_boundary = np.roll(fe_boundary, 1)
+    fw_boundary = np.roll(fe_boundary, 1, axis=-1)
     return fw_boundary - fe_boundary
 
 
@@ -80,72 +80,47 @@ def divergence_meridional(fy):
     flux = np.asarray(fy)
 
     fn_boundary = np.zeros_like(flux)
-    fn_boundary[:, 1:, :] = 0.5 * (flux[:, :-1, :] + flux[:, 1:, :])
+    fn_boundary[..., 1:, :] = 0.5 * (flux[..., :-1, :] + flux[..., 1:, :])
 
-    fs_boundary = np.roll(fn_boundary, -1, axis=1)
+    fs_boundary = np.roll(fn_boundary, -1, axis=-2)
     return fs_boundary - fn_boundary
 
 
-def get_vertical_transport(
-    fx_upper,
-    fx_lower,
-    fy_upper,
-    fy_lower,
-    evap,
-    precip,
-    w_upper,
-    w_lower,
-    periodic_boundary,
-    kvf
-):
+def get_vertical_transport(s, fx, fy, evap, precip, kvf, periodic):
 
-    # total moisture in the column
-    w = w_upper + w_lower
+    # relative to total moisture in the column
+    s_rel = (s / s.sum(dim='level'))[:, :-1, ...]
 
-    zonal_divergence_upper = divergence_zonal(fx_upper, periodic_boundary)
-    zonal_divergence_lower = divergence_zonal(fx_lower, periodic_boundary)
-    meridional_divergence_upper = divergence_meridional(fy_upper)
-    meridional_divergence_lower = divergence_meridional(fy_lower)
+    zonal_divergence = divergence_zonal(fx, periodic)
+    meridional_divergence = divergence_meridional(fy)
 
+    import IPython; IPython.embed(); quit()
     # check the water balance
-    residual_lower = np.zeros_like(precip)  # residual factor [m3]
-    residual_upper = np.zeros_like(precip)  # residual factor [m3]
+    residual = np.zeros_like(fx)  # residual factor [m3]
 
-    tendency_lower = (  # todo why skip the n/s but not w/e edges?
-        +zonal_divergence_lower[:, 1:-1, :]
-        + meridional_divergence_lower[:, 1:-1, :]
-        - precip[:, 1:-1, :] * (w_lower[:-1, 1:-1, :] / w[:-1, 1:-1, :])
-        + evap[:, 1:-1, :]
-    )
+    tendency = (
+        + zonal_divergence
+        + meridional_divergence
+        - precip * s_rel
+    )[:, :, 1:-1, :]
+    tendency.sel(level='lower').values += evap[:, :, 1:-1, :]
 
-    tendency_upper = (  # todo why skip the n/s but not w/e edges?
-        +zonal_divergence_upper[:, 1:-1, :]
-        + meridional_divergence_upper[:, 1:-1, :]
-        - precip[:, 1:-1, :] * (w_upper[:-1, 1:-1, :] / w[:-1, 1:-1, :])
-    )
-
-    residual_lower[:, 1:-1, :] = (
-        w_lower[1:, 1:-1, :] - w_lower[:-1, 1:-1, :] - tendency_lower
-    )
-    residual_upper[:, 1:-1, :] = w_upper[1:, 1:-1, :] - w_upper[:-1, 1:-1, :] - tendency_upper
+    residual[:, :, 1:-1, :] = s[:, 1:, 1:-1, :] - s[:, :-1, 1:-1, :] - tendency
 
     # compute the resulting vertical moisture flux; the vertical velocity so
-    # that the new residual_lower/w_lower = residual_upper/w_upper (positive downward)
-    fa_vert_raw = (
-        w_lower[1:, :, :] / w[1:, :, :] * (residual_lower + residual_upper) - residual_lower
+    # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
+    fv = (
+        (s.sel(level='lower') / s.sum('level'))[1:, :, :]
+        * residual.sum('level') - residual.sel(level='lower')
     )
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
     stab = 1.0 / (kvf + 1.0)
-    fa_vert_stable = np.minimum(
-        np.abs(fa_vert_raw), np.minimum(stab * w_upper[1:, :, :], stab * w_lower[1:, :, :])
-    )
+    fv_stable = np.minimum(np.abs(fv), stab * s.min(dim='level')[1:, :, :])
 
-    # redefine the vertical flux
-    fa_vert = np.sign(fa_vert_raw) * fa_vert_stable
-
-    return fa_vert
+    # Re-introduce the sign
+    return np.sign(fv) * fv_stable
 
 
 def get_grid_info(ds):

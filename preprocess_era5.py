@@ -75,7 +75,7 @@ for date in datelist[:]:
     # Determine the fluxes and states
     fx = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
     fy = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
-    cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
+    cwv = q * dp / g * a_gridcell[None, None, :, None] / density_water  # column water vapor (m3)
 
     # Split in 2 layers
     P_boundary = 0.72878581 * sp + 7438.803223
@@ -91,23 +91,19 @@ for date in datelist[:]:
     fy_upper = fy.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
     s_upper = cwv.where(upper_layer).sum(dim="level")  # m3
 
-    print(
-        "Check calculation water vapor, this value should be zero:",
-        (cwv.sum(dim="level") - (s_upper + s_lower)).sum().values,
-    )
-
-    tcwm3 = tcw * a_gridcell[np.newaxis, :] / density_water  # m3
+    # Combine upper and lower along a new dimension
+    level = xr.IndexVariable('level', ['lower', 'upper'])
+    fx = xr.concat([fx_lower, fx_upper], dim=level)
+    fy = xr.concat([fx_lower, fx_upper], dim=level)
+    s = xr.concat([fx_lower, fx_upper], dim=level)
 
     # Save preprocessed data as daily files including the following midnight
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = os.path.join(config["preprocessed_data_folder"], filename)
     xr.Dataset({
-        "fx_lower": fx_lower.assign_attrs(units="kg*m-1*s-1"),
-        "fy_lower": fy_lower.assign_attrs(units="kg*m-1*s-1"),
-        "fx_upper": fx_upper.assign_attrs(units="kg*m-1*s-1"),
-        "fy_upper": fy_upper.assign_attrs(units="kg*m-1*s-1"),
-        "s_upper": s_upper.assign_attrs(units="m**3"),
-        "s_lower": s_lower.assign_attrs(units="m**3"),
+        "fx": fx.assign_attrs(units="kg*m-1*s-1"),
+        "fy": fy.assign_attrs(units="kg*m-1*s-1"),
+        "s": s.assign_attrs(units="m**3"),
         "precip": precip.assign_attrs(units="m"),
         "evap": evap.assign_attrs(units="m"),
     }).to_netcdf(output_path)
