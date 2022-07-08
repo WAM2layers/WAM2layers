@@ -137,8 +137,8 @@ def backtrack(
     # Allocate arrays for daily accumulations
     ntime, nlat, nlon = s_upper.shape
 
-    s_track_upper_agg = np.zeros((nlat, nlon))
-    s_track_lower_agg = np.zeros((nlat, nlon))
+    s_track_upper_sum = np.zeros((nlat, nlon))
+    s_track_lower_sum = np.zeros((nlat, nlon))
     e_track = np.zeros((nlat, nlon))
 
     north_loss = south_loss = np.zeros(nlon)
@@ -216,17 +216,17 @@ def backtrack(
         west_loss += (fx_w_upper_we * s_track_relative_upper
                       + fx_w_lower_we * s_track_relative_lower)[:, 1]
 
-        # Aggregate daily accumulations
-        s_track_lower_agg += s_track_lower
-        s_track_upper_agg += s_track_upper
+        # Aggregate daily accumulations for calculating the daily means
+        s_track_lower_sum += s_track_lower
+        s_track_upper_sum += s_track_upper
 
     # Pack processed data into new dataset
     ds = xr.Dataset(
         {
-            "s_track_upper_last": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
-            "s_track_lower_last": (["lat", "lon"], s_track_lower),
-            "s_track_upper": (["lat", "lon"], s_track_upper_agg),
-            "s_track_lower": (["lat", "lon"], s_track_lower_agg),
+            "s_track_upper_restart": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
+            "s_track_lower_restart": (["lat", "lon"], s_track_lower),
+            "s_track_upper": (["lat", "lon"], s_track_upper_sum / ntime),
+            "s_track_lower": (["lat", "lon"], s_track_upper_sum / ntime),
             "e_track": (["lat", "lon"], e_track),
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
@@ -250,8 +250,8 @@ for i, date in enumerate(reversed(datelist)):
         if config["restart"]:
             # Reload last state from existing output
             ds = xr.open_dataset(output_path(date + pd.Timedelta(days=1)))
-            s_track_upper = ds.s_track_upper.values
-            s_track_lower = ds.s_track_lower.values
+            s_track_upper = ds.s_track_upper_restart.values
+            s_track_lower = ds.s_track_lower_restart.values
         else:
             # Allocate empty arrays based on shape of input data
             ds = xr.open_dataset(input_path(datelist[0]))
