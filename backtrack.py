@@ -195,8 +195,8 @@ def backtrack(
         )[inner]
 
         # down and top: redistribute unaccounted water that is otherwise lost from the sytem
-        lower_to_upper = np.maximum(0, s_track_lower) - s_lower[t - 1]
-        upper_to_lower = np.maximum(0, s_track_upper) - s_upper[t - 1]
+        lower_to_upper = np.maximum(0, s_track_lower - s_lower[t - 1])
+        upper_to_lower = np.maximum(0, s_track_upper - s_upper[t - 1])
         s_track_lower[inner] = (s_track_lower - lower_to_upper + upper_to_lower)[inner]
         s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
 
