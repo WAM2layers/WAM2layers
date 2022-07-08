@@ -137,8 +137,8 @@ def backtrack(
     # Allocate arrays for daily accumulations
     ntime, nlat, nlon = s_upper.shape
 
-    s_track_upper_sum = np.zeros((nlat, nlon))
-    s_track_lower_sum = np.zeros((nlat, nlon))
+    s_track_upper_mean = np.zeros((nlat, nlon))
+    s_track_lower_mean = np.zeros((nlat, nlon))
     e_track = np.zeros((nlat, nlon))
 
     north_loss = south_loss = np.zeros(nlon)
@@ -217,16 +217,16 @@ def backtrack(
                       + fx_w_lower_we * s_track_relative_lower)[:, 1]
 
         # Aggregate daily accumulations for calculating the daily means
-        s_track_lower_sum += s_track_lower
-        s_track_upper_sum += s_track_upper
+        s_track_lower_mean += s_track_lower / ntime
+        s_track_upper_mean += s_track_upper / ntime
 
     # Pack processed data into new dataset
     ds = xr.Dataset(
         {
             "s_track_upper_restart": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
             "s_track_lower_restart": (["lat", "lon"], s_track_lower),
-            "s_track_upper": (["lat", "lon"], s_track_upper_sum / ntime),
-            "s_track_lower": (["lat", "lon"], s_track_upper_sum / ntime),
+            "s_track_upper": (["lat", "lon"], s_track_upper_mean),
+            "s_track_lower": (["lat", "lon"], s_track_upper_mean),
             "e_track": (["lat", "lon"], e_track),
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
