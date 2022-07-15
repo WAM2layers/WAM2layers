@@ -17,18 +17,18 @@ with open("cases/era5_2013.yaml") as f:
 g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
-# Select model levels
-modellevels = np.append( np.arange(1,101,20), np.arange(101,138,2)) #[1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
-print('Number of model levels:',len(modellevels))
+# Preselection of model levels 
+modellevels = [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
-# Select longitude
-longitudes = [0,0.25,0.5,0.75,1.0]
+print('Number of model levels:',len(modellevels))
 
 # Calculate a and b coefficients 
 filenamecsv = 'tableERA5model_to_pressure.csv'
 df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
-a = df['a [Pa]'].to_xarray().rename(index='lev') #.sel(lev=modellevels_edge)
-b = df['b'].to_xarray().rename(index='lev') #.sel(lev=modellevels_edge)
+a = df['a [Pa]'].to_xarray().rename(index='lev')
+#.sel(lev=modellevels)
+b = df['b'].to_xarray().rename(index='lev')
+#.sel(lev=modellevels)
 
 # Calculate a and b at mid levels
 a_full = ((a[1:] + a[:-1].values)/2.0).sel(lev=modellevels)
@@ -46,7 +46,7 @@ def load_surface_data(variable, date):
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra),longitude=longitudes)
+    return da.sel(time=slice(date, extra))
 
 def load_modellevel_data(variable, date):
     """Load model level data for given variable and date."""
@@ -56,7 +56,7 @@ def load_modellevel_data(variable, date):
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra)).sel(lev=modellevels,longitude=longitudes)
+    return da.sel(time=slice(date, extra)).sel(lev=modellevels)
 
 datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
@@ -99,6 +99,7 @@ for date in datelist:
     cwv = q * dp_modellevels / g * a_gridcell[np.newaxis,np.newaxis,:] / density_water  # column water vapor (m3)
 
     # Split in 2 layers 
+    # To do: Check if this is a reasonable choice
     boundary = 111 # set boundary model level 111
     
     # Integrate fluxes and states to upper and lower layer
@@ -123,7 +124,7 @@ for date in datelist:
         
     print(
         "Check calculation water vapor with column water vapour, this value should be close to zero:",
-        np.nanmean((cwv.sum(dim="lev") - (tcwm3)).values/tcwm3),
+        np.nanmean(np.abs((cwv.sum(dim="lev") - (tcwm3)).values/tcwm3)),
     )
     # is niet hetzelfde.. hoe erg is dat?
     
