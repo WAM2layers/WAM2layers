@@ -30,7 +30,7 @@ a = df['a [Pa]'].to_xarray().rename(index='lev')
 b = df['b'].to_xarray().rename(index='lev')
 #.sel(lev=modellevels)
 
-# Calculate a and b at mid levels
+# Calculate a and b at mid levels (model levels)
 a_full = ((a[1:] + a[:-1].values)/2.0).sel(lev=modellevels)
 b_full = ((b[1:] + b[:-1].values)/2.0).sel(lev=modellevels)
 
