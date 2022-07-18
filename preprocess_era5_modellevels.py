@@ -22,7 +22,7 @@ modellevels = [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133
 
 print('Number of model levels:',len(modellevels))
 
-# Calculate a and b coefficients 
+# Load a and b coefficients 
 filenamecsv = 'tableERA5model_to_pressure.csv'
 df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
 a = df['a [Pa]'].to_xarray().rename(index='lev')
