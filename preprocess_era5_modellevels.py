@@ -62,7 +62,7 @@ datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist:
+for date in datelist[:1]:
     print(date)
 
     # Load data
@@ -74,8 +74,15 @@ for date in datelist:
     cp = load_surface_data("cp", date)
     lsp = load_surface_data("lsp", date)
     tcw = load_surface_data("tcw", date) # kg/m2
-    tcrw = load_surface_data("tcrw", date) # kg/m2
+    vieclw = load_surface_data("vieclw", date) # kg m-1 s-1
+    viefw = load_surface_data("viefw", date) # kg m-1 s-1
+    viewv = load_surface_data("viewv", date) # kg m-1 s-1
+    vinclw = load_surface_data("vinclw", date) # kg m-1 s-1
+    vinfw = load_surface_data("vinfw", date) # kg m-1 s-1
+    vinwv = load_surface_data("vinwv", date) # kg m-1 s-1
     precip = cp + lsp
+    vinf = vinclw + vinfw + vinwv # kg m-1 s-1 # northward integrated flux
+    vief = vieclw + viefw + viewv # kg m-1 s-1 # eastward integrated flux
 
     # Get grid info
     lat = u.latitude.values
@@ -94,8 +101,8 @@ for date in datelist:
     dp_modellevels = p_modellevels.diff(dim="lev") # in Pa
 
     # Determine the fluxes and states
-    fa_e = u * q * dp_modellevels / g  # eastward atmospheric moisture flux
-    fa_n = v * q * dp_modellevels / g  # northward atmospheric moisture flux
+    fa_e = u * q * dp_modellevels / g  # eastward atmospheric moisture flux (kg m-1 s-1)
+    fa_n = v * q * dp_modellevels / g  # northward atmospheric moisture flux (kg m-1 s-1)
     cwv = q * dp_modellevels / g * a_gridcell[np.newaxis,np.newaxis,:] / density_water  # column water vapor (m3)
 
     # Split in 2 layers 
@@ -109,25 +116,43 @@ for date in datelist:
     # Integrate fluxes and state
     fa_e_lower = fa_e.where(lower_layer).sum(dim="lev")
     fa_n_lower = fa_n.where(lower_layer).sum(dim="lev")
-    w_lower = cwv.where(lower_layer).sum(dim="lev")
-
+    q_lower = cwv.where(lower_layer).sum(dim="lev")
+        
     fa_e_upper = fa_e.where(upper_layer).sum(dim="lev")
     fa_n_upper = fa_n.where(upper_layer).sum(dim="lev")
-    w_upper = cwv.where(upper_layer).sum(dim="lev")
+    q_upper = cwv.where(upper_layer).sum(dim="lev")
    
     print(
         "Check calculation water vapor over two layers, this value should be zero:",
-        (cwv.sum(dim="lev") - (w_upper + w_lower)).sum().values,
+        (cwv.sum(dim="lev") - (q_upper + q_lower)).sum().values,
     )
 
     tcwm3 = tcw* a_gridcell[np.newaxis,:] / density_water # m3
+    #tcwvm3 = tcwv* a_gridcell[np.newaxis,:] / density_water # m3
         
     print(
-        "Check calculation water vapor with column water vapour, this value should be close to zero:",
+        "Relative difference between column water vapour and column water (vapour + cloud water + cloud ice):",
         np.nanmean(np.abs((cwv.sum(dim="lev") - (tcwm3)).values/tcwm3)),
     )
-    # is niet hetzelfde.. hoe erg is dat?
+
+    #correct for the fact that integrated specific humidity does not capture cloud water and cloud ice
+    q_total = q_lower + q_upper 
+    w_lower = tcwm3 * (q_lower / q_total) #m3 
+    w_upper = tcwm3 * (q_upper / q_total) #m3
     
+    print(
+        "Corrected column including cloud water + cloud ice, this values should be zero:",
+        np.nanmean(((w_upper + w_lower) - (tcwm3)).values),
+    )
+        
+    # also need to correct the fluxes but not sure how to do that or how that was done in the code originally
+    # not similar as for water column as you can have negative and positive fluxes?
+    fa_e_total = fa_e_upper + fa_e_lower
+    fa_n_total = fa_n_upper + fa_n_lower
+    fa_e_upper_corr = vief / fa_e_total
+    fa_n_upper_corr = vinf / fa_n_total
+    #check the code above 
+
     # Change units to m3, based on target frequency (not incoming frequency!)
     target_freq = config['target_frequency']
     total_seconds = pd.Timedelta(target_freq).total_seconds()
