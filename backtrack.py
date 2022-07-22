@@ -226,7 +226,7 @@ def backtrack(
             "s_track_upper_restart": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
             "s_track_lower_restart": (["lat", "lon"], s_track_lower),
             "s_track_upper": (["lat", "lon"], s_track_upper_mean),
-            "s_track_lower": (["lat", "lon"], s_track_upper_mean),
+            "s_track_lower": (["lat", "lon"], s_track_lower_mean),
             "e_track": (["lat", "lon"], e_track),
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
