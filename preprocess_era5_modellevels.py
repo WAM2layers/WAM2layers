@@ -118,7 +118,7 @@ for date in datelist[:1]:
         fa_n = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
         # no correction for fluxes is applied but we use the column water to calculate them
         
-        # Integrate state
+        # Vertically integrate state over two layers
         w_lower = cw.where(lower_layer).sum(dim="lev") \
             * a_gridcell[np.newaxis,:] / density_water # m3
         w_upper = cw.where(upper_layer).sum(dim="lev") \
@@ -133,7 +133,7 @@ for date in datelist[:1]:
         fa_e = u * cwv # eastward atmospheric moisture flux (kg m-1 s-1)
         fa_n = v * cwv  # northward atmospheric moisture flux (kg m-1 s-1)
     
-        # Vertically integrate states over two layers
+        # Vertically integrate state over two layers
         w_lower = cwv.where(lower_layer).sum(dim="lev") \
             * a_gridcell[np.newaxis,:] / density_water # m3
         w_upper = cwv.where(upper_layer).sum(dim="lev") \
