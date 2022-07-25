@@ -16,7 +16,7 @@ track_end_date: '20130604' #YYYYMMDD
 # Settings needed for the tracking run
 name_of_run: 'default_run'
 output_folder: ~/output_data
-veryfirstrun: true # true: starts from zero tracked water, false: loads tracked water
+restart: false # False: loads tracked water from previous run. True: starts from zero tracked water
 kvf: 3 # Vertical transport parameter for gross vertical transport between the layers during the tracking: "actual exchange = Kvf * F_vertical + F_vertical" in one direction and "-1 * (Kvf * F_vertical)" in opposite direction. # Default = 3.
 timetracking: false
 distancetracking: false
