@@ -1,5 +1,5 @@
 import os
-
+import numpy as np
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -56,6 +56,11 @@ for date in datelist[:]:
     # Calculate volumes
     evap *= a_gridcell  # m3
     precip *= a_gridcell  # m3
+
+    # Transfer negative (originally positive) values of evap to precip
+    precip = np.maximum(precip, 0) + np.maximum(evap, 0)
+    # Change sign convention to all positive,
+    evap = np.abs(np.minimum(evap, 0))
 
     # Create pressure array
     levels = q.level #in hPa
@@ -133,6 +138,8 @@ for date in datelist[:]:
         precip,
         w_upper,
         w_lower,
+        config["periodic_boundary"],
+        config["kvf"]
     )
 
     # Save preprocessed data
