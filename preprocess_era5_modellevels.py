@@ -83,6 +83,11 @@ for date in datelist[:]:
     evap *= a_gridcell  # m3
     precip *= a_gridcell  # m3
 
+    # Transfer negative (originally positive) values of evap to precip
+    precip = np.maximum(precip, 0) + np.maximum(evap, 0)
+    # Change sign convention to all positive,
+    evap = np.abs(np.minimum(evap, 0))
+    
     # Convert model levels to pressure values
     sp_modellevels2 = sp.expand_dims({'lev':modellevels},axis=1)
     p_modellevels = a_edge + b_edge*sp_modellevels2 # in Pa
