@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 
@@ -240,8 +240,8 @@ def backtrack(
         ds
     )
 
-
-region = xr.open_dataset(config['region']).isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
+region = xr.open_dataset(config['region']).region_flood.values#.isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
+#region_lsm = xr.open_dataset('/data/volume_2/era5_2013/FloodCase_201305_lsm.nc').isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
 
 for i, date in enumerate(reversed(datelist)):
     print(date)
