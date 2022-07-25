@@ -61,7 +61,7 @@ datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:]:
+for date in datelist[:1]:
     print(date)
 
     # Load data
@@ -106,14 +106,6 @@ for date in datelist[:]:
     if config['vertical_integral_available'] == True:
         #load total water column
         tcw = load_surface_data("tcw", date) # kg/m2
-        #vieclw = load_surface_data("vieclw", date) # kg m-1 s-1
-        #viefw = load_surface_data("viefw", date) # kg m-1 s-1
-        #viewv = load_surface_data("viewv", date) # kg m-1 s-1
-        #vinclw = load_surface_data("vinclw", date) # kg m-1 s-1
-        #vinfw = load_surface_data("vinfw", date) # kg m-1 s-1
-        #vinwv = load_surface_data("vinwv", date) # kg m-1 s-1
-        #vinf = vinclw + vinfw + vinwv # kg m-1 s-1 # northward integrated flux
-        #vief = vieclw + viefw + viewv # kg m-1 s-1 # eastward integrated flux
     
         # Determine the states
         cwv = q * dp_modellevels / g  #  # column water vapor (kg/m2)
@@ -124,14 +116,13 @@ for date in datelist[:]:
         # Determine the fluxes
         fa_e = u * cw # eastward atmospheric moisture flux (kg m-1 s-1)
         fa_n = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
-    
+        # no correction for fluxes is applied but we use the column water to calculate them
+        
         # Integrate state
         w_lower = cw.where(lower_layer).sum(dim="lev") \
             * a_gridcell[np.newaxis,:] / density_water # m3
         w_upper = cw.where(upper_layer).sum(dim="lev") \
             * a_gridcell[np.newaxis,:] / density_water # m3
-        
-        # no correction for fluxes as it is hard to decide how to distribute the correction over the two layers
         
     else: #calculate the fluxes based on the column water vapour
         
@@ -142,13 +133,13 @@ for date in datelist[:]:
         fa_e = u * cwv # eastward atmospheric moisture flux (kg m-1 s-1)
         fa_n = v * cwv  # northward atmospheric moisture flux (kg m-1 s-1)
     
-        # Integrate states over two layers
+        # Vertically integrate states over two layers
         w_lower = cwv.where(lower_layer).sum(dim="lev") \
             * a_gridcell[np.newaxis,:] / density_water # m3
         w_upper = cwv.where(upper_layer).sum(dim="lev") \
             * a_gridcell[np.newaxis,:] / density_water # m3
 
-    # Integrate states
+    # Vertically integrate fluxes over two layers
     fa_e_lower = fa_e.where(lower_layer).sum(dim="lev") # kg m-1 s-1
     fa_n_lower = fa_n.where(lower_layer).sum(dim="lev") # kg m-1 s-1
         
@@ -194,6 +185,8 @@ for date in datelist[:]:
         precip,
         w_upper,
         w_lower,
+        config['periodic_boundary'],
+        config['kvf']
     )
 
     # Save preprocessed data
