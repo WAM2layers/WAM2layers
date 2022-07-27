@@ -4,6 +4,14 @@ import xarray as xr
 import numpy as np
 from pathlib import Path
 import pandas as pd
+from preprocessing import (get_grid_info, get_stable_fluxes,
+                           get_vertical_transport)
+
+import cartopy
+import cartopy.crs as ccrs
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
 
 # Read case configuration
 with open("cases/era5_2021.yaml") as f:
@@ -25,6 +33,9 @@ if not input_dir.exists():
 if not output_dir.exists():
     output_dir.mkdir(parents=True)
 
+def time_in_range(start, end, current):
+    """Returns whether current is in the range [start, end]"""
+    return start <= current <= end
 
 def input_path(date):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
@@ -72,7 +83,7 @@ def to_edges_meridional(fy):
     fy_n_ns = fy_boundary * fy_neg
 
     # fluxes over the southern boundary
-    # TODO: shouldn't this be shift_south?
+    # TODO: shouldn't this be shift_south? when I write it out it seems to go allright
     fy_s_sn = shift_north(fy_n_sn)
     fy_s_ns = shift_north(fy_n_ns)
 
@@ -114,8 +125,10 @@ def split_vertical_flux(Kvf, fv):
 
     return f_downward, f_upward
 
+#make figures
 
 def backtrack(
+    date,
     preprocessed_data,
     s_track_upper,
     s_track_lower,
@@ -141,13 +154,19 @@ def backtrack(
     s_track_lower_mean = np.zeros((nlat, nlon))
     e_track = np.zeros((nlat, nlon))
 
-    north_loss = south_loss = np.zeros(nlon)
-    east_loss = west_loss = np.zeros(nlat)
+    north_loss = np.zeros(nlon)
+    south_loss = np.zeros(nlon)
+    east_loss = np.zeros(nlat) 
+    west_loss = np.zeros(nlat)
 
+    #only track the precipitation at certain dates
+    if time_in_range(config["event_start_date"], config["event_end_date"], date.strftime('%Y%m%d')) == False:
+        precip = precip * 0
+    
     # Sa calculation backward in time
-    ntime = len(s_lower)
     for t in reversed(range(ntime)):
-        P_region = region * precip[t-1]
+        #die allerlaatste stap -1 wil je toch niet?????
+        P_region = region * precip[t-1] # WHY t-1 ?
         s_total = s_upper[t] + s_lower[t]
 
         # separate the direction of the vertical flux and make it absolute
@@ -158,17 +177,17 @@ def backtrack(
         fx_e_upper_we, fx_e_upper_ew, fx_w_upper_we, fx_w_upper_ew = to_edges_zonal(fx_upper[t-1])
         fy_n_lower_sn, fy_n_lower_ns, fy_s_lower_sn, fy_s_lower_ns = to_edges_meridional(fy_lower[t-1])
         fy_n_upper_sn, fy_n_upper_ns, fy_s_upper_sn, fy_s_upper_ns = to_edges_meridional(fy_upper[t-1])
-
+        
         # Short name for often used expressions
         s_track_relative_lower = s_track_lower / s_lower[t]  # fraction of tracked relative to total moisture
         s_track_relative_upper = s_track_upper / s_upper[t]
         inner = np.s_[1:-1, 1:-1]
-
+        
         # Actual tracking (note: backtracking, all terms have been negated)
         s_track_lower[inner] += (
             + fx_e_lower_we * shift_east(s_track_relative_lower)
             + fx_w_lower_ew * shift_west(s_track_relative_lower)
-            + fy_n_lower_sn * shift_north(s_track_relative_lower)
+            + fy_n_lower_sn * shift_north(s_track_relative_lower) 
             + fy_s_lower_ns * shift_south(s_track_relative_lower)
             + f_upward * s_track_relative_upper
             - f_downward * s_track_relative_lower
@@ -216,10 +235,79 @@ def backtrack(
         west_loss += (fx_w_upper_we * s_track_relative_upper
                       + fx_w_lower_we * s_track_relative_lower)[:, 1]
 
+
         # Aggregate daily accumulations for calculating the daily means
         s_track_lower_mean += s_track_lower / ntime
         s_track_upper_mean += s_track_upper / ntime
+    
+    ######### added code to make in between figures of the data ########
+    print(date)
+    print(fx_lower.shape)
 
+    # Load data
+    u = xr.open_dataset('/data/volume_2/era5_2021/FloodCase_202107_u.nc')
+    
+    # Get grid info
+    lat = u.latitude.values
+    lon = u.longitude.values
+    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
+    
+    my_projection = ccrs.PlateCarree(central_longitude=0)
+
+    def load_flood_map(ax):
+        ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.8)
+        ax.add_feature(cartopy.feature.BORDERS, linestyle='-', linewidth=.2)
+
+        ax.set_xticks(np.arange(-180, 181, 20), crs=my_projection)
+        ax.set_yticks(np.arange(-90, 91, 20), crs=my_projection)
+        lon_formatter = LongitudeFormatter(zero_direction_label=True)
+        lat_formatter = LatitudeFormatter()
+        ax.xaxis.set_major_formatter(lon_formatter)
+        ax.yaxis.set_major_formatter(lat_formatter)
+        ax.contour(lon, lat, region,color='k', linewidth=0.8)
+        ax.set_xlim(-50, 30)
+        ax.set_ylim(30, 60)
+    precip_track = np.arange(0.0,50.0,5)
+    S_track = np.arange(0.0,5,0.5)
+    E_track = np.arange(0.0,1.0,0.1)
+
+    fig1 = plt.figure(figsize=(14, 8))
+
+    ax1 = plt.subplot(221, projection = my_projection)
+    cb1 = ax1.contourf(lon, lat, (precip.sum(axis=0)*region/a_gridcell)*1000, precip_track, cmap=plt.cm.Blues, extend='max') # We plot a colormesh using the gist_ncar colormap.
+    load_flood_map(ax1)
+    ax1.set_title('Tracked precipitation')
+
+    ax2 = plt.subplot(222, projection = my_projection)
+    cb2 = ax2.contourf(lon, lat, (e_track/a_gridcell)*1000, E_track, cmap=plt.cm.GnBu, extend='max') # We plot a colormesh using the gist_ncar colormap.
+    load_flood_map(ax2)
+    ax2.set_title('Moisture source')
+
+    ax3 = plt.subplot(223, projection = my_projection)
+    cb3 = ax3.contourf(lon, lat, (s_track_upper_mean/a_gridcell)*1000, S_track, cmap=plt.cm.YlOrRd, extend='max') # We plot a colormesh using the gist_ncar colormap.
+    ax3.quiver(lon[::5],lat[::5], fx_upper.mean(axis=0)[::5,::5], fy_upper.mean(axis=0)[::5,::5], color = 'black', width = 0.003, alpha =0.5)
+    load_flood_map(ax3)
+    ax3.set_title('S track upper layer')
+
+    ax4 = plt.subplot(224, projection = my_projection)
+    cb3 = ax4.contourf(lon, lat, (s_track_lower_mean/a_gridcell)*1000, S_track, cmap=plt.cm.YlOrRd, extend='max') # We plot a colormesh using the gist_ncar colormap.
+    ax4.quiver(lon[::5],lat[::5], fx_lower.mean(axis=0)[::5,::5], fy_lower.mean(axis=0)[::5,::5], color = 'black', width = 0.003, alpha =0.5)
+    load_flood_map(ax4)
+    ax4.set_title('S track lower layer')
+
+    new_axis= fig1.add_axes([0.55, 0.50, 0.35, 0.015]) #left, bottom, width, height
+    fig1.colorbar(cb2, cax=new_axis, orientation='horizontal')
+
+    new_axis2= fig1.add_axes([0.15, 0.50, 0.35, 0.015])
+    fig1.colorbar(cb1, cax=new_axis2, orientation='horizontal')
+    
+    new_axis3= fig1.add_axes([0.30, 0.08, 0.35, 0.015])
+    fig1.colorbar(cb3, cax=new_axis3, orientation='horizontal')
+    plt.savefig('figures/tracking'+ date.strftime('%Y%m%d') + '.png', format = 'png')
+    plt.show()
+    
+    ###### until here added code to make figures #########
+    
     # Pack processed data into new dataset
     ds = xr.Dataset(
         {
@@ -243,7 +331,7 @@ def backtrack(
 region = xr.open_dataset(config['region']).region_flood.values#.isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
 #region_lsm = xr.open_dataset('/data/volume_2/era5_2013/FloodCase_201305_lsm.nc').isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
 
-for i, date in enumerate(reversed(datelist)):
+for i, date in enumerate(reversed(datelist[:])):
     print(date)
 
     if i == 0:
@@ -261,6 +349,7 @@ for i, date in enumerate(reversed(datelist)):
     preprocessed_data = xr.open_dataset(input_path(date))
 
     (s_track_upper, s_track_lower, processed_data) = backtrack(
+        date,
         preprocessed_data,
         s_track_upper,
         s_track_lower,

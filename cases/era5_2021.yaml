@@ -23,3 +23,5 @@ kvf: 3 # Vertical transport parameter for gross vertical transport between the l
 timetracking: false
 distancetracking: false
 
+event_start_date: '20210713'
+event_end_date: '20210715'
