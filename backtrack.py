@@ -242,7 +242,6 @@ def backtrack(
     
     ######### added code to make in between figures of the data ########
     print(date)
-    print(fx_lower.shape)
 
     # Load data
     u = xr.open_dataset('/data/volume_2/era5_2021/FloodCase_202107_u.nc')
@@ -267,6 +266,7 @@ def backtrack(
         ax.contour(lon, lat, region,color='k', linewidth=0.8)
         ax.set_xlim(-50, 30)
         ax.set_ylim(30, 60)
+        
     precip_track = np.arange(0.0,50.0,5)
     S_track = np.arange(0.0,5,0.5)
     E_track = np.arange(0.0,1.0,0.1)
@@ -276,7 +276,7 @@ def backtrack(
     ax1 = plt.subplot(221, projection = my_projection)
     cb1 = ax1.contourf(lon, lat, (precip.sum(axis=0)*region/a_gridcell)*1000, precip_track, cmap=plt.cm.Blues, extend='max') # We plot a colormesh using the gist_ncar colormap.
     load_flood_map(ax1)
-    ax1.set_title('Tracked precipitation')
+    ax1.set_title('Tracked precipitation' + date.strftime('%Y%m%d'))
 
     ax2 = plt.subplot(222, projection = my_projection)
     cb2 = ax2.contourf(lon, lat, (e_track/a_gridcell)*1000, E_track, cmap=plt.cm.GnBu, extend='max') # We plot a colormesh using the gist_ncar colormap.
@@ -304,9 +304,15 @@ def backtrack(
     new_axis3= fig1.add_axes([0.30, 0.08, 0.35, 0.015])
     fig1.colorbar(cb3, cax=new_axis3, orientation='horizontal')
     plt.savefig('figures/tracking'+ date.strftime('%Y%m%d') + '.png', format = 'png')
-    plt.show()
+    #plt.show()
     
     ###### until here added code to make figures #########
+    
+    # in first time step you should expect that s_track_upper + s_track_lower + e_track = precip
+    # but that is not the case.. what goes wrong?
+    print(s_track_upper.sum() + s_track_lower.sum())
+    print((precip.sum(axis=0)*region).sum())
+    print((e_track).sum())
     
     # Pack processed data into new dataset
     ds = xr.Dataset(
