@@ -85,31 +85,27 @@ def to_edges_meridional(fy):
 
     # fluxes over the southern boundary
     # TODO: shouldn't this be shift_south? when I write it out it seems to go allright
-    fy_s_sn = shift_north(fy_n_sn)
-    fy_s_ns = shift_north(fy_n_ns)
+    fy_s_sn = shift_south(fy_n_sn)
+    fy_s_ns = shift_south(fy_n_ns)
 
     return fy_n_sn, fy_n_ns, fy_s_sn, fy_s_ns
 
 
 def shift_north(array):
     # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, -1, axis=-2)
-
+    return np.roll(array, 1, axis=-2)
 
 def shift_south(array):
     # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, 1, axis=-2)
-
+    return np.roll(array, -1, axis=-2)
 
 def shift_east(array):
     # Note: edges are reinserted at other end; but they're not used anyway
     return np.roll(array, -1, axis=-1)
 
-
 def shift_west(array):
     # Note: edges are reinserted at other end; but they're not used anyway
     return np.roll(array, 1, axis=-1)
-
 
 def split_vertical_flux(Kvf, fv):
     f_downward = f_upward = np.zeros_like(fv)
@@ -204,20 +200,20 @@ def backtrack(
             + P_region * (s_lower[t] / s_total)
             - evap[t-1] * s_track_relative_lower
         )[inner]
-
+        
         check_tendencies.append([
-            + fx_e_lower_we * shift_east(s_track_relative_lower),
-            + fx_w_lower_ew * shift_west(s_track_relative_lower),
-            + fy_n_lower_sn * shift_north(s_track_relative_lower),
-            + fy_s_lower_ns * shift_south(s_track_relative_lower),
-            + f_upward * s_track_relative_upper,
-            - f_downward * s_track_relative_lower,
-            - fy_s_lower_sn * s_track_relative_lower,
-            - fy_n_lower_ns * s_track_relative_lower,
-            - fx_e_lower_ew * s_track_relative_lower,
-            - fx_w_lower_we * s_track_relative_lower,
-            + P_region * (s_lower[t] / s_total),
-            - evap[t-1] * s_track_relative_lower,
+            (+ fx_e_lower_we * shift_east(s_track_relative_lower)).sum(),
+            (+ fx_w_lower_ew * shift_west(s_track_relative_lower)).sum(),
+            (+ fy_n_lower_sn * shift_north(s_track_relative_lower)).sum(),
+            (+ fy_s_lower_ns * shift_south(s_track_relative_lower)).sum(),
+            (+ f_upward * s_track_relative_upper).sum(),
+            (- f_downward * s_track_relative_lower).sum(),
+            (- fy_s_lower_sn * s_track_relative_lower).sum(),
+            (- fy_n_lower_ns * s_track_relative_lower).sum(),
+            (- fx_e_lower_ew * s_track_relative_lower).sum(),
+            (- fx_w_lower_we * s_track_relative_lower).sum(),
+            (+ P_region * (s_lower[t] / s_total)).sum(),
+            (- evap[t-1] * s_track_relative_lower).sum(),
         ])
 
         s_track_upper[inner] += (
@@ -261,6 +257,7 @@ def backtrack(
             tracked_precip.sum(),
             s_track_lower.sum(),
             s_track_upper.sum(),
+            s_track_lower.sum()+s_track_upper.sum(),
             e_track.sum(),
             east_loss.sum(),
             west_loss.sum(),
@@ -271,8 +268,10 @@ def backtrack(
         # Aggregate daily accumulations for calculating the daily means
         s_track_lower_mean += s_track_lower / ntime
         s_track_upper_mean += s_track_upper / ntime
-
-    df = pd.DataFrame(check, columns=['tracked_precip', 's_track_lower', 's_track_upper', 'e_track', 'east_loss', 'west_loss', 'north_loss', 'south_loss'])
+    
+    make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower, precip, s_track_upper_mean, s_track_lower_mean, e_track)
+    
+    df = pd.DataFrame(check, columns=['tracked_precip', 's_track_lower', 's_track_upper', 's_total', 'e_track', 'east_loss', 'west_loss', 'north_loss', 'south_loss'])
     df_tendencies = pd.DataFrame(check_tendencies, columns=['fx_e_lower_we', 'fx_w_lower_ew', 'fy_n_lower_sn', 'fy_s_lower_ns', 'f_upward', 'f_downward', 'fy_s_lower_sn', 'fy_n_lower_ns', 'fx_e_lower_ew', 'fx_w_lower_we', 'P_region', 'evap'])
     df.plot()
     df_tendencies.plot()
@@ -377,7 +376,7 @@ def make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower
 
 region = xr.open_dataset(config['region']).region_flood.values
 
-for i, date in enumerate(reversed(datelist[-9])):
+for i, date in enumerate(reversed(datelist[:])):
     print(date)
 
     if i == 0:
