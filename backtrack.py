@@ -37,7 +37,7 @@ def time_in_range(start, end, current):
     """Returns whether current is in the range [start, end]"""
     return start <= current <= end
 
-  
+
 def input_path(date):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
@@ -164,6 +164,10 @@ def backtrack(
     if time_in_range(config["event_start_date"], config["event_end_date"], date.strftime('%Y%m%d')) == False:
         precip = precip * 0
 
+    # some arrays for checking
+    check = []
+    tracked_precip = np.zeros((nlat, nlon))
+
     # Sa calculation backward in time
     for t in reversed(range(ntime)):
         #die allerlaatste stap -1 wil je toch niet?????
@@ -236,11 +240,24 @@ def backtrack(
         west_loss += (fx_w_upper_we * s_track_relative_upper
                       + fx_w_lower_we * s_track_relative_lower)[:, 1]
 
+        tracked_precip += P_region
+        check.append([
+            tracked_precip.sum(),
+            s_track_lower.sum(),
+            s_track_upper.sum(),
+            e_track.sum(),
+            east_loss.sum(),
+            west_loss.sum(),
+            north_loss.sum(),
+            south_loss.sum()
+        ])
 
         # Aggregate daily accumulations for calculating the daily means
         s_track_lower_mean += s_track_lower / ntime
         s_track_upper_mean += s_track_upper / ntime
 
+    df = pd.DataFrame(check, columns=['tracked_precip', 's_track_lower', 's_track_upper', 'e_track', 'east_loss', 'west_loss', 'north_loss', 'south_loss'])
+    df.plot()
     make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower, precip, s_track_upper_mean, s_track_lower_mean, e_track)
 
     # in first time step you should expect that s_track_upper + s_track_lower + e_track = precip
