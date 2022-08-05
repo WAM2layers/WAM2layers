@@ -166,6 +166,7 @@ def backtrack(
 
     # some arrays for checking
     check = []
+    check_tendencies = []
     tracked_precip = np.zeros((nlat, nlon))
 
     # Sa calculation backward in time
@@ -203,6 +204,21 @@ def backtrack(
             + P_region * (s_lower[t] / s_total)
             - evap[t-1] * s_track_relative_lower
         )[inner]
+
+        check_tendencies.append([
+            + fx_e_lower_we * shift_east(s_track_relative_lower),
+            + fx_w_lower_ew * shift_west(s_track_relative_lower),
+            + fy_n_lower_sn * shift_north(s_track_relative_lower),
+            + fy_s_lower_ns * shift_south(s_track_relative_lower),
+            + f_upward * s_track_relative_upper,
+            - f_downward * s_track_relative_lower,
+            - fy_s_lower_sn * s_track_relative_lower,
+            - fy_n_lower_ns * s_track_relative_lower,
+            - fx_e_lower_ew * s_track_relative_lower,
+            - fx_w_lower_we * s_track_relative_lower,
+            + P_region * (s_lower[t] / s_total),
+            - evap[t-1] * s_track_relative_lower,
+        ])
 
         s_track_upper[inner] += (
             + fx_e_upper_we * shift_east(s_track_relative_upper)
@@ -257,7 +273,9 @@ def backtrack(
         s_track_upper_mean += s_track_upper / ntime
 
     df = pd.DataFrame(check, columns=['tracked_precip', 's_track_lower', 's_track_upper', 'e_track', 'east_loss', 'west_loss', 'north_loss', 'south_loss'])
+    df_tendencies = pd.DataFrame(check_tendencies, columns=['fx_e_lower_we', 'fx_w_lower_ew', 'fy_n_lower_sn', 'fy_s_lower_ns', 'f_upward', 'f_downward', 'fy_s_lower_sn', 'fy_n_lower_ns', 'fx_e_lower_ew', 'fx_w_lower_we', 'P_region', 'evap'])
     df.plot()
+    df_tendencies.plot()
     make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower, precip, s_track_upper_mean, s_track_lower_mean, e_track)
 
     # in first time step you should expect that s_track_upper + s_track_lower + e_track = precip
@@ -289,7 +307,7 @@ def backtrack(
 
 def make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower, precip, s_track_upper_mean, s_track_lower_mean, e_track):
     ######### added code to make in between figures of the data ########
-        print(date)
+    print(date)
 
     # Load data
     u = xr.open_dataset('/data/volume_2/era5_2021/FloodCase_202107_u.nc')
@@ -359,7 +377,7 @@ def make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower
 
 region = xr.open_dataset(config['region']).region_flood.values
 
-for i, date in enumerate(reversed(datelist)):
+for i, date in enumerate(reversed(datelist[-9])):
     print(date)
 
     if i == 0:
