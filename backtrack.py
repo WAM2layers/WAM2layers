@@ -141,8 +141,10 @@ def backtrack(
     s_track_lower_mean = np.zeros((nlat, nlon))
     e_track = np.zeros((nlat, nlon))
 
-    north_loss = south_loss = np.zeros(nlon)
-    east_loss = west_loss = np.zeros(nlat)
+    north_loss = np.zeros(nlon)
+    south_loss = np.zeros(nlon)
+    east_loss = np.zeros(nlat)
+    west_loss = np.zeros(nlat)
 
     # Sa calculation backward in time
     ntime = len(s_lower)
