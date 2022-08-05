@@ -34,6 +34,29 @@ datelist = pd.date_range(
     start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
+def calc_q2m(d2m,ps):
+    '''
+    Calculate the specific humidity from (surface) pressure and 
+    dew point temperature
+    
+    See further details at eq. 7.4 and 7.5 (Page 102) of:
+    https://www.ecmwf.int/en/elibrary/20198-ifs-documentation-cy47r3-part-iv-physical-processes
+    '''
+    R_d =287.0597 
+    R_v=461.5250 
+    a1=611.21 
+    a3=17.502 
+    a4=32.19 
+    T0=273.15
+    
+    #Calculation of E saturation water vapour pressure from Teten's formula
+    E=a1*np.exp(a3*(d2m-T0)/(d2m-a4))
+    
+    #Specific humidity
+    q2m=(R_d/R_v)*E/(ps-((1-R_d/R_v)*E))
+
+    return q2m 
+
 for date in datelist[:]:
     print(date)
 
@@ -47,6 +70,10 @@ for date in datelist[:]:
     lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
     tcw = load_data("tcw", date) # kg/m2
+    d2m = load_data("d2m", date) # Dew point in K
+    q2m = calc_q2m(d2m,sp) # kg kg-1
+    u10 = load_data("u10",date) # in m/s
+    v10 = load_data("v10",date) # in m/s
 
     # Get grid info
     lat = u.latitude.values
