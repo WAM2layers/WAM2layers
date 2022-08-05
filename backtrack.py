@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 
@@ -25,7 +25,10 @@ if not input_dir.exists():
 if not output_dir.exists():
     output_dir.mkdir(parents=True)
 
-
+def time_in_range(start, end, current):
+    """Returns whether current is in the range [start, end]"""
+    return start <= current <= end
+    
 def input_path(date):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
@@ -116,6 +119,7 @@ def split_vertical_flux(Kvf, fv):
 
 
 def backtrack(
+    date,
     preprocessed_data,
     s_track_upper,
     s_track_lower,
@@ -146,8 +150,10 @@ def backtrack(
     east_loss = np.zeros(nlat)
     west_loss = np.zeros(nlat)
 
+    if time_in_range(config["event_start_date"], config["event_end_date"], date.strftime('%Y%m%d')) == False:
+        precip = precip * 0
+    
     # Sa calculation backward in time
-    ntime = len(s_lower)
     for t in reversed(range(ntime)):
         P_region = region * precip[t-1]
         s_total = s_upper[t] + s_lower[t]
@@ -242,8 +248,7 @@ def backtrack(
         ds
     )
 
-
-region = xr.open_dataset(config['region']).isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
+region = xr.open_dataset(config['region']).region_flood.values
 
 for i, date in enumerate(reversed(datelist)):
     print(date)
@@ -263,6 +268,7 @@ for i, date in enumerate(reversed(datelist)):
     preprocessed_data = xr.open_dataset(input_path(date))
 
     (s_track_upper, s_track_lower, processed_data) = backtrack(
+        date,
         preprocessed_data,
         s_track_upper,
         s_track_lower,

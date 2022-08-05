@@ -10,7 +10,7 @@ from preprocessing import (get_grid_info, get_stable_fluxes,
 
 
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 # Set constants
@@ -39,7 +39,7 @@ b_edge = xr.concat([b[0],(b_full[1:].values + b_full[:-1])/2.0,b[-1]],dim='lev')
 
 def load_surface_data(variable, date):
     """Load data for given variable and date."""
-    filename = f"FloodCase_201305_{variable}.nc"
+    filename = f"FloodCase_202107_{variable}.nc"
     filepath = os.path.join(config["input_folder"], filename)
     da = xr.open_dataset(filepath)[variable]
 
@@ -49,7 +49,7 @@ def load_surface_data(variable, date):
 
 def load_modellevel_data(variable, date):
     """Load model level data for given variable and date."""
-    filename = f"FloodCase_201305_ml_{variable}.nc"
+    filename = f"FloodCase_202107_ml_{variable}.nc"
     filepath = os.path.join(config["input_folder"], filename)
     da = xr.open_dataset(filepath)[variable]
 
@@ -61,7 +61,7 @@ datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:1]:
+for date in datelist[:]:
     print(date)
 
     # Load data
