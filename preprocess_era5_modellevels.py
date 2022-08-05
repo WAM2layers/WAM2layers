@@ -62,7 +62,6 @@ start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="
 )
 
 for date in datelist[:]:
-
     print(date)
 
     # Load data

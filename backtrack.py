@@ -37,6 +37,7 @@ def time_in_range(start, end, current):
     """Returns whether current is in the range [start, end]"""
     return start <= current <= end
 
+  
 def input_path(date):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
@@ -159,7 +160,7 @@ def backtrack(
     east_loss = np.zeros(nlat) 
     west_loss = np.zeros(nlat)
 
-    #only track the precipitation at certain dates
+    # Only track the precipitation at certain dates
     if time_in_range(config["event_start_date"], config["event_end_date"], date.strftime('%Y%m%d')) == False:
         precip = precip * 0
     
@@ -334,10 +335,9 @@ def backtrack(
         ds
     )
 
-region = xr.open_dataset(config['region']).region_flood.values#.isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
-#region_lsm = xr.open_dataset('/data/volume_2/era5_2013/FloodCase_201305_lsm.nc').isel(time=0).lsm.rename(latitude='lat', longitude='lon').values
+region = xr.open_dataset(config['region']).region_flood.values
 
-for i, date in enumerate(reversed(datelist[:])):
+for i, date in enumerate(reversed(datelist)):
     print(date)
 
     if i == 0:
