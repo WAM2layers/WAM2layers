@@ -157,13 +157,13 @@ def backtrack(
 
     north_loss = np.zeros(nlon)
     south_loss = np.zeros(nlon)
-    east_loss = np.zeros(nlat) 
+    east_loss = np.zeros(nlat)
     west_loss = np.zeros(nlat)
 
     # Only track the precipitation at certain dates
     if time_in_range(config["event_start_date"], config["event_end_date"], date.strftime('%Y%m%d')) == False:
         precip = precip * 0
-    
+
     # Sa calculation backward in time
     for t in reversed(range(ntime)):
         #die allerlaatste stap -1 wil je toch niet?????
@@ -178,17 +178,17 @@ def backtrack(
         fx_e_upper_we, fx_e_upper_ew, fx_w_upper_we, fx_w_upper_ew = to_edges_zonal(fx_upper[t-1])
         fy_n_lower_sn, fy_n_lower_ns, fy_s_lower_sn, fy_s_lower_ns = to_edges_meridional(fy_lower[t-1])
         fy_n_upper_sn, fy_n_upper_ns, fy_s_upper_sn, fy_s_upper_ns = to_edges_meridional(fy_upper[t-1])
-        
+
         # Short name for often used expressions
         s_track_relative_lower = s_track_lower / s_lower[t]  # fraction of tracked relative to total moisture
         s_track_relative_upper = s_track_upper / s_upper[t]
         inner = np.s_[1:-1, 1:-1]
-        
+
         # Actual tracking (note: backtracking, all terms have been negated)
         s_track_lower[inner] += (
             + fx_e_lower_we * shift_east(s_track_relative_lower)
             + fx_w_lower_ew * shift_west(s_track_relative_lower)
-            + fy_n_lower_sn * shift_north(s_track_relative_lower) 
+            + fy_n_lower_sn * shift_north(s_track_relative_lower)
             + fy_s_lower_ns * shift_south(s_track_relative_lower)
             + f_upward * s_track_relative_upper
             - f_downward * s_track_relative_lower
@@ -240,18 +240,48 @@ def backtrack(
         # Aggregate daily accumulations for calculating the daily means
         s_track_lower_mean += s_track_lower / ntime
         s_track_upper_mean += s_track_upper / ntime
-    
+
+    make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower, precip, s_track_upper_mean, s_track_lower_mean, e_track)
+
+    # in first time step you should expect that s_track_upper + s_track_lower + e_track = precip
+    # but that is not the case.. what goes wrong?
+    print(s_track_upper.sum() + s_track_lower.sum())
+    print((precip.sum(axis=0)*region).sum())
+    print((e_track).sum())
+
+    # Pack processed data into new dataset
+    ds = xr.Dataset(
+        {
+            "s_track_upper_restart": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
+            "s_track_lower_restart": (["lat", "lon"], s_track_lower),
+            "s_track_upper": (["lat", "lon"], s_track_upper_mean),
+            "s_track_lower": (["lat", "lon"], s_track_lower_mean),
+            "e_track": (["lat", "lon"], e_track),
+            "north_loss": (["lon"], north_loss),
+            "south_loss": (["lon"], south_loss),
+            "east_loss": (["lat"], east_loss),
+            "west_loss": (["lat",], west_loss),
+        }
+    )
+    return (
+        s_track_upper,
+        s_track_lower,
+        ds
+    )
+
+
+def make_diagnostic_figures(date, region, fx_upper, fy_upper, fx_lower, fy_lower, precip, s_track_upper_mean, s_track_lower_mean, e_track):
     ######### added code to make in between figures of the data ########
-    print(date)
+        print(date)
 
     # Load data
     u = xr.open_dataset('/data/volume_2/era5_2021/FloodCase_202107_u.nc')
-    
+
     # Get grid info
     lat = u.latitude.values
     lon = u.longitude.values
     a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
-    
+
     my_projection = ccrs.PlateCarree(central_longitude=0)
 
     def load_flood_map(ax):
@@ -267,7 +297,7 @@ def backtrack(
         ax.contour(lon, lat, region,color='k', linewidth=0.8)
         ax.set_xlim(-50, 30)
         ax.set_ylim(30, 60)
-        
+
     precip_track = np.arange(0.0,50.0,5)
     S_track = np.arange(0.0,5,0.5)
     E_track = np.arange(0.0,1.0,0.1)
@@ -301,39 +331,14 @@ def backtrack(
 
     new_axis2= fig1.add_axes([0.15, 0.50, 0.35, 0.015])
     fig1.colorbar(cb1, cax=new_axis2, orientation='horizontal')
-    
+
     new_axis3= fig1.add_axes([0.30, 0.08, 0.35, 0.015])
     fig1.colorbar(cb3, cax=new_axis3, orientation='horizontal')
     plt.savefig('figures/tracking'+ date.strftime('%Y%m%d') + '.png', format = 'png')
-    #plt.show()
-    
+    plt.close()
+
     ###### until here added code to make figures #########
-    
-    # in first time step you should expect that s_track_upper + s_track_lower + e_track = precip
-    # but that is not the case.. what goes wrong?
-    print(s_track_upper.sum() + s_track_lower.sum())
-    print((precip.sum(axis=0)*region).sum())
-    print((e_track).sum())
-    
-    # Pack processed data into new dataset
-    ds = xr.Dataset(
-        {
-            "s_track_upper_restart": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
-            "s_track_lower_restart": (["lat", "lon"], s_track_lower),
-            "s_track_upper": (["lat", "lon"], s_track_upper_mean),
-            "s_track_lower": (["lat", "lon"], s_track_lower_mean),
-            "e_track": (["lat", "lon"], e_track),
-            "north_loss": (["lon"], north_loss),
-            "south_loss": (["lon"], south_loss),
-            "east_loss": (["lat"], east_loss),
-            "west_loss": (["lat",], west_loss),
-        }
-    )
-    return (
-        s_track_upper,
-        s_track_lower,
-        ds
-    )
+
 
 region = xr.open_dataset(config['region']).region_flood.values
 
