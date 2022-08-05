@@ -9,17 +9,34 @@ from preprocessing import (get_grid_info, get_stable_fluxes,
                            get_vertical_transport)
 
 
+# Read case configuration
+with open("cases/era5_2013.yaml") as f:
+    config = yaml.safe_load(f)
+
 # Set constants
 g = 9.80665  # [m/s2]
 density_water = 1000  # [kg/m3]
 
-# Select model levels
-modellevels = np.append( np.arange(1,100,10), np.arange(101,138,1)) #[1,20,40,60,80,100,110,120,125,130,131,132,133,134,135,136,137]
+# Preselection of model levels 
+modellevels = [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
+
 print('Number of model levels:',len(modellevels))
 
-# Read case configuration
-with open("cases/era5_2013.yaml") as f:
-    config = yaml.safe_load(f)
+# Load a and b coefficients 
+filenamecsv = 'tableERA5model_to_pressure.csv'
+df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
+a = df['a [Pa]'].to_xarray().rename(index='lev')
+#.sel(lev=modellevels)
+b = df['b'].to_xarray().rename(index='lev')
+#.sel(lev=modellevels)
+
+# Calculate a and b at mid levels (model levels)
+a_full = ((a[1:] + a[:-1].values)/2.0).sel(lev=modellevels)
+b_full = ((b[1:] + b[:-1].values)/2.0).sel(lev=modellevels)
+
+#Construct a and b at edges for selected levels
+a_edge = xr.concat([a[0],(a_full[1:].values + a_full[:-1])/2.0,a[-1]],dim='lev')
+b_edge = xr.concat([b[0],(b_full[1:].values + b_full[:-1])/2.0,b[-1]],dim='lev')
 
 def load_surface_data(variable, date):
     """Load data for given variable and date."""
@@ -45,7 +62,7 @@ datelist = pd.date_range(
 start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
 )
 
-for date in datelist[:1]:
+for date in datelist:
     print(date)
 
     # Load data
@@ -70,13 +87,8 @@ for date in datelist[:1]:
     precip *= a_gridcell  # m3
 
     # Convert model levels to pressure values
-    filenamecsv = 'tableERA5model_to_pressure.csv'
-    df = pd.read_csv(os.path.join(config["input_folder"],filenamecsv))
-    a = df['a [Pa]'].to_xarray().rename(index='lev').sel(lev=modellevels)
-    b = df['b'].to_xarray().rename(index='lev').sel(lev=modellevels)
-    
     sp_modellevels2 = sp.expand_dims({'lev':modellevels},axis=1)
-    p_modellevels = a + b*sp_modellevels2 # in Pa
+    p_modellevels = a_edge + b_edge*sp_modellevels2 # in Pa
 
     #calculate the difference between the pressure levels
     dp_modellevels = p_modellevels.diff(dim="lev") # in Pa
@@ -87,6 +99,7 @@ for date in datelist[:1]:
     cwv = q * dp_modellevels / g * a_gridcell[np.newaxis,np.newaxis,:] / density_water  # column water vapor (m3)
 
     # Split in 2 layers 
+    # To do: Check if this is a reasonable choice
     boundary = 111 # set boundary model level 111
     
     # Integrate fluxes and states to upper and lower layer
@@ -108,10 +121,10 @@ for date in datelist[:1]:
     )
 
     tcwm3 = tcw* a_gridcell[np.newaxis,:] / density_water # m3
-    
+        
     print(
         "Check calculation water vapor with column water vapour, this value should be close to zero:",
-        (cwv.sum(dim="lev") - (tcwm3)).sum().values,
+        np.nanmean(np.abs((cwv.sum(dim="lev") - (tcwm3)).values/tcwm3)),
     )
     # is niet hetzelfde.. hoe erg is dat?
     
