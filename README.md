@@ -5,6 +5,31 @@ code originally developed by Ruud van der Ent. It can be used to determine where
 precipitation originally evaporated (backtracking), or where evaporated moisture
 eventually ends up (forward tracking).
 
+
+## Solved equations
+Considering the schematic illustration below, forward- and backward tracking can be formulated respectively as:
+
+$$
+\begin{align}
+s_{t+1}=s_t &+F_{we,w}\ast s_{t,w}-F_{we,e}\ast s_t & s_{t-1}=s_t &+F_{we,e}\ast s_{t,e}-F_{we,w}\ast s_t \\
+            &+F_{ew,e}\ast s_{t,e}-F_{ew,w}\ast s_t &             &+F_{ew,w}\ast s_{t,w}-F_{ew,e}\ast s_t \\
+            &+F_{ns,n}\ast s_{t,n}-F_{ns,s}\ast s_t &             &+F_{ns,s}\ast s_{t,s}-F_{ns,n}\ast s_t \\
+            &+F_{sn,s}\ast s_{t,s}-F_{sn,n}\ast s_t &             &+F_{sn,n}\ast s_{t,n}-F_{sn,s}\ast s_t \\
+            &+F_{ul,u}\ast s_{t,u}-F_{ul,l}\ast s_t &             &+F_{ul,l}\ast s_{t,l}-F_{ul,u}\ast s_t \\
+            &+F_{lu,l}\ast s_{t,l}-F_{lu,u}\ast s_t &             &+F_{lu,u}\ast s_{t,u}-F_{lu,l}\ast s_t \\
+            &+E-P                                   &             &-E+P
+\end{align}
+$$
+
+where $F$ are (total) moisture fluxes and $s$ represents the amount of tracked relative to total moisture in the grid cells. 
+The up/down fluxes are not illustrated but they follow the same systematic as the north/south and east/west fluxes. 
+Note that all fluxes are by definition positive; this is needed because moisture flux is scaled with the relative amount of tracked moisture 
+in the grid cells where it originates from.
+
+In WAM2Layers code, these equations are solved for one upper and one lower layer (such that only two of the 4 vertical transport terms are relevant for each layer). The evaporation term is used for the lower layer only, while the precipitation contribution is distributed across the two layers.
+
+![image](https://user-images.githubusercontent.com/17080502/183941265-116cfb6d-3b03-4602-a750-9abe7c7cc554.png)
+
 ## How to use
 
 The model workflow consists of three steps:
