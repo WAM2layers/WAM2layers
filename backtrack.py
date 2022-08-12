@@ -54,19 +54,19 @@ def to_edges_zonal(fx):
         fxh[:, -1] = 0.5 * (fx[:, -1] + fx[:, 0])
 
     # find out where the positive and negative fluxes are
-    fx_pos = np.ones_like(fx)
-    fx_pos[fxh < 0] = 0
-    fx_neg = fx_pos - 1
+    f_pos = np.ones_like(fx)
+    f_pos[fxh < 0] = 0
+    f_neg = f_pos - 1
 
     # separate directions west-east (all positive numbers)
-    fx_e_we = fxh * fx_pos  # eastern edge, outgoing to west
-    fx_e_ew = fxh * fx_neg  # eastern edge, incoming from west
+    f_e_we = fxh * f_pos  # eastern edge, outgoing to west
+    f_e_ew = fxh * f_neg  # eastern edge, incoming from west
 
     # fluxes over the western boundary
-    fx_w_we = shift_west(fx_e_we)
-    fx_w_ew = shift_west(fx_e_ew)
+    f_w_we = shift_west(f_e_we)
+    f_w_ew = shift_west(f_e_ew)
 
-    return fx_e_we, fx_e_ew, fx_w_we, fx_w_ew
+    return f_e_we, f_e_ew, f_w_we, f_w_ew
 
 
 def to_edges_meridional(fy):
@@ -136,15 +136,15 @@ def backtrack(
 ):
 
     # Unpack preprocessed data  # TODO: change names in preproc
-    fx_upper = preprocessed_data["fa_e_upper"].values
-    fy_upper = preprocessed_data["fa_n_upper"].values
-    fx_lower = preprocessed_data["fa_e_lower"].values
-    fy_lower = preprocessed_data["fa_n_lower"].values
+    fx_upper = preprocessed_data["fx_upper"].values
+    fy_upper = preprocessed_data["fy_upper"].values
+    fx_lower = preprocessed_data["fx_lower"].values
+    fy_lower = preprocessed_data["fy_lower"].values
     evap = preprocessed_data["evap"].values
     precip = preprocessed_data["precip"].values
-    s_upper = preprocessed_data["w_upper"].values
-    s_lower = preprocessed_data["w_lower"].values
-    f_vert = preprocessed_data["fa_vert"].values
+    s_upper = preprocessed_data["s_upper"].values
+    s_lower = preprocessed_data["s_lower"].values
+    f_vert = preprocessed_data["f_vert"].values
 
     # Allocate arrays for daily accumulations
     ntime, nlat, nlon = s_upper.shape
@@ -179,12 +179,13 @@ def backtrack(
         f_downward, f_upward = split_vertical_flux(kvf, f_vert[t - 1])
 
         # Determine horizontal fluxes over the grid-cell boundaries
-        fx_e_lower_we, fx_e_lower_ew, fx_w_lower_we, fx_w_lower_ew = to_edges_zonal(
+        f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
             fx_lower[t - 1]
         )
-        fx_e_upper_we, fx_e_upper_ew, fx_w_upper_we, fx_w_upper_ew = to_edges_zonal(
+        f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(
             fx_upper[t - 1]
         )
+
         (
             fy_n_lower_sn,
             fy_n_lower_ns,
@@ -207,31 +208,31 @@ def backtrack(
 
         # Actual tracking (note: backtracking, all terms have been negated)
         s_track_lower[inner] += (
-            +fx_e_lower_we * shift_east(s_track_relative_lower)
-            + fx_w_lower_ew * shift_west(s_track_relative_lower)
+            + f_e_lower_we * shift_east(s_track_relative_lower)
+            + f_w_lower_ew * shift_west(s_track_relative_lower)
             + fy_n_lower_sn * shift_north(s_track_relative_lower)
             + fy_s_lower_ns * shift_south(s_track_relative_lower)
             + f_upward * s_track_relative_upper
             - f_downward * s_track_relative_lower
             - fy_s_lower_sn * s_track_relative_lower
             - fy_n_lower_ns * s_track_relative_lower
-            - fx_e_lower_ew * s_track_relative_lower
-            - fx_w_lower_we * s_track_relative_lower
+            - f_e_lower_ew * s_track_relative_lower
+            - f_w_lower_we * s_track_relative_lower
             + P_region * (s_lower[t] / s_total)
             - evap[t - 1] * s_track_relative_lower
         )[inner]
 
         s_track_upper[inner] += (
-            +fx_e_upper_we * shift_east(s_track_relative_upper)
-            + fx_w_upper_ew * shift_west(s_track_relative_upper)
+            + f_e_upper_we * shift_east(s_track_relative_upper)
+            + f_w_upper_ew * shift_west(s_track_relative_upper)
             + fy_n_upper_sn * shift_north(s_track_relative_upper)
             + fy_s_upper_ns * shift_south(s_track_relative_upper)
             + f_downward * s_track_relative_lower
             - f_upward * s_track_relative_upper
             - fy_s_upper_sn * s_track_relative_upper
             - fy_n_upper_ns * s_track_relative_upper
-            - fx_w_upper_we * s_track_relative_upper
-            - fx_e_upper_ew * s_track_relative_upper
+            - f_w_upper_we * s_track_relative_upper
+            - f_e_upper_ew * s_track_relative_upper
             + P_region * (s_upper[t] / s_total)
         )[inner]
 
@@ -256,13 +257,13 @@ def backtrack(
         )[-2, :]
 
         east_loss += (
-            fx_e_upper_ew * s_track_relative_upper
-            + fx_e_lower_ew * s_track_relative_lower
+            f_e_upper_ew * s_track_relative_upper
+            + f_e_lower_ew * s_track_relative_lower
         )[:, -2]
 
         west_loss += (
-            fx_w_upper_we * s_track_relative_upper
-            + fx_w_lower_we * s_track_relative_lower
+            f_w_upper_we * s_track_relative_upper
+            + f_w_lower_we * s_track_relative_lower
         )[:, 1]
 
         # Aggregate daily accumulations for calculating the daily means
