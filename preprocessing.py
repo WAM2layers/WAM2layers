@@ -5,6 +5,7 @@ from scipy.interpolate import interp1d
 import xarray as xr
 
 
+# old, keep only for reference and ecearth starting case
 def resample(variable, divt, count_time, method="interp"):
     """Resample the variable to a given number of timesteps."""
 
@@ -35,151 +36,29 @@ def resample(variable, divt, count_time, method="interp"):
     return new_var
 
 
-def get_stable_fluxes(fx, fy, s):
-    """Stabilize the outfluxes / influxes.
-
-    During the reduced timestep the water cannot move further than 1/x * the
-    gridcell, In other words at least x * the reduced timestep is needed to
-    cross a gridcell.
-    """
-    fx_abs = np.abs(fx)
-    fy_abs = np.abs(fy)
-
-    stab = 1.0 / 2.0
-
-    # TODO: Check; I don't really understand what's happening here
-    fx_corrected = (fx_abs / (fx_abs + fy_abs)) * stab * s[:-1, :, :]
-    fx_stable = np.minimum(fx_abs, fx_corrected)
-
-    fy_corrected = (fy_abs / (fx_abs + fy_abs)) * stab * s[:-1, :, :]
-    fy_stable = np.minimum(fy_abs, fy_corrected)
-
-    # get rid of any nan values
-    fx_stable[np.isnan(fx_stable)] = 0
-    fy_stable[np.isnan(fy_stable)] = 0
-
-    # redefine
-    fx = np.sign(fx) * fx_stable
-    fy = np.sign(fy) * fy_stable
-
-    return fx, fy
-
-
-def divergence_zonal(fx, periodic_boundary):
-    """Define the horizontal fluxes over the zonal boundaries."""
-    flux = np.asarray(fx)
-
-    fe_boundary = np.zeros_like(flux)
-    fe_boundary[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
-    if periodic_boundary == True:
-        fe_boundary[:, :, -1] = 0.5 * (flux[:, :, -1] + flux[:, :, 0])
-
-    fw_boundary = np.roll(fe_boundary, 1)
-    return fw_boundary - fe_boundary
-
-
-def divergence_meridional(fy):
-    """Define the horizontal fluxes over the meridional boundaries."""
-    flux = np.asarray(fy)
-
-    fn_boundary = np.zeros_like(flux)
-    fn_boundary[:, 1:, :] = 0.5 * (flux[:, :-1, :] + flux[:, 1:, :])
-
-    fs_boundary = np.roll(fn_boundary, -1, axis=1)
-    return fs_boundary - fn_boundary
-
-
-def get_vertical_transport(
-    fx_upper,
-    fx_lower,
-    fy_upper,
-    fy_lower,
-    e,
-    p,
-    s_upper,
-    s_lower,
-    periodic_boundary,
-    kvf,
-):
-
-    # total moisture in the column
-    w = s_upper + s_lower
-
-    zonal_divergence_upper = divergence_zonal(fx_upper, periodic_boundary)
-    zonal_divergence_lower = divergence_zonal(fx_lower, periodic_boundary)
-    meridional_divergence_upper = divergence_meridional(fy_upper)
-    meridional_divergence_lower = divergence_meridional(fy_lower)
-
-    # check the water balance
-    residual_lower = np.zeros_like(p)  # residual factor [m3]
-    residual_upper = np.zeros_like(p)  # residual factor [m3]
-
-    tendency_lower = (  # todo why skip the n/s but not w/e edges?
-        +zonal_divergence_lower[:, 1:-1, :]
-        + meridional_divergence_lower[:, 1:-1, :]
-        - p[:, 1:-1, :] * (s_lower[:-1, 1:-1, :] / w[:-1, 1:-1, :])
-        + e[:, 1:-1, :]
-    )
-
-    tendency_upper = (  # todo why skip the n/s but not w/e edges?
-        +zonal_divergence_upper[:, 1:-1, :]
-        + meridional_divergence_upper[:, 1:-1, :]
-        - p[:, 1:-1, :] * (s_upper[:-1, 1:-1, :] / w[:-1, 1:-1, :])
-    )
-
-    residual_lower[:, 1:-1, :] = (
-        s_lower[1:, 1:-1, :] - s_lower[:-1, 1:-1, :] - tendency_lower
-    )
-    residual_upper[:, 1:-1, :] = s_upper[1:, 1:-1, :] - s_upper[:-1, 1:-1, :] - tendency_upper
-
-    # compute the resulting vertical moisture flux; the vertical velocity so
-    # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
-    f_vert_raw = (
-        s_lower[1:, :, :] / w[1:, :, :] * (residual_lower + residual_upper) - residual_lower
-    )
-
-    # stabilize the outfluxes / influxes; during the reduced timestep the
-    # vertical flux can maximally empty/fill 1/x of the top or down storage
-    stab = 1.0 / (kvf + 1.0)
-    f_vert_stable = np.minimum(
-        np.abs(f_vert_raw), np.minimum(stab * s_upper[1:, :, :], stab * s_lower[1:, :, :])
-    )
-
-    # redefine the vertical flux
-    f_vert = np.sign(f_vert_raw) * f_vert_stable
-
-    return f_vert
-
-
-def get_grid_info(latitude, longitude):
-    """Return grid cell area and lenght sides."""
+def get_grid_info(ds):
+    """Return grid cell area and lenght of the sides."""
     dg = 111089.56  # [m] length of 1 degree latitude
     erad = 6.371e6  # [m] Earth radius
 
-    gridcell = np.abs(longitude[1] - longitude[0])  # [degrees] grid cell size
+    latitude = ds.latitude.values
+    longitude = ds.longitude.values
+    grid_spacing = np.abs(longitude[1] - longitude[0])  # [degrees]
 
-    # new area size calculation:
-    lat_n_bound = np.minimum(90.0, latitude + 0.5 * gridcell)
-    lat_s_bound = np.maximum(-90.0, latitude - 0.5 * gridcell)
+    # Calculate area TODO check this calculation!
+    lat_n = np.minimum(90.0, latitude + 0.5 * grid_spacing)
+    lat_s = np.maximum(-90.0, latitude - 0.5 * grid_spacing)
 
-    # TODO check this calculation!
-    a_gridcell = np.zeros([len(latitude), 1])
-    a_gridcell[:, 0] = (
-        (np.pi / 180.0)
-        * erad ** 2
-        * abs(np.sin(lat_s_bound * np.pi / 180.0) - np.sin(lat_n_bound * np.pi / 180.0))
-        * gridcell
+    a = np.pi / 180.0 * erad ** 2 * grid_spacing * abs(
+        np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0)
     )
 
-    l_ew_gridcell = gridcell * dg  # [m] length eastern/western boundary of a cell
-    l_n_gridcell = (
-        dg * gridcell * np.cos((latitude + gridcell / 2) * np.pi / 180)
-    )  # [m] length northern boundary of a cell
-    l_s_gridcell = (
-        dg * gridcell * np.cos((latitude - gridcell / 2) * np.pi / 180)
-    )  # [m] length southern boundary of a cell
-    l_mid_gridcell = 0.5 * (l_n_gridcell + l_s_gridcell)
-    return a_gridcell, l_ew_gridcell, l_mid_gridcell
+    # Calculate faces
+    ly = grid_spacing * dg  # [m] length eastern/western boundary of a cell
+    lx_n_gridcell = ly * np.cos((latitude + grid_spacing / 2) * np.pi / 180)
+    lx_s_gridcell = ly * np.cos((latitude - grid_spacing / 2) * np.pi / 180)
+    lx = 0.5 * (lx_n_gridcell + lx_s_gridcell)
+    return a, ly, lx
 
 
 def join_levels(pressure_level_data, surface_level_data):
