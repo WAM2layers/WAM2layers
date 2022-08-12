@@ -196,32 +196,9 @@ def stabilize_fluxes(fluxes, states):
         fluxes["fy_"+ level] = np.sign(fy) * fy_stable
 
 
-def split_east_west(fx, periodic_boundary):
-    """Define the horizontal fluxes over the zonal boundaries."""
-    flux = np.asarray(fx)
-
-    fe = np.zeros_like(flux)
-    fe[:, :, :-1] = 0.5 * (flux[:, :, :-1] + flux[:, :, 1:])
-    if periodic_boundary:
-        fe[:, :, -1] = 0.5 * (flux[:, :, -1] + flux[:, :, 0])
-
-    fw = np.roll(fe, 1)
-    return fe, fw
-
-
-def split_north_south(fy):
-    """Define the horizontal fluxes over the meridional boundaries."""
-    flux = np.asarray(fy)
-
-    fn = np.zeros_like(flux)
-    fn[:, 1:, :] = 0.5 * (flux[:, :-1, :] + flux[:, 1:, :])
-
-    fs = np.roll(fn, -1, axis=1)
-    return fn, fs
-
-
 def convergence(fx, fy):
-    return -np.gradient(fx, axis=-1) - np.gradient(fy, axis=-2)
+    # Note: latitude decreasing, hence positive fy gradient is convergence
+    return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
 def calculate_fv(fluxes, states, kvf, periodic):
@@ -233,15 +210,8 @@ def calculate_fv(fluxes, states, kvf, periodic):
     s_rel_upper = (states.s_upper / s_total).interp(time=fluxes.time)
     s_rel_lower = (states.s_lower / s_total).interp(time=fluxes.time)
 
-    fe_upper, fw_upper = split_east_west(fluxes.fx_upper, periodic)
-    fe_lower, fw_lower = split_east_west(fluxes.fx_lower, periodic)
-    fn_upper, fs_upper = split_north_south(fluxes.fy_upper)
-    fn_lower, fs_lower = split_north_south(fluxes.fy_lower)
-
-    # TODO: I don't understand why
-    # fw_upper - fe_upper + fs_upper - fn_upper isn't approx equal to convergence
-    tendency_upper = fw_upper - fe_upper + fs_upper - fn_upper - fluxes.precip.values * s_rel_upper
-    tendency_lower = fw_lower - fe_lower + fs_lower - fn_lower - fluxes.precip.values * s_rel_lower + fluxes.evap
+    tendency_upper = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel_upper
+    tendency_lower = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel_lower + fluxes.evap
 
     residual_upper = states.s_upper.diff("time").values - tendency_upper
     residual_lower = states.s_lower.diff("time").values - tendency_lower
@@ -430,7 +400,7 @@ def backtrack(
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
             "east_loss": (["lat"], east_loss),
-            "west_loss": (["lat",],west_loss),
+            "west_loss": (["lat"],west_loss),
         }
     )
     return (s_track_upper, s_track_lower, ds)
