@@ -1,9 +1,11 @@
-import yaml
-import xarray as xr
+from pathlib import Path
 
 import numpy as np
-from pathlib import Path
 import pandas as pd
+import xarray as xr
+import yaml
+
+from visualization import make_diagnostic_figures
 
 # Read case configuration
 with open("cases/era5_2021.yaml") as f:
@@ -11,24 +13,31 @@ with open("cases/era5_2021.yaml") as f:
 
 
 datelist = pd.date_range(
-    start=config["track_start_date"], end=config["track_end_date"], freq="d", inclusive="left"
+    start=config["track_start_date"],
+    end=config["track_end_date"],
+    freq="d",
+    inclusive="left",
 )
 
-input_dir = Path(config['preprocessed_data_folder']).expanduser()
-output_dir = Path(config['output_folder']).expanduser() / "backtrack"
+input_dir = Path(config["preprocessed_data_folder"]).expanduser()
+output_dir = Path(config["output_folder"]).expanduser() / "backtrack"
 
 # Check if input dir exists
 if not input_dir.exists():
-    raise ValueError("Please create the preprocessed_data_folder before running the script")
+    raise ValueError(
+        "Please create the preprocessed_data_folder before running the script"
+    )
 
 # Create output dir if it doesn't exist yet
 if not output_dir.exists():
     output_dir.mkdir(parents=True)
 
+
 def time_in_range(start, end, current):
     """Returns whether current is in the range [start, end]"""
     return start <= current <= end
-    
+
+
 def input_path(date):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
@@ -75,21 +84,20 @@ def to_edges_meridional(fy):
     fy_n_ns = fy_boundary * fy_neg
 
     # fluxes over the southern boundary
-    # TODO: shouldn't this be shift_south?
-    fy_s_sn = shift_north(fy_n_sn)
-    fy_s_ns = shift_north(fy_n_ns)
+    fy_s_sn = shift_south(fy_n_sn)
+    fy_s_ns = shift_south(fy_n_ns)
 
     return fy_n_sn, fy_n_ns, fy_s_sn, fy_s_ns
 
 
 def shift_north(array):
     # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, -1, axis=-2)
+    return np.roll(array, 1, axis=-2)
 
 
 def shift_south(array):
     # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, 1, axis=-2)
+    return np.roll(array, -1, axis=-2)
 
 
 def shift_east(array):
@@ -150,31 +158,56 @@ def backtrack(
     east_loss = np.zeros(nlat)
     west_loss = np.zeros(nlat)
 
-    if time_in_range(config["event_start_date"], config["event_end_date"], date.strftime('%Y%m%d')) == False:
+    # Only track the precipitation at certain dates
+    if (
+        time_in_range(
+            config["event_start_date"],
+            config["event_end_date"],
+            date.strftime("%Y%m%d"),
+        )
+        == False
+    ):
         precip = precip * 0
-    
+
     # Sa calculation backward in time
     for t in reversed(range(ntime)):
-        P_region = region * precip[t-1]
+        # die allerlaatste stap -1 wil je toch niet?????
+        P_region = region * precip[t - 1]  # WHY t-1 ?
         s_total = s_upper[t] + s_lower[t]
 
         # separate the direction of the vertical flux and make it absolute
-        f_downward, f_upward = split_vertical_flux(kvf, f_vert[t-1])
+        f_downward, f_upward = split_vertical_flux(kvf, f_vert[t - 1])
 
         # Determine horizontal fluxes over the grid-cell boundaries
-        fx_e_lower_we, fx_e_lower_ew, fx_w_lower_we, fx_w_lower_ew = to_edges_zonal(fx_lower[t-1])
-        fx_e_upper_we, fx_e_upper_ew, fx_w_upper_we, fx_w_upper_ew = to_edges_zonal(fx_upper[t-1])
-        fy_n_lower_sn, fy_n_lower_ns, fy_s_lower_sn, fy_s_lower_ns = to_edges_meridional(fy_lower[t-1])
-        fy_n_upper_sn, fy_n_upper_ns, fy_s_upper_sn, fy_s_upper_ns = to_edges_meridional(fy_upper[t-1])
+        fx_e_lower_we, fx_e_lower_ew, fx_w_lower_we, fx_w_lower_ew = to_edges_zonal(
+            fx_lower[t - 1]
+        )
+        fx_e_upper_we, fx_e_upper_ew, fx_w_upper_we, fx_w_upper_ew = to_edges_zonal(
+            fx_upper[t - 1]
+        )
+        (
+            fy_n_lower_sn,
+            fy_n_lower_ns,
+            fy_s_lower_sn,
+            fy_s_lower_ns,
+        ) = to_edges_meridional(fy_lower[t - 1])
+        (
+            fy_n_upper_sn,
+            fy_n_upper_ns,
+            fy_s_upper_sn,
+            fy_s_upper_ns,
+        ) = to_edges_meridional(fy_upper[t - 1])
 
         # Short name for often used expressions
-        s_track_relative_lower = s_track_lower / s_lower[t]  # fraction of tracked relative to total moisture
+        s_track_relative_lower = (
+            s_track_lower / s_lower[t]
+        )  # fraction of tracked relative to total moisture
         s_track_relative_upper = s_track_upper / s_upper[t]
         inner = np.s_[1:-1, 1:-1]
 
         # Actual tracking (note: backtracking, all terms have been negated)
         s_track_lower[inner] += (
-            + fx_e_lower_we * shift_east(s_track_relative_lower)
+            +fx_e_lower_we * shift_east(s_track_relative_lower)
             + fx_w_lower_ew * shift_west(s_track_relative_lower)
             + fy_n_lower_sn * shift_north(s_track_relative_lower)
             + fy_s_lower_ns * shift_south(s_track_relative_lower)
@@ -185,11 +218,11 @@ def backtrack(
             - fx_e_lower_ew * s_track_relative_lower
             - fx_w_lower_we * s_track_relative_lower
             + P_region * (s_lower[t] / s_total)
-            - evap[t-1] * s_track_relative_lower
+            - evap[t - 1] * s_track_relative_lower
         )[inner]
 
         s_track_upper[inner] += (
-            + fx_e_upper_we * shift_east(s_track_relative_upper)
+            +fx_e_upper_we * shift_east(s_track_relative_upper)
             + fx_w_upper_ew * shift_west(s_track_relative_upper)
             + fy_n_upper_sn * shift_north(s_track_relative_upper)
             + fy_s_upper_ns * shift_south(s_track_relative_upper)
@@ -209,29 +242,51 @@ def backtrack(
         s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
 
         # compute tracked evaporation
-        e_track += evap[t-1] * (s_track_lower / s_lower[t])
+        e_track += evap[t - 1] * (s_track_lower / s_lower[t])
 
         # losses to the north and south
-        north_loss += (fy_n_upper_ns * s_track_relative_upper
-                       + fy_n_lower_ns * s_track_relative_lower)[1, :]
+        north_loss += (
+            fy_n_upper_ns * s_track_relative_upper
+            + fy_n_lower_ns * s_track_relative_lower
+        )[1, :]
 
-        south_loss += (fy_s_upper_sn * s_track_relative_upper
-                       + fy_s_lower_sn * s_track_relative_lower)[-2, :]
+        south_loss += (
+            fy_s_upper_sn * s_track_relative_upper
+            + fy_s_lower_sn * s_track_relative_lower
+        )[-2, :]
 
-        east_loss += (fx_e_upper_ew * s_track_relative_upper
-                      + fx_e_lower_ew * s_track_relative_lower)[:, -2]
+        east_loss += (
+            fx_e_upper_ew * s_track_relative_upper
+            + fx_e_lower_ew * s_track_relative_lower
+        )[:, -2]
 
-        west_loss += (fx_w_upper_we * s_track_relative_upper
-                      + fx_w_lower_we * s_track_relative_lower)[:, 1]
+        west_loss += (
+            fx_w_upper_we * s_track_relative_upper
+            + fx_w_lower_we * s_track_relative_lower
+        )[:, 1]
 
         # Aggregate daily accumulations for calculating the daily means
         s_track_lower_mean += s_track_lower / ntime
         s_track_upper_mean += s_track_upper / ntime
 
+    make_diagnostic_figures(
+        date,
+        region,
+        fx_upper,
+        fy_upper,
+        fx_lower,
+        fy_lower,
+        precip,
+        s_track_upper_mean,
+        s_track_lower_mean,
+        e_track,
+    )
+
     # Pack processed data into new dataset
     ds = xr.Dataset(
         {
-            "s_track_upper_restart": (["lat", "lon"], s_track_upper),  # Keep last state for a restart
+            # Keep last state for a restart
+            "s_track_upper_restart": (["lat", "lon"],s_track_upper),
             "s_track_lower_restart": (["lat", "lon"], s_track_lower),
             "s_track_upper": (["lat", "lon"], s_track_upper_mean),
             "s_track_lower": (["lat", "lon"], s_track_lower_mean),
@@ -239,18 +294,15 @@ def backtrack(
             "north_loss": (["lon"], north_loss),
             "south_loss": (["lon"], south_loss),
             "east_loss": (["lat"], east_loss),
-            "west_loss": (["lat",], west_loss),
+            "west_loss": (["lat",],west_loss),
         }
     )
-    return (
-        s_track_upper,
-        s_track_lower,
-        ds
-    )
+    return (s_track_upper, s_track_lower, ds)
 
-region = xr.open_dataset(config['region']).region_flood.values
 
-for i, date in enumerate(reversed(datelist)):
+region = xr.open_dataset(config["region"]).region_flood.values
+
+for i, date in enumerate(reversed(datelist[:])):
     print(date)
 
     if i == 0:
@@ -273,7 +325,7 @@ for i, date in enumerate(reversed(datelist)):
         s_track_upper,
         s_track_lower,
         region,
-        config['kvf'],
+        config["kvf"],
     )
 
     # Write output to file

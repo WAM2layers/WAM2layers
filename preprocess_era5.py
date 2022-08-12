@@ -4,8 +4,7 @@ import xarray as xr
 import yaml
 from pathlib import Path
 
-from preprocessing import (get_grid_info, get_stable_fluxes,
-                           get_vertical_transport)
+from preprocessing import get_grid_info, get_stable_fluxes, get_vertical_transport
 
 
 # Set constants
@@ -17,7 +16,7 @@ with open("cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
-output_dir = Path(config['preprocessed_data_folder']).expanduser()
+output_dir = Path(config["preprocessed_data_folder"]).expanduser()
 output_dir.mkdir(exist_ok=True, parents=True)
 
 
@@ -32,7 +31,10 @@ def load_data(variable, date):
 
 
 datelist = pd.date_range(
-    start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d", inclusive="left"
+    start=config["preprocess_start_date"],
+    end=config["preprocess_end_date"],
+    freq="d",
+    inclusive="left",
 )
 
 def calc_q2m(d2m,ps):
@@ -62,13 +64,13 @@ for date in datelist[:]:
     print(date)
 
     # Load data
-    u = load_data("u", date) #in m/s
-    v = load_data("v", date) #in m/s
-    q = load_data("q", date) #in kg kg-1
-    sp = load_data("sp", date) #in Pa
-    evap = load_data("e", date) #in m (accumulated hourly)
-    cp = load_data("cp", date) #convective precipitation in m (accumulated hourly)
-    lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
+    u = load_data("u", date)  # in m/s
+    v = load_data("v", date)  # in m/s
+    q = load_data("q", date)  # in kg kg-1
+    sp = load_data("sp", date)  # in Pa
+    evap = load_data("e", date)  # in m (accumulated hourly)
+    cp = load_data("cp", date)  # convective precipitation in m (accumulated hourly)
+    lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
     tcw = load_data("tcw", date) # kg/m2
     d2m = load_data("d2m", date) # Dew point in K
@@ -91,7 +93,7 @@ for date in datelist[:]:
     evap = np.abs(np.minimum(evap, 0))
 
     # Create pressure array
-    levels = q.level #in hPa
+    levels = q.level  # in hPa
     p = levels.broadcast_like(u) * 100  # Pa
 
     # Interpolate to new levels
@@ -115,13 +117,13 @@ for date in datelist[:]:
     upper_layer = dp.level < P_boundary / 100
 
     # Integrate fluxes and state
-    fa_e_lower = fa_e.where(lower_layer).sum(dim="level") #kg*m-1*s-1
-    fa_n_lower = fa_n.where(lower_layer).sum(dim="level") #kg*m-1*s-1
-    w_lower = cwv.where(lower_layer).sum(dim="level") #m3
+    fa_e_lower = fa_e.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
+    fa_n_lower = fa_n.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
+    w_lower = cwv.where(lower_layer).sum(dim="level")  # m3
 
-    fa_e_upper = fa_e.where(upper_layer).sum(dim="level") #kg*m-1*s-1
-    fa_n_upper = fa_n.where(upper_layer).sum(dim="level") #kg*m-1*s-1
-    w_upper = cwv.where(upper_layer).sum(dim="level") #m3
+    fa_e_upper = fa_e.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
+    fa_n_upper = fa_n.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
+    w_upper = cwv.where(upper_layer).sum(dim="level")  # m3
 
     print(
         "Check calculation water vapor, this value should be zero:",
@@ -131,7 +133,7 @@ for date in datelist[:]:
     tcwm3 = tcw * a_gridcell[np.newaxis, :] / density_water  # m3
 
     # Change units to m3, based on target frequency (not incoming frequency!)
-    target_freq = config['target_frequency']
+    target_freq = config["target_frequency"]
     total_seconds = pd.Timedelta(target_freq).total_seconds()
     fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
     fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
@@ -167,7 +169,7 @@ for date in datelist[:]:
         w_upper,
         w_lower,
         config["periodic_boundary"],
-        config["kvf"]
+        config["kvf"],
     )
 
     # Save preprocessed data
@@ -179,10 +181,26 @@ for date in datelist[:]:
 
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "fa_e_upper": (["time_fluxes", "lat", "lon"], fa_e_upper, {"units": "m**3"}),
-            "fa_n_upper": (["time_fluxes", "lat", "lon"], fa_n_upper, {"units": "m**3"}),
-            "fa_e_lower": (["time_fluxes", "lat", "lon"], fa_e_lower, {"units": "m**3"}),
-            "fa_n_lower": (["time_fluxes", "lat", "lon"], fa_n_lower, {"units": "m**3"}),
+            "fa_e_upper": (
+                ["time_fluxes", "lat", "lon"],
+                fa_e_upper,
+                {"units": "m**3"},
+            ),
+            "fa_n_upper": (
+                ["time_fluxes", "lat", "lon"],
+                fa_n_upper,
+                {"units": "m**3"},
+            ),
+            "fa_e_lower": (
+                ["time_fluxes", "lat", "lon"],
+                fa_e_lower,
+                {"units": "m**3"},
+            ),
+            "fa_n_lower": (
+                ["time_fluxes", "lat", "lon"],
+                fa_n_lower,
+                {"units": "m**3"},
+            ),
             "w_upper": (["time_states", "lat", "lon"], w_upper, {"units": "m**3"}),
             "w_lower": (["time_states", "lat", "lon"], w_lower, {"units": "m**3"}),
             "fa_vert": (["time_fluxes", "lat", "lon"], fa_vert, {"units": "m**3"}),
@@ -190,9 +208,9 @@ for date in datelist[:]:
             "precip": (["time_fluxes", "lat", "lon"], precip, {"units": "m**3"}),
         },
         coords={
-            'time_fluxes': newtime_fluxes,
-            'time_states': newtime_states,
-            'lat': u.latitude.values,
-            'lon': u.longitude.values
-        }
+            "time_fluxes": newtime_fluxes,
+            "time_states": newtime_states,
+            "lat": u.latitude.values,
+            "lon": u.longitude.values,
+        },
     ).to_netcdf(output_path)
