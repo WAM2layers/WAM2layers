@@ -1,3 +1,8 @@
+#testplot lines
+import matplotlib.pyplot as plt
+def spatialtestplot(variable):
+    plt.figure(), plt.imshow(variable), plt.colorbar()
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -36,6 +41,7 @@ datelist = pd.date_range(
 )
 
 for date in datelist[:]:
+    date = datelist[0]
     print(date)
 
     # Load data
@@ -48,8 +54,14 @@ for date in datelist[:]:
     lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
     tcw = load_data("tcw", date) # kg/m2
+    
+    # dummy data for the surface (should be replaced by download from Chris)
+    u_surf = u[:,-1,:,:]
+    v_surf = v[:,-1,:,:]
+    q_surf = q[:,-1,:,:]
 
     # Get grid info
+    time = u.time.values
     lat = u.latitude.values
     lon = u.longitude.values
     a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
@@ -62,32 +74,106 @@ for date in datelist[:]:
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
+   
+    # Create full pressure array (including top of atmosphere and surface pressure, 1100 is a dummy value)
+    levels = np.append(0, np.append(np.array(q.level), [1100, 1100])) * 100 # Pa
+    levels_reshaped = np.reshape(levels, [1, len(levels), 1, 1])
+    p_temp = np.tile(levels_reshaped, (len(time), 1, len(lat), len(lon)))
+    sp_reshaped = np.reshape(np.array(sp), [len(time), 1, len(lat), len(lon)])
+    sp_temp = np.tile(sp_reshaped, (1, len(levels), 1, 1))
+      
+    # find the location of the surface
+    above_surface = p_temp < sp_temp
+    surf_loc = np.sum(above_surface, axis=1)
+    
+    # find the location of the boundary
+    p_boundary = 0.72878581 * np.array(sp) + 7438.803223
+    p_boundary_reshaped = np.reshape(np.array(p_boundary), [len(time), 1, len(lat), len(lon)])
+    p_boundary_temp = np.tile(p_boundary_reshaped, (1, len(levels), 1, 1))
+    above_boundary = (p_temp < p_boundary_temp)
+    boundary_loc = np.sum(above_boundary, axis=1)
+    
+    # Create pressure fields: [time, top-upper_levels-boundary-lower_levels-surface:, latitude, longitude]
+    p_full = np.zeros(p_temp.shape)
+    q_full = np.zeros(p_temp.shape) # assume for p=0, q=0
+    u_full = np.zeros(p_temp.shape)
+    u_full[:,0,:,:] = u[:,0,:,:] # assume for p=0, u is equal to u at highest level in the atmosphere
+    v_full = np.zeros(p_temp.shape)
+    v_full[:,0,:,:] = v[:,0,:,:] # assume for p=0, u is equal to u at highest level in the atmosphere
+    for t in range(len(time)): #TODO: check if this loop is necessary (if removed possibly keep stored for debugging)
+        for i in range(len(lat)):
+            for j in range(len(lon)):
+                t=0
+                i=55
+                j=50
+                p_full[t,1:boundary_loc[t,i,j],i,j] = p_temp[t,1:boundary_loc[t,i,j],i,j]
+                p_full[t,boundary_loc[t,i,j],i,j] = p_boundary[t,i,j]
+                p_full[t,boundary_loc[t,i,j]+1:surf_loc[t,i,j]+1,i,j] = p_temp[t,boundary_loc[t,i,j]:surf_loc[t,i,j],i,j]
+                p_full[t,surf_loc[t,i,j]+1:,i,j] = sp[t,i,j]
+                
+                q_full[t,1:boundary_loc[t,i,j],i,j] = q[t,0:boundary_loc[t,i,j]-1,i,j]
+                q_full[t,boundary_loc[t,i,j],i,j] = q[t,boundary_loc[t,i,j]-2,i,j] + \
+                                                    ( (q[t,boundary_loc[t,i,j]-1,i,j] - q[t,boundary_loc[t,i,j]-2,i,j]) \
+                                                     * (p_boundary[t,i,j] - p_full[t,boundary_loc[t,i,j]-1,i,j]) ) \
+                                                        / (p_full[t,boundary_loc[t,i,j]+1,i,j] - p_full[t,boundary_loc[t,i,j]-1,i,j])
+                q_full[t,boundary_loc[t,i,j]+1:surf_loc[t,i,j]+1,i,j] = q[t,boundary_loc[t,i,j]-1:surf_loc[t,i,j]-1,i,j]
+                q_full[t,surf_loc[t,i,j]:,i,j] = q_surf[t,i,j]
+                
+                u_full[t,1:boundary_loc[t,i,j],i,j] = u[t,0:boundary_loc[t,i,j]-1,i,j]
+                u_full[t,boundary_loc[t,i,j],i,j] = u[t,boundary_loc[t,i,j]-2,i,j] + \
+                                                    ( (u[t,boundary_loc[t,i,j]-1,i,j] - u[t,boundary_loc[t,i,j]-2,i,j]) \
+                                                     * (p_boundary[t,i,j] - p_full[t,boundary_loc[t,i,j]-1,i,j]) ) \
+                                                        / (p_full[t,boundary_loc[t,i,j]+1,i,j] - p_full[t,boundary_loc[t,i,j]-1,i,j])
+                u_full[t,boundary_loc[t,i,j]+1:surf_loc[t,i,j]+1,i,j] = u[t,boundary_loc[t,i,j]-1:surf_loc[t,i,j]-1,i,j]
+                u_full[t,surf_loc[t,i,j]:,i,j] = u_surf[t,i,j]
+                
+                v_full[t,1:boundary_loc[t,i,j],i,j] = v[t,0:boundary_loc[t,i,j]-1,i,j]
+                v_full[t,boundary_loc[t,i,j],i,j] = v[t,boundary_loc[t,i,j]-2,i,j] + \
+                                                    ( (v[t,boundary_loc[t,i,j]-1,i,j] - v[t,boundary_loc[t,i,j]-2,i,j]) \
+                                                     * (p_boundary[t,i,j] - p_full[t,boundary_loc[t,i,j]-1,i,j]) ) \
+                                                        / (p_full[t,boundary_loc[t,i,j]+1,i,j] - p_full[t,boundary_loc[t,i,j]-1,i,j])
+                v_full[t,boundary_loc[t,i,j]+1:surf_loc[t,i,j]+1,i,j] = v[t,boundary_loc[t,i,j]-1:surf_loc[t,i,j]-1,i,j]
+                v_full[t,surf_loc[t,i,j]:,i,j] = v_surf[t,i,j]
+                
+                # TODO, if we keep this code like this, create a function for the manipulation of q, u, and v (uses the same code)            
 
-    # Create pressure array
-    levels = q.level #in hPa
-    p = levels.broadcast_like(u) * 100  # Pa
-
+    # TODO: add a quick check whether the new pressure level list is strictly increasing, otherwise give an error
+            
     # Interpolate to new levels
-    edges = 0.5 * (levels.values[1:] + levels.values[:-1])
-    u = u.interp(level=edges)
-    v = v.interp(level=edges)
-    q = q.interp(level=edges)
+    midpoints = 0.5 * (p_full[:,:-1,:,:] + p_full[:,1:,:,:]) # TODO: not used, but could be to used when converted to x_array
+    q_mid = 0.5 * (q_full[:,:-1,:,:] + q_full[:,1:,:,:])
+    u_mid = 0.5 * (u_full[:,:-1,:,:] + u_full[:,1:,:,:])
+    v_mid = 0.5 * (v_full[:,:-1,:,:] + v_full[:,1:,:,:])
 
     # Calculate pressure jump
-    dp = p.diff(dim="level")
-    dp["level"] = edges
-
+    dp = p_full[:,1:,:,:] - p_full[:,:-1,:,:]
+    
     # Determine the fluxes and states
-    fa_e = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
-    fa_n = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
-    cwv = q * dp / g * a_gridcell / density_water  # column water vapor (m3)
-
-    # Split in 2 layers
-    P_boundary = 0.72878581 * sp + 7438.803223
-    lower_layer = (dp.level < sp / 100) & (dp.level > P_boundary / 100)
-    upper_layer = dp.level < P_boundary / 100
-
+    fa_e = u_mid * q_mid * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
+    fa_n = v_mid * q_mid * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
+    cwv = q_mid * dp / g * a_gridcell / density_water  # column water vapor (m3)
+    
+    # convert fa_e, fa_n and cwv to xarray
+    def fs_to_xarray(fs, dimension_data, mid_levels, delta_pressure):
+        fs_xr = xr.DataArray(
+            data = fs,
+            dims = ["time", "level", "latitude", "longitude"],
+            coords = dict(
+                time = dimension_data.time,
+                latitude = dimension_data.latitude,
+                longitude = dimension_data.longitude,
+                mid_level = (["time", "level", "latitude", "longitude"], mid_levels),
+                delta_pressure = (["time", "level", "latitude", "longitude"], delta_pressure) 
+            ) )
+        return fs_xr
+    
+    fa_e = fs_to_xarray(fa_e, q, midpoints, dp)
+    fa_n = fs_to_xarray(fa_n, q, midpoints, dp)
+    cwv = fs_to_xarray(cwv, q, midpoints, dp)
+                    
     # Integrate fluxes and state
+    upper_layer = above_boundary[:,:-1,:,:]
+    lower_layer = ~upper_layer
     fa_e_lower = fa_e.where(lower_layer).sum(dim="level") #kg*m-1*s-1
     fa_n_lower = fa_n.where(lower_layer).sum(dim="level") #kg*m-1*s-1
     w_lower = cwv.where(lower_layer).sum(dim="level") #m3
