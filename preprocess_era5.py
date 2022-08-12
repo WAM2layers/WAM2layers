@@ -1,8 +1,3 @@
-#testplot lines
-import matplotlib.pyplot as plt
-def spatialtestplot(variable):
-    plt.figure(), plt.imshow(variable), plt.colorbar()
-
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -41,7 +36,6 @@ datelist = pd.date_range(
 )
 
 for date in datelist[:]:
-    date = datelist[0]
     print(date)
 
     # Load data
@@ -54,14 +48,8 @@ for date in datelist[:]:
     lsp = load_data("lsp", date) #large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
     tcw = load_data("tcw", date) # kg/m2
-    
-    # dummy data for the surface (should be replaced by download from Chris)
-    u_surf = u[:,-1,:,:]
-    v_surf = v[:,-1,:,:]
-    q_surf = q[:,-1,:,:]
 
     # Get grid info
-    time = u.time.values
     lat = u.latitude.values
     lon = u.longitude.values
     a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
@@ -74,32 +62,11 @@ for date in datelist[:]:
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
-   
-    # Create full pressure array (including top of atmosphere and surface pressure, 1100 is a dummy value)
-    levels = np.append(0, np.append(np.array(q.level), 1100)) * 100 # Pa
-    levels_reshaped = np.reshape(levels, [1, len(levels), 1, 1])
-    p_full = np.tile(levels_reshaped, (len(time), 1, len(lat), len(lon)))
-    sp_reshaped = np.reshape(np.array(sp), [len(time), 1, len(lat), len(lon)])
-    sp_full = np.tile(sp_reshaped, (1, len(levels), 1, 1))
-    
-    # find the location of the surface
-    above_surface = p_full < sp_full
-    surf_loc = np.sum(above_surface, axis=1)
-    
-    # Create pressure and humidity fields: [time, top-upper_levels-boundary-bottom_levels-surface:, latitude, longitude]
-    for t in range(len(time)):
-        for i in range(len(lat)):
-            for j in range(len(lon)):
-                p_full[t,surf_loc[t,i,j]:,i,j] = sp[t,i,j]
-    
-    # find the location of the boundary
-    p_boundary = 0.72878581 * np.array(sp) + 7438.803223
-    P_boundary_reshaped = np.reshape(np.array(sp), [len(time), 1, len(lat), len(lon)])
-    above_boundary = p_full < sp_full
-    boundary_loc = np.sum(above_boundary, axis=1)
-    
-    # TODO: add a quick check whether the new pressure level list is strictly increasing
-        
+
+    # Create pressure array
+    levels = q.level #in hPa
+    p = levels.broadcast_like(u) * 100  # Pa
+
     # Interpolate to new levels
     edges = 0.5 * (levels.values[1:] + levels.values[:-1])
     u = u.interp(level=edges)
