@@ -341,22 +341,6 @@ def backtrack(
         s_track_relative_upper = s_track_upper / s_upper[t+1]
         inner = np.s_[1:-1, 1:-1]
 
-        print(
-            "f_e_lower_we: ", (f_e_lower_we * look_east(s_track_relative_lower)).mean(), "\n",
-            "f_w_lower_ew: ", (f_w_lower_ew * look_west(s_track_relative_lower)).mean(), "\n",
-            "fy_n_lower_sn: ", (fy_n_lower_sn * look_north(s_track_relative_lower)).mean(), "\n",
-            "fy_s_lower_ns: ", (fy_s_lower_ns * look_south(s_track_relative_lower)).mean(), "\n",
-            "f_upward: ", (f_upward * s_track_relative_upper).mean(), "\n",
-            "f_downward: ", (f_downward * s_track_relative_lower).mean(), "\n",
-            "fy_s_lower_sn: ", (fy_s_lower_sn * s_track_relative_lower).mean(), "\n",
-            "fy_n_lower_ns: ", (fy_n_lower_ns * s_track_relative_lower).mean(), "\n",
-            "f_e_lower_ew: ", (f_e_lower_ew * s_track_relative_lower).mean(), "\n",
-            "f_w_lower_we: ", (f_w_lower_we * s_track_relative_lower).mean(), "\n",
-            "P_region: ", (P_region * (s_lower[t+1] / s_total)).mean(), "\n",
-            "evap: ", (evap[t] * s_track_relative_lower).mean(), "\n",
-        )
-
-
         # Actual tracking (note: backtracking, all terms have been negated)
         s_track_lower[inner] += (
             + f_e_lower_we * look_east(s_track_relative_lower)

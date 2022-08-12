@@ -84,10 +84,6 @@ for date in datelist[:]:
     # Get grid info
     a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
 
-    # Calculate volumes
-    evap *= a_gridcell[None, :, None]  # m3
-    precip *= a_gridcell[None, :, None] # m3
-
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     # Change sign convention to all positive,
