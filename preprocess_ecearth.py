@@ -7,8 +7,14 @@ import xarray as xr
 import yaml
 
 from preprocessing import (
-    resample, get_stable_fluxes, get_vertical_transport, get_grid_info,
-    join_levels, repeat_upper_level, get_new_target_levels, interpolate
+    resample,
+    get_stable_fluxes,
+    get_vertical_transport,
+    get_grid_info,
+    join_levels,
+    repeat_upper_level,
+    get_new_target_levels,
+    interpolate,
 )
 
 
@@ -34,7 +40,11 @@ def _get_input_data(variable, date, latnrs, lonnrs):
     """Get input data for variable."""
     filename = f"{name_of_run}{variable}_{date.year}{date.month:02d}_NH.nc"
     filepath = os.path.join(config["input_folder"], filename)
-    return xr.open_dataset(filepath).sel(time=date.strftime("%Y%m%d")).isel(lat=latnrs, lon=lonnrs)
+    return (
+        xr.open_dataset(filepath)
+        .sel(time=date.strftime("%Y%m%d"))
+        .isel(lat=latnrs, lon=lonnrs)
+    )
 
 
 def get_input_data(variable, date, latnrs, lonnrs):
@@ -164,14 +174,14 @@ for date in datelist:
     precip = (precipitation * a_gridcell).values
 
     # put data on a smaller time step
-    evap = resample(evap, divt/2, count_time, method='bfill')[:-1]
-    precip = resample(precip, divt/2, count_time, method='bfill')[:-1]
-    w_upper = resample(w_upper, divt, count_time, method='interp')
-    w_lower = resample(w_lower, divt, count_time, method='interp')
-    fa_e_upper = resample(fa_e_upper, divt, count_time, method='interp')[:-1]
-    fa_e_lower = resample(fa_e_lower, divt, count_time, method='interp')[:-1]
-    fa_n_upper = resample(fa_n_upper, divt, count_time, method='interp')[:-1]
-    fa_n_lower = resample(fa_n_lower, divt, count_time, method='interp')[:-1]
+    evap = resample(evap, divt / 2, count_time, method="bfill")[:-1]
+    precip = resample(precip, divt / 2, count_time, method="bfill")[:-1]
+    w_upper = resample(w_upper, divt, count_time, method="interp")
+    w_lower = resample(w_lower, divt, count_time, method="interp")
+    fa_e_upper = resample(fa_e_upper, divt, count_time, method="interp")[:-1]
+    fa_e_lower = resample(fa_e_lower, divt, count_time, method="interp")[:-1]
+    fa_n_upper = resample(fa_n_upper, divt, count_time, method="interp")[:-1]
+    fa_n_lower = resample(fa_n_lower, divt, count_time, method="interp")[:-1]
 
     # convert to m3   [kg*m^-1 * s^-1 * s * m * kg^-1 * m^3] = [m3]
     total_seconds = config["timestep"] / config["divt"]
@@ -185,7 +195,9 @@ for date in datelist:
     fa_e_lower, fa_n_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
 
     # determine the vertical moisture flux
-    fa_vert = get_vertical_transport(fa_e_upper, fa_e_lower, fa_n_upper, fa_n_lower, evap, precip, w_upper, w_lower)
+    fa_vert = get_vertical_transport(
+        fa_e_upper, fa_e_lower, fa_n_upper, fa_n_lower, evap, precip, w_upper, w_lower
+    )
 
     # Save preprocessed data
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"

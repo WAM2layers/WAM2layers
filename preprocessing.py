@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 import xarray as xr
 
 
-def resample(variable, divt, count_time, method='interp'):
+def resample(variable, divt, count_time, method="interp"):
     """Resample the variable to a given number of timesteps."""
 
     _, nlat, nlon = variable.shape
@@ -21,12 +21,14 @@ def resample(variable, divt, count_time, method='interp'):
             partvector[o + i] = i / divt
 
     for t in range(ntime):
-        idx = int((t+1) / divt + oddvector[t])
+        idx = int((t + 1) / divt + oddvector[t])
 
-        if method == 'bfill':
+        if method == "bfill":
             new_var[t] = (1 / divt) * variable[idx - 1]
-        elif method == 'interp':
-            new_var[t] = variable[idx - 1] + partvector[t] * (variable[idx] - variable[idx - 1])
+        elif method == "interp":
+            new_var[t] = variable[idx - 1] + partvector[t] * (
+                variable[idx] - variable[idx - 1]
+            )
         else:
             raise ValueError(f"Unknown resample method {method}")
 
@@ -97,7 +99,7 @@ def get_vertical_transport(
     w_top,
     w_down,
     periodic_boundary,
-    kvf
+    kvf,
 ):
 
     # total moisture in the column
