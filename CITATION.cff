@@ -36,8 +36,10 @@ abstract: >-
   or where evaporated moisture eventually ends up
   (forward tracking).
 keywords:
+  - moisture tracking
+  - hydrological cycle
   - meteorology
   - python
-  - moisture tracking
+  - moisture recycling
   - atmospheric rivers
 license: Apache-2.0
