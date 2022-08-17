@@ -276,8 +276,7 @@ def backtrack(
 
     # Sa calculation backward in time
     for t in reversed(range(ntime)):
-        # die allerlaatste stap -1 wil je toch niet?????
-        P_region = region * precip[t]  # WHY t-1 ?
+        P_region = region * precip[t] 
         s_total = s_upper[t+1] + s_lower[t+1]
 
         # separate the direction of the vertical flux and make it absolute
