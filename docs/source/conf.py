@@ -33,4 +33,5 @@ nb_execution_mode = "off"
 
 html_theme_options = {
     "includehidden": True,
+    'collapse_navigation': False,
 }
