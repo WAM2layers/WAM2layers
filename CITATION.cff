@@ -23,7 +23,7 @@ authors:
     name-particle: van de Koppel
   - given-names: Liang
     name-particle: Guo
-    orc-id: 'https://orcid.org/0000-0002-6004-3884'
+    orcid: 'https://orcid.org/0000-0002-6004-3884'
   - given-names: Peter
     family-names: Kalverla
     affiliation: Netherlands eScience Center
@@ -36,8 +36,12 @@ abstract: >-
   or where evaporated moisture eventually ends up
   (forward tracking).
 keywords:
+  - moisture tracking
+  - hydrological cycle
   - meteorology
   - python
-  - moisture tracking
+  - moisture recycling
   - atmospheric rivers
 license: Apache-2.0
+version: v3.0.0-beta
+date-released: '2022-03-18'
