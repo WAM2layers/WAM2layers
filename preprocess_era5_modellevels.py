@@ -6,7 +6,7 @@ import yaml
 import numpy as np
 from pathlib import Path
 
-from preprocessing import get_grid_info, get_stable_fluxes, get_vertical_transport
+from preprocessing import get_grid_info
 
 
 # Read case configuration
@@ -82,13 +82,7 @@ for date in datelist[:]:
     precip = cp + lsp
 
     # Get grid info
-    lat = u.latitude.values
-    lon = u.longitude.values
-    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
-
-    # Calculate volumes
-    evap *= a_gridcell  # m3
-    precip *= a_gridcell  # m3
+    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
@@ -110,123 +104,51 @@ for date in datelist[:]:
     lower_layer = dp_modellevels.lev > boundary
     upper_layer = ~lower_layer
 
+    cwv = q * dp_modellevels / g  #  # column water vapor (kg/m2)
+
     if config["vertical_integral_available"] == True:
-        # load total water column
-        tcw = load_surface_data("tcw", date)  # kg/m2
-
-        # Determine the states
-        cwv = q * dp_modellevels / g  #  # column water vapor (kg/m2)
-
         # calculate column water instead of column water vapour
+        tcw = load_surface_data("tcw", date)  # kg/m2
         cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+    else:
+        # calculate the fluxes based on the column water vapour
+        cw = cwv
 
-        # Determine the fluxes
-        fa_e = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
-        fa_n = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+    # Vertically integrate state over two layers
+    s_lower = (
+        cw.where(lower_layer).sum(dim="lev")
+        * a_gridcell[None, :, None]
+        / density_water
+    )  # m3
+    s_upper = (
+        cw.where(upper_layer).sum(dim="lev")
+        * a_gridcell[None, :, None]
+        / density_water
+    )  # m3
 
-        # no correction for fluxes as it is hard to decide how to distribute the correction over the two layers
-        # no correction for fluxes is applied but we use the column water to calculate them
-
-        # Vertically integrate state over two layers
-        w_lower = (
-            cw.where(lower_layer).sum(dim="lev")
-            * a_gridcell[np.newaxis, :]
-            / density_water
-        )  # m3
-        w_upper = (
-            cw.where(upper_layer).sum(dim="lev")
-            * a_gridcell[np.newaxis, :]
-            / density_water
-        )  # m3
-
-    else:  # calculate the fluxes based on the column water vapour
-
-        # Determine the states
-        cwv = q * dp_modellevels / g  #  # column water vapor (kg/m2)
-
-        # Determine the fluxes
-        fa_e = u * cwv  # eastward atmospheric moisture flux (kg m-1 s-1)
-        fa_n = v * cwv  # northward atmospheric moisture flux (kg m-1 s-1)
-
-        # Vertically integrate state over two layers
-
-        w_lower = (
-            cwv.where(lower_layer).sum(dim="lev")
-            * a_gridcell[np.newaxis, :]
-            / density_water
-        )  # m3
-        w_upper = (
-            cwv.where(upper_layer).sum(dim="lev")
-            * a_gridcell[np.newaxis, :]
-            / density_water
-        )  # m3
+    # Determine the fluxes
+    fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
+    fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
 
     # Vertically integrate fluxes over two layers
-    fa_e_lower = fa_e.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
-    fa_n_lower = fa_n.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
+    fx_lower = fx.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
+    fy_lower = fy.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
 
-    fa_e_upper = fa_e.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
-    fa_n_upper = fa_n.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
-
-    # Change units to m3, based on target frequency (not incoming frequency!)
-    target_freq = config["target_frequency"]
-    total_seconds = pd.Timedelta(target_freq).total_seconds()
-    fa_e_upper *= total_seconds * (l_ew_gridcell / density_water)
-    fa_e_lower *= total_seconds * (l_ew_gridcell / density_water)
-    fa_n_upper *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
-    fa_n_lower *= total_seconds * (l_mid_gridcell[None, :, None] / density_water)
-
-    # Put data on a smaller time step...
-    time = w_upper.time.values
-    newtime = pd.date_range(time[0], time[-1], freq="15Min")[:-1]
-    w_upper = w_upper.interp(time=newtime).values
-    w_lower = w_lower.interp(time=newtime).values
-
-    # ... fluxes on the edges instead of midpoints
-    newtime = newtime[:-1] + pd.Timedelta("6Min") / 2
-    fa_e_upper = fa_e_upper.interp(time=newtime).values
-    fa_n_upper = fa_n_upper.interp(time=newtime).values
-
-    fa_e_lower = fa_e_lower.interp(time=newtime).values
-    fa_n_lower = fa_n_lower.interp(time=newtime).values
-
-    precip = (precip.reindex(time=newtime, method="bfill") / 4).values
-    evap = (evap.reindex(time=newtime, method="bfill") / 4).values
-
-    # Stabilize horizontal fluxes
-    fa_e_upper, fa_n_upper = get_stable_fluxes(fa_e_upper, fa_n_upper, w_upper)
-    fa_e_lower, fa_n_lower = get_stable_fluxes(fa_e_lower, fa_n_lower, w_lower)
-
-    # Determine the vertical moisture flux
-    fa_vert = get_vertical_transport(
-        fa_e_upper,
-        fa_e_lower,
-        fa_n_upper,
-        fa_n_lower,
-        evap,
-        precip,
-        w_upper,
-        w_lower,
-        config["periodic_boundary"],
-        config["kvf"],
-    )
+    fx_upper = fx.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
+    fy_upper = fy.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
 
     # Save preprocessed data
-    # Note: fluxes (dim: time) are at the edges of the timesteps,
-    # while states (dim: time2) are at the midpoints and include next midnight
-    # so the first state from day 2 will overlap with the last flux from day 1
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = os.path.join(config["preprocessed_data_folder"], filename)
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "fa_e_upper": (["time", "lat", "lon"], fa_e_upper),
-            "fa_n_upper": (["time", "lat", "lon"], fa_n_upper),
-            "fa_e_lower": (["time", "lat", "lon"], fa_e_lower),
-            "fa_n_lower": (["time", "lat", "lon"], fa_n_lower),
-            "w_upper": (["time2", "lat", "lon"], w_upper),
-            "w_lower": (["time2", "lat", "lon"], w_lower),
-            "fa_vert": (["time", "lat", "lon"], fa_vert),
-            "evap": (["time", "lat", "lon"], evap),
-            "precip": (["time", "lat", "lon"], precip),
+            "fx_upper": fx_upper,
+            "fy_upper": fy_upper,
+            "fx_lower": fx_lower,
+            "fy_lower": fy_lower,
+            "s_upper": s_upper,
+            "s_lower": s_lower,
+            "evap": evap,
+            "precip": precip,
         }
     ).to_netcdf(output_path)
