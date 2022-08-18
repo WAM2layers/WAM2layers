@@ -33,7 +33,10 @@ def make_diagnostic_figures(
     # Get grid info
     lat = u.latitude.values
     lon = u.longitude.values
-    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(lat, lon)
+    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
+
+    # TODO: improve this
+    a_gridcell = a_gridcell[:, None]
 
     my_projection = ccrs.PlateCarree(central_longitude=0)
 

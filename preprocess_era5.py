@@ -1,11 +1,12 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-from pathlib import Path
 
-from preprocessing import get_grid_info
-
+from preprocessing import (get_grid_info, insert_level, interpolate,
+                           sortby_ndarray)
 
 # Set constants
 g = 9.80665  # [m/s2]
@@ -69,14 +70,14 @@ for date in datelist[:]:
     q = load_data("q", date)  # in kg kg-1
     u = load_data("u", date)  # in m/s
     v = load_data("v", date)  # in m/s
-    sp = load_data("sp", date)  # in Pa
+    p_surf = load_data("sp", date)  # in Pa
     evap = load_data("e", date)  # in m (accumulated hourly)
     cp = load_data("cp", date)  # convective precipitation in m (accumulated hourly)
     lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
     tcw = load_data("tcw", date)  # kg/m2
     d2m = load_data("d2m", date)  # Dew point in K
-    q_surf = calc_q2m(d2m, sp)  # kg kg-1
+    q_surf = calc_q2m(d2m, p_surf)  # kg kg-1
     u_surf = load_data("u10", date)  # in m/s
     v_surf = load_data("v10", date)  # in m/s
 
@@ -95,154 +96,66 @@ for date in datelist[:]:
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
-    # Create full pressure array (including top of atmosphere and surface pressure, 1100 is a dummy value)
-    levels = np.append(0, np.append(np.array(q.level), [1100, 1100])) * 100  # Pa
-    levels_reshaped = np.reshape(levels, [1, len(levels), 1, 1])
-    p_temp = np.tile(levels_reshaped, (len(time), 1, len(lat), len(lon)))
-    sp_reshaped = np.reshape(np.array(sp), [len(time), 1, len(lat), len(lon)])
-    sp_temp = np.tile(sp_reshaped, (1, len(levels), 1, 1))
+    # Create pressure array with the same dimensions as u, q, and v
+    p = u.level.broadcast_like(u)
 
-    # find the location of the surface
-    above_surface = p_temp < sp_temp
-    surf_loc = np.sum(above_surface, axis=1)
+    # Insert top of atmosphere values
+    u = insert_level(u, u.isel(level=0), 0)
+    v = insert_level(v, v.isel(level=0), 0)
+    q = insert_level(q, q.isel(level=0), 0)
+    p = insert_level(p, 0, 0)
 
-    # find the location of the boundary
-    p_boundary = 0.72878581 * np.array(sp) + 7438.803223
-    p_boundary_reshaped = np.reshape(
-        np.array(p_boundary), [len(time), 1, len(lat), len(lon)]
-    )
-    p_boundary_temp = np.tile(p_boundary_reshaped, (1, len(levels), 1, 1))
-    above_boundary = p_temp < p_boundary_temp
-    boundary_loc = np.sum(above_boundary, axis=1)
+    # Insert surface level values
+    u = insert_level(u, u_surf, 110000)
+    v = insert_level(v, v_surf, 110000)
+    q = insert_level(q, q_surf, 110000)
+    p = insert_level(p, p_surf, 110000)
 
-    # Create pressure fields: [time, top-upper_levels-boundary-lower_levels-surface:, latitude, longitude]
-    # TODO: the loop below works, but is super slow, check if this loop is necessary (if removed possibly keep stored for debugging)
-    p_full = np.zeros(p_temp.shape)
-    q_full = np.zeros(p_temp.shape)  # assume for p=0, q=0
-    u_full = np.zeros(p_temp.shape)
-    u_full[:, 0, :, :] = u[
-        :, 0, :, :
-    ]  # assume for p=0, u is equal to u at highest level in the atmosphere
-    v_full = np.zeros(p_temp.shape)
-    v_full[:, 0, :, :] = v[
-        :, 0, :, :
-    ]  # assume for p=0, u is equal to u at highest level in the atmosphere
-    for t in range(len(time)):
-        for i in range(len(lat)):
-            for j in range(len(lon)):
-                p_full[t, 1 : boundary_loc[t, i, j], i, j] = p_temp[
-                    t, 1 : boundary_loc[t, i, j], i, j
-                ]
-                p_full[t, boundary_loc[t, i, j], i, j] = p_boundary[t, i, j]
-                p_full[
-                    t, boundary_loc[t, i, j] + 1 : surf_loc[t, i, j] + 1, i, j
-                ] = p_temp[t, boundary_loc[t, i, j] : surf_loc[t, i, j], i, j]
-                p_full[t, surf_loc[t, i, j] + 1 :, i, j] = sp[t, i, j]
+    # Sort arrays by pressure (ascending)
+    u.values = sortby_ndarray(u.values, p.values, axis=1)
+    v.values = sortby_ndarray(v.values, p.values, axis=1)
+    q.values = sortby_ndarray(q.values, p.values, axis=1)
+    p.values = sortby_ndarray(p.values, p.values, axis=1)
 
-                q_full[t, 1 : boundary_loc[t, i, j], i, j] = q[
-                    t, 0 : boundary_loc[t, i, j] - 1, i, j
-                ]
-                q_full[t, boundary_loc[t, i, j], i, j] = q[
-                    t, boundary_loc[t, i, j] - 2, i, j
-                ] + (
-                    (
-                        q[t, boundary_loc[t, i, j] - 1, i, j]
-                        - q[t, boundary_loc[t, i, j] - 2, i, j]
-                    )
-                    * (p_boundary[t, i, j] - p_full[t, boundary_loc[t, i, j] - 1, i, j])
-                ) / (
-                    p_full[t, boundary_loc[t, i, j] + 1, i, j]
-                    - p_full[t, boundary_loc[t, i, j] - 1, i, j]
-                )
-                q_full[t, boundary_loc[t, i, j] + 1 : surf_loc[t, i, j] + 1, i, j] = q[
-                    t, boundary_loc[t, i, j] - 1 : surf_loc[t, i, j] - 1, i, j
-                ]
-                q_full[t, surf_loc[t, i, j] :, i, j] = q_surf[t, i, j]
+    # Insert boundary level values (at a ridiculous dummy pressure value)
+    p_boundary = 0.72878581 * np.array(p_surf) + 7438.803223
+    u = insert_level(u, interpolate(p_boundary, p, u), 150000)
+    v = insert_level(v, interpolate(p_boundary, p, v), 150000)
+    q = insert_level(q, interpolate(p_boundary, p, q), 150000)
+    p = insert_level(p, p_boundary, 150000)
 
-                u_full[t, 1 : boundary_loc[t, i, j], i, j] = u[
-                    t, 0 : boundary_loc[t, i, j] - 1, i, j
-                ]
-                u_full[t, boundary_loc[t, i, j], i, j] = u[
-                    t, boundary_loc[t, i, j] - 2, i, j
-                ] + (
-                    (
-                        u[t, boundary_loc[t, i, j] - 1, i, j]
-                        - u[t, boundary_loc[t, i, j] - 2, i, j]
-                    )
-                    * (p_boundary[t, i, j] - p_full[t, boundary_loc[t, i, j] - 1, i, j])
-                ) / (
-                    p_full[t, boundary_loc[t, i, j] + 1, i, j]
-                    - p_full[t, boundary_loc[t, i, j] - 1, i, j]
-                )
-                u_full[t, boundary_loc[t, i, j] + 1 : surf_loc[t, i, j] + 1, i, j] = u[
-                    t, boundary_loc[t, i, j] - 1 : surf_loc[t, i, j] - 1, i, j
-                ]
-                u_full[t, surf_loc[t, i, j] :, i, j] = u_surf[t, i, j]
+    # Sort arrays by pressure once more (ascending)
+    u.values = sortby_ndarray(u.values, p.values, axis=1)
+    v.values = sortby_ndarray(v.values, p.values, axis=1)
+    q.values = sortby_ndarray(q.values, p.values, axis=1)
+    p.values = sortby_ndarray(p.values, p.values, axis=1)
 
-                v_full[t, 1 : boundary_loc[t, i, j], i, j] = v[
-                    t, 0 : boundary_loc[t, i, j] - 1, i, j
-                ]
-                v_full[t, boundary_loc[t, i, j], i, j] = v[
-                    t, boundary_loc[t, i, j] - 2, i, j
-                ] + (
-                    (
-                        v[t, boundary_loc[t, i, j] - 1, i, j]
-                        - v[t, boundary_loc[t, i, j] - 2, i, j]
-                    )
-                    * (p_boundary[t, i, j] - p_full[t, boundary_loc[t, i, j] - 1, i, j])
-                ) / (
-                    p_full[t, boundary_loc[t, i, j] + 1, i, j]
-                    - p_full[t, boundary_loc[t, i, j] - 1, i, j]
-                )
-                v_full[t, boundary_loc[t, i, j] + 1 : surf_loc[t, i, j] + 1, i, j] = v[
-                    t, boundary_loc[t, i, j] - 1 : surf_loc[t, i, j] - 1, i, j
-                ]
-                v_full[t, surf_loc[t, i, j] :, i, j] = v_surf[t, i, j]
-
-                # TODO, if we keep this code like this, create a function for the manipulation of q, u, and v (uses the same code)
-
-    # TODO: add a quick check whether the new pressure level list is strictly increasing, otherwise give an error!
-
-    # Interpolate to new levels
-    midpoints = 0.5 * (
-        p_full[:, :-1, :, :] + p_full[:, 1:, :, :]
-    )  # TODO: not used, but could be to used when converted to x_array
-    q_mid = 0.5 * (q_full[:, :-1, :, :] + q_full[:, 1:, :, :])
-    u_mid = 0.5 * (u_full[:, :-1, :, :] + u_full[:, 1:, :, :])
-    v_mid = 0.5 * (v_full[:, :-1, :, :] + v_full[:, 1:, :, :])
+    # Reset level coordinate as its values have become meaningless
+    nlev = u.level.size
+    u = u.assign_coords(level=np.arange(len(u.level)))
+    v = v.assign_coords(level=np.arange(len(u.level)))
+    q = q.assign_coords(level=np.arange(len(u.level)))
+    p = p.assign_coords(level=np.arange(len(u.level)))
 
     # Calculate pressure jump
-    dp = p_full[:, 1:, :, :] - p_full[:, :-1, :, :]
+    dp = p.diff("level")
+    assert np.all(dp > 0), "Pressure levels should increase monotonically"
+
+    # Interpolate to midpoints
+    midpoints = 0.5 * (u.level.values[1:] + u.level.values[:-1])
+    u = u.interp(level=midpoints)
+    v = v.interp(level=midpoints)
+    q = q.interp(level=midpoints)
+    p = p.interp(level=midpoints)
+    dp.assign_coords(level=midpoints)
 
     # Determine the fluxes and states
-    fx = u_mid * q_mid * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
-    fy = v_mid * q_mid * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
-    cwv = q_mid * dp / g * a_gridcell / density_water  # column water vapor (m3)
-
-    # convert fa_e, fa_n and cwv to xarray # TODO: move to preprocessing function
-    def fs_to_xarray(fs, dimension_data, mid_levels, delta_pressure):
-        fs_xr = xr.DataArray(
-            data=fs,
-            dims=["time", "level", "latitude", "longitude"],
-            coords=dict(
-                time=dimension_data.time,
-                latitude=dimension_data.latitude,
-                longitude=dimension_data.longitude,
-                mid_level=(["time", "level", "latitude", "longitude"], mid_levels),
-                delta_pressure=(
-                    ["time", "level", "latitude", "longitude"],
-                    delta_pressure,
-                ),
-            ),
-        )
-        return fs_xr
-
-    fx = fs_to_xarray(fa_e, q, midpoints, dp)
-    fy = fs_to_xarray(fa_n, q, midpoints, dp)
-    cwv = fs_to_xarray(cwv, q, midpoints, dp)
+    fx = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
+    fy = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
+    cwv = q * dp / g * a_gridcell[None, None, :, None] / density_water  # column water vapor (m3)
 
     # Integrate fluxes and state
-    upper_layer = above_boundary[:, :-1, :, :]
+    upper_layer = p < p_boundary[:, None, :, :]
     lower_layer = ~upper_layer
 
     fx_lower = fx.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
@@ -253,12 +166,12 @@ for date in datelist[:]:
     fy_upper = fy.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
     s_upper = cwv.where(upper_layer).sum(dim="level")  # m3
 
-    print(
-        "Check calculation water vapor, this value should be zero:",
-        (cwv.sum(dim="level") - (s_upper + s_lower)).sum().values,
+    # Check column water vapor conservation
+    np.testing.assert_array_almost_equal(
+        cwv.sum(dim="level"),
+        s_upper + s_lower,
+        err_msg="Column water vapor should be approximately 0"
     )
-
-    tcwm3 = tcw * a_gridcell[np.newaxis, :] / density_water  # m3
 
     # Save preprocessed data
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"

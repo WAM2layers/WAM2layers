@@ -64,11 +64,11 @@ def get_grid_info(ds):
 def join_levels(pressure_level_data, surface_level_data):
     """Combine 3d pressure level and 2d surface level data.
 
-    A dummy value of 1000 hPa is inserted for the surface pressure
+    A dummy value of 1100 hPa is inserted for the surface pressure
     """
     bottom = pressure_level_data.isel(lev=0).copy()
     bottom.values = surface_level_data.values
-    bottom["lev"] = 100000.0  # dummy value
+    bottom["lev"] = 110000.0  # dummy value
 
     # NB: plevs needs to come first to preserve dimension order
     return xr.concat([pressure_level_data, bottom], dim="lev").sortby(
@@ -125,7 +125,7 @@ def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
     return new_p
 
 
-def interpolate(old_var, old_pressure_levels, new_pressure_levels, type="linear"):
+def interpolate_old(old_var, old_pressure_levels, new_pressure_levels, type="linear"):
     """Interpolate old_var to new_pressure_levels."""
     new_var = np.zeros_like(new_pressure_levels)
 
@@ -145,3 +145,84 @@ def interpolate(old_var, old_pressure_levels, new_pressure_levels, type="linear"
                 new_var[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])
 
     return new_var
+
+
+def interpolate(x, xp, fp, axis=1, descending=False):
+    """Linearly interpolate along an axis of an N-dimensional array.
+
+    This function interpolates one slice at a time, i.e. if xp and fp are 4d
+    arrays, x should be a 3d array and the function will return a 3d array.
+
+    It is assumed that the input array is monotonic along the axis.
+    """
+    # Cast input to numpy arrays
+    x = np.asarray(x)
+    xp = np.asarray(xp)
+    fp = np.asarray(fp)
+
+    # Move interpolation axis to first position for easier indexing
+    xp = np.moveaxis(xp, axis, 0)
+    fp = np.moveaxis(fp, axis, 0)
+
+    # Handle descending axis
+    if descending:
+        xp = np.flip(xp, axis=0)
+        fp = np.flip(fp, axis=0)
+        assert np.diff(xp, axis=0).min() >= 0, "with descending=False, xp must be monotonically decreasing"
+    else:
+        assert np.diff(xp, axis=0).min() >= 0, "with desciending=True, xp must be monotonically increasing"
+
+    # Check for out of bounds values
+    if np.any(x[None, ...] < xp[0, ...]):
+        raise ValueError("one or more x are below the lowest value of xp")
+    if np.any(x[None, ...] > xp[-1, ...]):
+        raise ValueError("one or more x are above the highest value of xp")
+
+    # Find indices such that xp[lower] < x < xp[upper]
+    upper = np.sum(x > xp, axis=0)
+    lower = upper - 1
+
+    # This will allow numpy advanced indexing to take an (N-1)D slice of an ND array
+    upper = (upper, *np.meshgrid(*[range(l) for l in x.shape], indexing="ij"))
+    lower = (lower, *np.meshgrid(*[range(l) for l in x.shape], indexing="ij"))
+
+    fy = fp[lower] + (fp[upper] - fp[lower]) * (x - xp[lower]) / (xp[upper] - xp[lower])
+    return fy
+
+
+def insert_level(pressure_level_data, new_level, coord_value, dim_name="level"):
+    """Insert a new level in the pressure level data.
+
+    Note: new levels are inserted at the end of the dimension.
+    Sorting by descending pressure is not performed automatically.
+
+    Args:
+        - pressure_level_data: xarray.DataArray with dimensions (time, lev, lat,
+          lon)
+        - new_level: the new data values that should be inserted as an
+          additional level. If int or float, it will insert a constant value. If
+          array like, it will insert the values in the array.
+        - coord_value: coordinate value to use for the new level, e.g. 110000 Pa
+          for well below the surface. Must be unique.
+    """
+    # Create dummy array that can be concatenated with the original data.
+    dummy = pressure_level_data.isel({dim_name: 0}).copy()
+    dummy[dim_name] = coord_value
+
+    # Insert the nedim_name data into the dummy array
+    if isinstance(new_level, xr.DataArray):
+        dummy.values = new_level.values
+    elif isinstance(new_level, np.ndarray):
+        dummy.values = new_level
+    elif isinstance(new_level, (int, float)):
+        dummy.values = np.ones_like(dummy) * new_level
+    else:
+        raise ValueError("Invalid type for new_level")
+
+    return xr.concat([pressure_level_data, dummy], dim=dim_name)
+
+
+def sortby_ndarray(array, other, axis):
+    """Sort array along axis by the values in another array."""
+    idx = np.argsort(other, axis=axis)
+    return np.take_along_axis(array, idx, axis=axis)
