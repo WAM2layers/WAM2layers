@@ -23,7 +23,7 @@ authors:
     name-particle: van de Koppel
   - given-names: Liang
     name-particle: Guo
-    orc-id: 'https://orcid.org/0000-0002-6004-3884'
+    orcid: 'https://orcid.org/0000-0002-6004-3884'
   - given-names: Peter
     family-names: Kalverla
     affiliation: Netherlands eScience Center
