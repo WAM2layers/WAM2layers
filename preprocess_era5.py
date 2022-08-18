@@ -41,20 +41,25 @@ datelist = pd.date_range(
 for date in datelist[:]:
     print(date)
 
-    # Load data
+    # 4d fields
     q = load_data("q", date)  # in kg kg-1
     u = load_data("u", date)  # in m/s
     v = load_data("v", date)  # in m/s
-    p_surf = load_data("sp", date)  # in Pa
+
+    # Precipitation and evaporation
     evap = load_data("e", date)  # in m (accumulated hourly)
     cp = load_data("cp", date)  # convective precipitation in m (accumulated hourly)
     lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
+
+    # TODO: not used
     tcw = load_data("tcw", date)  # kg/m2
-    d2m = load_data("d2m", date)  # Dew point in K
-    q_surf = calculate_humidity(d2m, p_surf)  # kg kg-1
+
+    p_surf = load_data("sp", date)  # in Pa
+    d_surf = load_data("d2m", date)  # Dew point in K
     u_surf = load_data("u10", date)  # in m/s
     v_surf = load_data("v10", date)  # in m/s
+    q_surf = calculate_humidity(d2m, p_surf)  # kg kg-1
 
     # Get grid info
     time = u.time.values
@@ -63,6 +68,7 @@ for date in datelist[:]:
     a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
 
     # Calculate volumes
+    # TODO: shall we do this in the tracking?
     evap *= a_gridcell[None, :, None]  # m3
     precip *= a_gridcell[None, :, None]  # m3
 
@@ -107,10 +113,10 @@ for date in datelist[:]:
 
     # Reset level coordinate as its values have become meaningless
     nlev = u.level.size
-    u = u.assign_coords(level=np.arange(len(u.level)))
-    v = v.assign_coords(level=np.arange(len(u.level)))
-    q = q.assign_coords(level=np.arange(len(u.level)))
-    p = p.assign_coords(level=np.arange(len(u.level)))
+    u = u.assign_coords(level=np.arange(nlev))
+    v = v.assign_coords(level=np.arange(nlev))
+    q = q.assign_coords(level=np.arange(nlev))
+    p = p.assign_coords(level=np.arange(nlev))
 
     # Calculate pressure jump
     dp = p.diff("level")
@@ -126,7 +132,7 @@ for date in datelist[:]:
 
     # Determine the fluxes and states
     fx = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
-    fy = v * q * dp / g  # northward atmospheric moisture flux (#kg*m-1*s-1)
+    fy = v * q * dp / g  # northward atmospheric moisture flux (kg*m-1*s-1)
     cwv = q * dp / g * a_gridcell[None, None, :, None] / density_water  # column water vapor (m3)
 
     # Integrate fluxes and state
