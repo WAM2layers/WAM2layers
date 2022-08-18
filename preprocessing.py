@@ -226,3 +226,27 @@ def sortby_ndarray(array, other, axis):
     """Sort array along axis by the values in another array."""
     idx = np.argsort(other, axis=axis)
     return np.take_along_axis(array, idx, axis=axis)
+
+
+def calculate_humidity(dewpoint, pressure):
+    """
+    Calculate the specific humidity from (surface) pressure and
+    dew point temperature
+
+    See further details at eq. 7.4 and 7.5 (Page 102) of:
+    https://www.ecmwf.int/en/elibrary/20198-ifs-documentation-cy47r3-part-iv-physical-processes
+    """
+    Rd = 287.0597
+    Rv = 461.5250
+    a1 = 611.21
+    a3 = 17.502
+    a4 = 32.19
+    t0 = 273.15
+
+    # Calculation of saturation water vapour pressure from Teten's formula
+    svp = a1 * np.exp(a3 * (dewpoint - t0) / (dewpoint - a4))
+
+    # Specific humidity
+    spec_hum = (Rd / Rv) * svp / (pressure - ((1 - Rd / Rv) * svp))
+
+    return spec_hum
