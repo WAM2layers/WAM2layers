@@ -11,3 +11,6 @@ dependencies:
   - pyyaml
   - xarray
   - ipython
+
+
+# dev: sphinx, myst-parser, cffconvert, black, isort, ...
