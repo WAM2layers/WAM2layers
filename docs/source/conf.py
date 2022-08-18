@@ -35,3 +35,11 @@ html_theme_options = {
     "includehidden": True,
     'collapse_navigation': False,
 }
+
+# This modifies the "edit on github" link at the top
+html_context = {
+  'display_github': True,
+  'github_user': 'WAM2layers',
+  'github_repo': 'WAM2layers',
+  'github_version': 'master'
+}
