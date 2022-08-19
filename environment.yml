@@ -10,10 +10,10 @@ dependencies:
   - matplotlib
   - pyyaml
   - xarray
-  # - ipython
-  # - sphinx
-  # - sphinx_rtd_theme
-  # - myst-nb
-  # - black
-  # - isort
-  # - cffconvert
+  - ipython
+  - sphinx
+  - sphinx_rtd_theme
+  - myst-nb
+  - black
+  - isort
+  - cffconvert
