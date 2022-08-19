@@ -164,6 +164,11 @@ def change_units(fluxes, target_freq):
     for variable in fluxes.data_vars:
         fluxes[variable] = fluxes[variable].assign_attrs(units="m**3")
 
+    states["s_upper"] *= a[None, :, None] / density
+    states["s_lower"] *= a[None, :, None] / density
+    for variable in states.data_vars:
+        states[variable] = states[variable].assign_attrs(units="m**3")
+
 
 def stabilize_fluxes(fluxes, states):
     """Stabilize the outfluxes / influxes.
@@ -415,8 +420,8 @@ for i, date in enumerate(reversed(datelist[:])):
     # After this, the fluxes will be "in between" the states
     fluxes, states = resample(preprocessed_data, config['target_frequency'])
 
-    # Convert flux data to volumes
-    change_units(fluxes, config["target_frequency"])
+    # Convert data to volumes
+    change_units(fluxes, states, config["target_frequency"])
 
     # Apply a stability correction if needed
     stabilize_fluxes(fluxes, states)

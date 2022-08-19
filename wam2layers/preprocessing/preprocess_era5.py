@@ -5,12 +5,10 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from preprocessing import (get_grid_info, insert_level, interpolate,
-                           sortby_ndarray)
+from preprocessing import insert_level, interpolate, sortby_ndarray
 
 # Set constants
 g = 9.80665  # [m/s2]
-density_water = 1000  # [kg/m3]
 
 # Read case configuration
 with open("cases/era5_2013.yaml") as f:
@@ -21,13 +19,17 @@ output_dir = Path(config["preprocessed_data_folder"]).expanduser()
 output_dir.mkdir(exist_ok=True, parents=True)
 
 
-def load_data(variable, date):
+def load_data(variable, date, levels=None):
     """Load data for given variable and date."""
-    filepath = Path(config["input_folder"]) / f"FloodCase_201305_{variable}.nc"
+    # TODO: remove hardcoded filename pattern
+    filepath = Path(config["input_folder"]) / f"FloodCase_202107_{variable}.nc"
     da = xr.open_dataset(filepath)[variable]
 
     # Include midnight of the next day (if available)
     extra = date + pd.Timedelta(days=1)
+
+    if levels is not None:
+        return da.sel(time=slice(date, extra)).sel(level=levels)
     return da.sel(time=slice(date, extra))
 
 
@@ -42,9 +44,9 @@ for date in datelist[:]:
     print(date)
 
     # 4d fields
-    q = load_data("q", date)  # in kg kg-1
     u = load_data("u", date)  # in m/s
     v = load_data("v", date)  # in m/s
+    q = load_data("q", date)  # in kg kg-1
 
     # Precipitation and evaporation
     evap = load_data("e", date)  # in m (accumulated hourly)
@@ -52,25 +54,12 @@ for date in datelist[:]:
     lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
     precip = cp + lsp
 
-    # TODO: not used
-    tcw = load_data("tcw", date)  # kg/m2
-
+    # 3d fields
     p_surf = load_data("sp", date)  # in Pa
     d_surf = load_data("d2m", date)  # Dew point in K
     u_surf = load_data("u10", date)  # in m/s
     v_surf = load_data("v10", date)  # in m/s
     q_surf = calculate_humidity(d2m, p_surf)  # kg kg-1
-
-    # Get grid info
-    time = u.time.values
-    lat = u.latitude.values
-    lon = u.longitude.values
-    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
-
-    # Calculate volumes
-    # TODO: shall we do this in the tracking?
-    evap *= a_gridcell[None, :, None]  # m3
-    precip *= a_gridcell[None, :, None]  # m3
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
@@ -130,26 +119,36 @@ for date in datelist[:]:
     p = p.interp(level=midpoints)
     dp.assign_coords(level=midpoints)
 
-    # Determine the fluxes and states
-    fx = u * q * dp / g  # eastward atmospheric moisture flux (kg*m-1*s-1)
-    fy = v * q * dp / g  # northward atmospheric moisture flux (kg*m-1*s-1)
-    cwv = q * dp / g * a_gridcell[None, None, :, None] / density_water  # column water vapor (m3)
-
-    # Integrate fluxes and state
+    # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
     lower_layer = ~upper_layer
 
-    fx_lower = fx.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
-    fy_lower = fy.where(lower_layer).sum(dim="level")  # kg*m-1*s-1
-    s_lower = cwv.where(lower_layer).sum(dim="level")  # m3
+    cwv = q * dp / g  # column water vapor (m3)
 
-    fx_upper = fx.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
-    fy_upper = fy.where(upper_layer).sum(dim="level")  # kg*m-1*s-1
-    s_upper = cwv.where(upper_layer).sum(dim="level")  # m3
+    if config["vertical_integral_available"] == True:
+        # calculate column water instead of column water vapour
+        tcw = load_data("tcw", date)  # kg/m2
+        cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
+    else:
+        # calculate the fluxes based on the column water vapour
+        cw = cwv
+
+    # Vertically integrate state over two layers
+    s_lower = cw.where(lower_layer).sum(dim="level")
+    s_upper = cw.where(upper_layer).sum(dim="level")
+    # Determine the fluxes
+    fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
+    fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+
+    # Vertically integrate fluxes over two layers
+    fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+    fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+    fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+    fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
     # Check column water vapor conservation
     np.testing.assert_array_almost_equal(
-        cwv.sum(dim="level"),
+        cw.sum(dim="level"),
         s_upper + s_lower,
         err_msg="Column water vapor should be approximately 0"
     )
@@ -157,7 +156,6 @@ for date in datelist[:]:
     # Save preprocessed data
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = output_dir / filename
-
     xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fx_upper": fx_upper,
