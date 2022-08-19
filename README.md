@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/wam2layers/badge/?version=latest)](https://wam2layers.readthedocs.io/en/latest/?badge=latest)
+
 # Atmospheric moisture tracking
 
 This repository contains the source code of the WAM2layers moisture tracking
