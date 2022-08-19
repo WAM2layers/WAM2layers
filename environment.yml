@@ -1,5 +1,6 @@
 name: wam2layers
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - python=3
@@ -13,7 +14,8 @@ dependencies:
   - ipython
   - sphinx
   - sphinx_rtd_theme
-  - myst-nb
   - black
   - isort
-  - cffconvert
+  - pip:
+    - myst-nb
+    - cffconvert
