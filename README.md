@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/471007521.svg)](https://zenodo.org/badge/latestdoi/471007521)
 [![Documentation Status](https://readthedocs.org/projects/wam2layers/badge/?version=latest)](https://wam2layers.readthedocs.io/en/latest/?badge=latest)
 
 # Atmospheric moisture tracking
@@ -44,7 +45,8 @@ We are actively developing the code at the moment, so it may be subject to
 change. We encourage anyone who is interested in re-using the code to get in
 touch. We may be able to help.
 
-If you use the code for a publication, please cite it using its DOI (TODO)
-and/or the following paper: [Contrasting roles of interception and transpiration
-in the hydrological cycle - Part 2: Moisture
+If you use the code for a publication, please cite it using the [DOI of the
+appropriate release](https://doi.org/10.5281/zenodo.7010594) and/or the
+following paper: [Contrasting roles of interception and transpiration in the
+hydrological cycle - Part 2: Moisture
 recycling](https://doi.org/10.5194/esd-5-471-2014)
