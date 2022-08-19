@@ -5,7 +5,7 @@ code originally developed by Ruud van der Ent. It can be used to determine where
 precipitation originally evaporated (backtracking), or where evaporated moisture
 eventually ends up (forward tracking).
 
-See the [documentation](#) for a more detailed description.
+See the [documentation](http://wam2layers.rtfd.io/) for a more detailed description.
 
 # How to use
 
