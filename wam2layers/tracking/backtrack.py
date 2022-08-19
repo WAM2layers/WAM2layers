@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from visualization import make_diagnostic_figures
+from analysis.visualization import make_diagnostic_figures
 from preprocessing import get_grid_info
 
 # Read case configuration
@@ -276,7 +276,7 @@ def backtrack(
 
     # Sa calculation backward in time
     for t in reversed(range(ntime)):
-        P_region = region * precip[t] 
+        P_region = region * precip[t]
         s_total = s_upper[t+1] + s_lower[t+1]
 
         # separate the direction of the vertical flux and make it absolute
