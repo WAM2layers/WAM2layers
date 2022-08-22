@@ -93,11 +93,6 @@ for date in datelist[:]:
     q = insert_level(q, q_surf, 110000)
     p = insert_level(p, p_surf, 110000)
     
-    # set pressure value below surface to surface pressure
-    below_surface = p > np.array(p_surf)[:, None, :, :]
-    # TODO: insert a line that replaces all pressure values where the pressure is below surface with surface pressure (without a loop), something like this, but does not work (array dimension mismatch):
-    #p[p.where(below_surface)] = p_surf
-
     # Sort arrays by pressure (ascending)
     u.values = sortby_ndarray(u.values, p.values, axis=1)
     v.values = sortby_ndarray(v.values, p.values, axis=1)
@@ -134,9 +129,9 @@ for date in datelist[:]:
     v = v.interp(level=midpoints)
     q = q.interp(level=midpoints)
     p = p.interp(level=midpoints)
-    dp.assign_coords(level=midpoints)
+    dp = dp.assign_coords(level=midpoints)
     
-    # water vapor voxels #TODO: ERROR the lines below results for unknown reason in cwv with shape=(25, 0, 121, 321)
+    # water vapor voxels
     cwv = q * dp / g  #  # column water vapor (kg/m2)
     
     if config["vertical_integral_available"] == True:
@@ -149,7 +144,7 @@ for date in datelist[:]:
     
     # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
-    lower_layer = ~upper_layer
+    lower_layer = (p_boundary[:, None, :, :] < p) & (p < np.array(p_surf)[:, None, :, :])
                  
     # Vertically integrate state over two layers
     s_lower = (
