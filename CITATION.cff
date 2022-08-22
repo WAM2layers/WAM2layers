@@ -43,5 +43,9 @@ keywords:
   - moisture recycling
   - atmospheric rivers
 license: Apache-2.0
-version: v3.0.0-beta
-date-released: '2022-03-18'
+version: v3.0.0-beta.2
+date-released: '2022-08-19'
+identifiers:
+  - description: Latest version of software
+    type: doi
+    value: "10.5281/zenodo.7010594"
