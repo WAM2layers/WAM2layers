@@ -144,11 +144,12 @@ for date in datelist[:]:
     if config["vertical_integral_available"] == True:
         # calculate column water instead of column water vapour
         tcw = load_data("tcw", date)  # kg/m2
-        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2) 
+        #TODO: warning if cw >> cwv
     else:
-        # calculate the fluxes based on the column water vapour
+        # fluxes will be calculated based on the column water vapour
         cw = cwv
-    
+       
     # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
     lower_layer = p_boundary[:, None, :, :] < p
