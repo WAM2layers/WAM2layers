@@ -150,8 +150,7 @@ for date in datelist[:]:
     # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
     lower_layer = ~upper_layer
-    lower_layer = (dp.level < sp / 100) & (dp.level > P_boundary / 100)
-             
+                 
     # Vertically integrate state over two layers
     s_lower = (
         cw.where(lower_layer).sum(dim="lev")
