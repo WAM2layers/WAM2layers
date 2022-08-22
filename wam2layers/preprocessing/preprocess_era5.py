@@ -92,6 +92,11 @@ for date in datelist[:]:
     v = insert_level(v, v_surf, 110000)
     q = insert_level(q, q_surf, 110000)
     p = insert_level(p, p_surf, 110000)
+    
+    # set pressure value below surface to surface pressure
+    p.values[p > p_surf
+    below_surface = p > p_surf[:, None, :, :]
+    p[p.where(lower_layer)] = 
 
     # Sort arrays by pressure (ascending)
     u.values = sortby_ndarray(u.values, p.values, axis=1)
