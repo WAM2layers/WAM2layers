@@ -5,13 +5,14 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from preprocessing import insert_level, interpolate, sortby_ndarray
+from preprocessing import (calculate_humidity, insert_level, interpolate,
+                           sortby_ndarray)
 
 # Set constants
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("../../cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -50,8 +51,8 @@ for date in datelist[:]:
 
     # Precipitation and evaporation
     evap = load_data("e", date)  # in m (accumulated hourly)
-    cp = load_data("cp", date)  # convective precipitation in m (accumulated hourly)
-    lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
+    cp = load_data("cp", date)  # convective precip in m (accumulated hourly)
+    lsp = load_data("lsp", date)  # large scale precip in m (accumulated)
     precip = cp + lsp
 
     # 3d fields
@@ -59,23 +60,25 @@ for date in datelist[:]:
     d_surf = load_data("d2m", date)  # Dew point in K
     u_surf = load_data("u10", date)  # in m/s
     v_surf = load_data("v10", date)  # in m/s
-    q_surf = calculate_humidity(d2m, p_surf)  # kg kg-1
+    q_surf = calculate_humidity(d_surf, p_surf)  # kg kg-1
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
-    # Create pressure array with the same dimensions as u, q, and v
-    p = u.level.broadcast_like(u)
+    # Create pressure array with the same dimensions as u, q, and v and convert
+    # from hPa to Pa
+    p = u.level.broadcast_like(u) * 100  # Pa
 
     # Insert top of atmosphere values
+    # Assume wind at top same as values at lowest pressure, humidity at top 0
     u = insert_level(u, u.isel(level=0), 0)
     v = insert_level(v, v.isel(level=0), 0)
-    q = insert_level(q, q.isel(level=0), 0)
+    q = insert_level(q, 0, 0)
     p = insert_level(p, 0, 0)
 
-    # Insert surface level values
+    # Insert surface level values (at a high dummy pressure value)
     u = insert_level(u, u_surf, 110000)
     v = insert_level(v, v_surf, 110000)
     q = insert_level(q, q_surf, 110000)
@@ -117,25 +120,35 @@ for date in datelist[:]:
     v = v.interp(level=midpoints)
     q = q.interp(level=midpoints)
     p = p.interp(level=midpoints)
-    dp.assign_coords(level=midpoints)
+    dp = dp.assign_coords(level=midpoints)
+
+    # mask values below surface
+    above_surface = p < np.array(p_surf)[:, None, :, :]
+    u = u.where(above_surface)
+    v = v.where(above_surface)
+    q = q.where(above_surface)
+    p = p.where(above_surface)
+
+    # water vapor voxels
+    cwv = q * dp / g  # column water vapor (kg/m2)
+
+    if config["vertical_integral_available"]:
+        # calculate column water instead of column water vapour
+        tcw = load_data("tcw", date)  # kg/m2
+        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+        # TODO: warning if cw >> cwv
+    else:
+        # fluxes will be calculated based on the column water vapour
+        cw = cwv
 
     # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
-    lower_layer = ~upper_layer
-
-    cwv = q * dp / g  # column water vapor (m3)
-
-    if config["vertical_integral_available"] == True:
-        # calculate column water instead of column water vapour
-        tcw = load_data("tcw", date)  # kg/m2
-        cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
-    else:
-        # calculate the fluxes based on the column water vapour
-        cw = cwv
+    lower_layer = p_boundary[:, None, :, :] < p
 
     # Vertically integrate state over two layers
     s_lower = cw.where(lower_layer).sum(dim="level")
     s_upper = cw.where(upper_layer).sum(dim="level")
+
     # Determine the fluxes
     fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
     fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
@@ -145,13 +158,6 @@ for date in datelist[:]:
     fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
     fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
     fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
-
-    # Check column water vapor conservation
-    np.testing.assert_array_almost_equal(
-        cw.sum(dim="level"),
-        s_upper + s_lower,
-        err_msg="Column water vapor should be approximately 0"
-    )
 
     # Save preprocessed data
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"

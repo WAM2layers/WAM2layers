@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +10,7 @@ import yaml
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("cases/era5_2013.yaml") as f:
+with open("../../cases/era5_2013.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -47,8 +46,8 @@ a_full = ((a[1:] + a[:-1].values) / 2.0).sel(lev=modellevels)
 b_full = ((b[1:] + b[:-1].values) / 2.0).sel(lev=modellevels)
 
 # Construct a and b at edges for selected levels
-a_edge = xr.concat([a[0], (a_full[1:].values + a_full[:-1]) / 2.0, a[-1]], dim="lev")
-b_edge = xr.concat([b[0], (b_full[1:].values + b_full[:-1]) / 2.0, b[-1]], dim="lev")
+a_edge = xr.concat([a[0], (a_full[1:].values + a_full[:-1]) / 2, a[-1]], dim="lev")
+b_edge = xr.concat([b[0], (b_full[1:].values + b_full[:-1]) / 2, b[-1]], dim="lev")
 
 datelist = pd.date_range(
     start=config["preprocess_start_date"],
@@ -67,22 +66,21 @@ for date in datelist[:]:
 
     # Precipitation and evaporation
     evap = load_data("e", date)  # in m (accumulated hourly)
-    cp = load_data("cp", date)  # convective precipitation in m (accumulated hourly)
-    lsp = load_data("lsp", date)  # large scale precipitation in m (accumulated hourly)
+    cp = load_data("cp", date)  # convective precip in m (accumulated hourly)
+    lsp = load_data("lsp", date)  # large scale precip in m (accumulated)
     precip = cp + lsp
 
     # 3d fields
-    sp = load_data("sp", date)  # in Pa
+    p_surf = load_data("sp", date)  # in Pa
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
-
     # Split in 2 layers
     # Convert model levels to pressure values
-    sp_modellevels2 = sp.expand_dims({"lev": modellevels}, axis=1)
+    sp_modellevels2 = p_surf.expand_dims({"lev": modellevels}, axis=1)
     p_modellevels = a_edge + b_edge * sp_modellevels2  # in Pa
 
     # calculate the difference between the pressure levels
@@ -90,19 +88,20 @@ for date in datelist[:]:
     # To do: Check if this is a reasonable choice
     boundary = 111  # set boundary model level 111
 
-    # Integrate fluxes and states to upper and lower layer
-    lower_layer = dp_modellevels.lev > boundary
-    upper_layer = ~lower_layer
+    cwv = q * dp_modellevels / g  # column water vapor (kg/m2)
 
-    cwv = q * dp_modellevels / g  #  # column water vapor (kg/m2)
-
-    if config["vertical_integral_available"] == True:
+    if config["vertical_integral_available"]:
         # calculate column water instead of column water vapour
         tcw = load_data("tcw", date)  # kg/m2
         cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+        # TODO: warning if cw >> cwv
     else:
-        # calculate the fluxes based on the column water vapour
+        # fluxes will be calculated based on the column water vapour
         cw = cwv
+
+    # Integrate fluxes and states to upper and lower layer
+    lower_layer = dp_modellevels.lev > boundary
+    upper_layer = ~lower_layer
 
     # Vertically integrate state over two layers
     s_lower = cw.where(lower_layer).sum(dim="lev")
@@ -117,13 +116,6 @@ for date in datelist[:]:
     fy_lower = fy.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
     fx_upper = fx.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
     fy_upper = fy.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
-
-# Check column water vapor conservation
-    np.testing.assert_array_almost_equal(
-        cw.sum(dim="lev"),
-        s_upper + s_lower,
-        err_msg="Column water vapor should be approximately 0"
-    )
 
     # Save preprocessed data
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
