@@ -5,12 +5,13 @@ import pandas as pd
 import xarray as xr
 import yaml
 
+from checks import check_input  # TODO move to other module
 
 # Set constants
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("../../cases/era5_2013.yaml") as f:
+with open("../../cases/era5_2021_local.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -21,7 +22,8 @@ output_dir.mkdir(exist_ok=True, parents=True)
 def load_data(variable, date, levels=None):
     """Load data for given variable and date."""
     # TODO: remove hardcoded filename pattern
-    filepath = Path(config["input_folder"]) / f"FloodCase_202107_{variable}.nc"
+    prefix = "FloodCase_202107_ml" if levels is not None else "FloodCase_202107"
+    filepath = Path(config["input_folder"]) / f"{prefix}_{variable}.nc"
     da = xr.open_dataset(filepath)[variable]
 
     # Include midnight of the next day (if available)
@@ -38,8 +40,8 @@ print("Number of model levels:", len(modellevels))
 
 # Load a and b coefficients
 df = pd.read_csv("tableERA5model_to_pressure.csv")
-a = df["a [Pa]"].to_xarray().rename(index="lev")  # .sel(lev=modellevels)
-b = df["b"].to_xarray().rename(index="lev")  # .sel(lev=modellevels)
+a = df["a [Pa]"].to_xarray().rename(index="lev")
+b = df["b"].to_xarray().rename(index="lev")
 
 # Calculate a and b at mid levels (model levels)
 a_full = ((a[1:] + a[:-1].values) / 2.0).sel(lev=modellevels)
@@ -68,13 +70,14 @@ for date in datelist[:]:
     evap = load_data("e", date)  # in m (accumulated hourly)
     cp = load_data("cp", date)  # convective precip in m (accumulated hourly)
     lsp = load_data("lsp", date)  # large scale precip in m (accumulated)
-    precip = cp + lsp
+    precip = (cp + lsp)
 
     # 3d fields
     p_surf = load_data("sp", date)  # in Pa
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
+    precip = precip.assign_attrs(units="m")  # xr doesn't preserve attributes in arithmetic
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
@@ -98,29 +101,28 @@ for date in datelist[:]:
     else:
         # fluxes will be calculated based on the column water vapour
         cw = cwv
+    cw = cw.assign_attrs(units="kg m-2")
 
     # Integrate fluxes and states to upper and lower layer
     lower_layer = dp_modellevels.lev > boundary
     upper_layer = ~lower_layer
 
     # Vertically integrate state over two layers
-    s_lower = cw.where(lower_layer).sum(dim="lev")
-    s_upper = cw.where(upper_layer).sum(dim="lev")
+    s_lower = cw.where(lower_layer).sum(dim="lev", keep_attrs=True)
+    s_upper = cw.where(upper_layer).sum(dim="lev", keep_attrs=True)
 
     # Determine the fluxes
-    fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
-    fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+    fx = (u * cw).assign_attrs(units="kg m-1 s-1")  # eastward atmospheric moisture flux (kg m-1 s-1)
+    fy = (v * cw).assign_attrs(units="kg m-1 s-1")  # northward atmospheric moisture flux (kg m-1 s-1)
 
     # Vertically integrate fluxes over two layers
-    fx_lower = fx.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
-    fy_lower = fy.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
-    fx_upper = fx.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
-    fy_upper = fy.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
+    fx_lower = fx.where(lower_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+    fy_lower = fy.where(lower_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+    fx_upper = fx.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+    fy_upper = fy.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
 
-    # Save preprocessed data
-    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-    output_path = output_dir / filename
-    xr.Dataset(
+    # Combine everything into one dataset
+    ds = xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fx_upper": fx_upper,
             "fy_upper": fy_upper,
@@ -131,4 +133,12 @@ for date in datelist[:]:
             "evap": evap,
             "precip": precip,
         }
-    ).to_netcdf(output_path)
+    )
+
+    # Verify that the data meets all the requirements for the model
+    check_input(ds)
+
+    # Save preprocessed data
+    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+    output_path = output_dir / filename
+    ds.to_netcdf(output_path)
