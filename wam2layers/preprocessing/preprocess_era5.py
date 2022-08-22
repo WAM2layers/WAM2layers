@@ -131,9 +131,16 @@ for date in datelist[:]:
     p = p.interp(level=midpoints)
     dp = dp.assign_coords(level=midpoints)
     
+    # mask values below surface
+    above_surface = p < np.array(p_surf)[:, None, :, :]
+    u = u.where(above_surface)
+    v = v.where(above_surface)
+    q = q.where(above_surface)
+    p = p.where(above_surface)
+    
     # water vapor voxels
     cwv = q * dp / g  #  # column water vapor (kg/m2)
-    
+        
     if config["vertical_integral_available"] == True:
         # calculate column water instead of column water vapour
         tcw = load_data("tcw", date)  # kg/m2
@@ -144,7 +151,7 @@ for date in datelist[:]:
     
     # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
-    lower_layer = (p_boundary[:, None, :, :] < p) & (p < np.array(p_surf)[:, None, :, :])
+    lower_layer = p_boundary[:, None, :, :] < p
                  
     # Vertically integrate state over two layers
     s_lower = (
