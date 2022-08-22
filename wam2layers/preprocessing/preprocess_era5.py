@@ -94,9 +94,9 @@ for date in datelist[:]:
     p = insert_level(p, p_surf, 110000)
     
     # set pressure value below surface to surface pressure
-    p.values[p > p_surf
-    below_surface = p > p_surf[:, None, :, :]
-    p[p.where(lower_layer)] = 
+    below_surface = p > np.array(p_surf)[:, None, :, :]
+    # TODO: insert a line that replaces all pressure values where the pressure is below surface with surface pressure (without a loop), something like this, but does not work (array dimension mismatch):
+    #p[p.where(below_surface)] = p_surf
 
     # Sort arrays by pressure (ascending)
     u.values = sortby_ndarray(u.values, p.values, axis=1)
@@ -150,7 +150,8 @@ for date in datelist[:]:
     # Integrate fluxes and states to upper and lower layer
     upper_layer = p < p_boundary[:, None, :, :]
     lower_layer = ~upper_layer
-    
+    lower_layer = (dp.level < sp / 100) & (dp.level > P_boundary / 100)
+             
     # Vertically integrate state over two layers
     s_lower = (
         cw.where(lower_layer).sum(dim="lev")
