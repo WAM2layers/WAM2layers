@@ -7,12 +7,13 @@ import yaml
 
 from preprocessing import (calculate_humidity, insert_level, interpolate,
                            sortby_ndarray)
+from checks import check_input
 
 # Set constants
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("../../cases/era5_2013.yaml") as f:
+with open("../../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -131,11 +132,10 @@ for date in datelist[:]:
 
     # water vapor voxels
     cwv = q * dp / g  # column water vapor (kg/m2)
-
     if config["vertical_integral_available"]:
         # calculate column water instead of column water vapour
         tcw = load_data("tcw", date)  # kg/m2
-        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+        cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
         # TODO: warning if cw >> cwv
     else:
         # fluxes will be calculated based on the column water vapour
@@ -159,18 +159,24 @@ for date in datelist[:]:
     fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
     fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
+    # Combine everything into one dataset
+    ds = xr.Dataset(
+        {  # TODO: would be nice to add coordinates and units as well
+            "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
+            "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
+            "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
+            "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+            "s_upper": s_upper.assign_attrs(units="kg m-2"),
+            "s_lower": s_lower.assign_attrs(units="kg m-2"),
+            "evap": evap.assign_attrs(units="m"),
+            "precip": precip.assign_attrs(units="m"),
+        }
+    )
+
+    # Verify that the data meets all the requirements for the model
+    check_input(ds)
+
     # Save preprocessed data
     filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
     output_path = output_dir / filename
-    xr.Dataset(
-        {  # TODO: would be nice to add coordinates and units as well
-            "fx_upper": fx_upper,
-            "fy_upper": fy_upper,
-            "fx_lower": fx_lower,
-            "fy_lower": fy_lower,
-            "s_upper": s_upper,
-            "s_lower": s_lower,
-            "evap": evap,
-            "precip": precip,
-        }
-    ).to_netcdf(output_path)
+    ds.to_netcdf(output_path)

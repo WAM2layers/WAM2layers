@@ -11,7 +11,7 @@ from checks import check_input  # TODO move to other module
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("../../cases/era5_2021_local.yaml") as f:
+with open("../../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
