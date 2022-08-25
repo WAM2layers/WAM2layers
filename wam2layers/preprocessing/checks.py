@@ -1,10 +1,11 @@
 import warnings
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 
-def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
+def _warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     """A more compact warning format.
 
     https://stackoverflow.com/a/26433913
@@ -14,7 +15,7 @@ def warning_on_one_line(message, category, filename, lineno, file=None, line=Non
 
 
 # Override the format with which warnings are printed
-warnings.formatwarning = warning_on_one_line
+warnings.formatwarning = _warning_on_one_line
 
 
 def check_monotonic_increase(data, dim="level"):
@@ -77,11 +78,19 @@ def check_range(data, range):
         warnings.warn(f"Data is not within the range {min} to {max}.")
 
 
+def check_uniform(coord):
+    spacing = np.diff(coord)
+    if not spacing.min() == spacing.max():
+        warnings.warn(f"Coordinate spacing is not uniform for coord {coord}")
+
+
 def check_coords(data, coords):
     check_shape(data, ndim=len(coords))
     for coord in coords:
         if coord not in data.coords:
             warnings.warn(f"Data does not have a coordinate {coord}.")
+        else:
+            check_uniform(data[coord])
 
 
 def check_input(data):
