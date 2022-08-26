@@ -81,6 +81,22 @@ for date in datelist[:]:
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
+    # Convert precip and evap from accumulations to fluxes
+    density = 1000  # [kg/m3]
+    timestep = pd.Timedelta(precip.time.diff('time')[0].values)
+    nseconds = timestep.total_seconds()
+    precip = (density * precip / nseconds).assign_attrs(units="kg m-2 s-1")
+    evap = (density * evap / nseconds).assign_attrs(units="kg m-2 s-1")
+
+    # Valid time are now midway throught the timestep, better to be consistent
+    # Extrapolation introduces a small inconsistency at the last midnight...
+    original_time = precip.time
+    midpoint_time = original_time - timestep / 2
+    precip["time"] = precip.time - timestep / 2
+    evap["time"] = precip.time - timestep / 2
+    precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+
     # Split in 2 layers
     # Convert model levels to pressure values
     sp_modellevels2 = p_surf.expand_dims({"lev": modellevels}, axis=1)
@@ -120,6 +136,7 @@ for date in datelist[:]:
     fy_lower = fy.where(lower_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
     fx_upper = fx.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
     fy_upper = fy.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+
 
     # Combine everything into one dataset
     ds = xr.Dataset(

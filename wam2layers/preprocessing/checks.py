@@ -108,12 +108,12 @@ def check_input(data):
 
 VARIABLES = yaml.safe_load("""
     evap:
-        valid_units: ["m", "m of water equivalent"]
+        valid_units: ["kg m-2 s-1", "kg/m2/s"]
         range: [0, 0.001]
         all_positive: True
         coordinates: [time, latitude, longitude]
     precip:
-        valid_units: ["m", "m of water equivalent"]
+        valid_units: ["kg m-2 s-1", "kg/m2/s"]
         range: [0, 0.1]
         all_positive: True
         coordinates: [time, latitude, longitude]

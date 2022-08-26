@@ -68,6 +68,23 @@ for date in datelist[:]:
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
+    # Convert precip and evap from accumulations to fluxes
+    density = 1000  # [kg/m3]
+    timestep = pd.Timedelta(precip.time.diff('time')[0].values)
+    nseconds = timestep.total_seconds()
+    precip = (density * precip / nseconds).assign_attrs(units="kg m-2 s-1")
+    evap = (density * evap / nseconds).assign_attrs(units="kg m-2 s-1")
+
+    # Valid time are now midway throught the timestep, better to be consistent
+    # Extrapolation introduces a small inconsistency at the last midnight...
+    original_time = precip.time
+    midpoint_time = original_time - timestep / 2
+    precip["time"] = precip.time - timestep / 2
+    evap["time"] = precip.time - timestep / 2
+    precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+
+
     # Create pressure array with the same dimensions as u, q, and v and convert
     # from hPa to Pa
     p = u.level.broadcast_like(u) * 100  # Pa
@@ -168,8 +185,8 @@ for date in datelist[:]:
             "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
             "s_upper": s_upper.assign_attrs(units="kg m-2"),
             "s_lower": s_lower.assign_attrs(units="kg m-2"),
-            "evap": evap.assign_attrs(units="m"),
-            "precip": precip.assign_attrs(units="m"),
+            "evap": evap,
+            "precip": precip,
         }
     )
 
