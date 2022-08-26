@@ -114,12 +114,12 @@ VARIABLES = yaml.safe_load("""
         all_positive: True
         coordinates: [time, latitude, longitude]
     s_upper:
-        valid_units: ["kg m-2", "kg/m2", "kg m-2 s-1", "kg/m2/s"]
+        valid_units: ["kg m-2", "kg/m2"]
         range: [0, 1000]
         all_positive: True
         coordinates: [time, latitude, longitude]
     s_lower:
-        valid_units: ["kg m-2", "kg/m2", "kg m-2 s-1", "kg/m2/s"]
+        valid_units: ["kg m-2", "kg/m2"]
         range: [0, 1000]
         all_positive: True
         coordinates: [time, latitude, longitude]
