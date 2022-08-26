@@ -91,6 +91,10 @@ def check_coords(data, coords):
             warnings.warn(f"Data does not have a coordinate {coord}.")
         else:
             check_uniform(data[coord])
+        if coord == "latitude":
+            check_monotonic_decrease(data[coord], dim=coord)
+        else:
+            check_monotonic_increase(data[coord], dim=coord)
 
 
 def check_input(data):

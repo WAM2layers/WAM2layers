@@ -35,6 +35,7 @@ This dataset adheres to the following requirements:
 - The states (`s_upper` and `s_lower`) should be positive as well
 - `evap` and `precip` are accumulations (in "m") since the previous timestep
 - States are given in units of "kg m-2", fluxes in "kg m-1 s-1"
+- Latitude should be decreasing, time and longitude increasing.
 
 ## Data checking utility functions
 
