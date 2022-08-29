@@ -3,19 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3
+  - python=3.9
   - cartopy
-  - numpy
-  - scipy
-  - netcdf4
   - matplotlib
-  - pyyaml
-  - xarray
   - ipython
-  - sphinx
-  - sphinx_rtd_theme
-  - black
-  - isort
-  - pip:
-    - myst-nb
-    - cffconvert
