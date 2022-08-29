@@ -7,12 +7,13 @@ import yaml
 
 from preprocessing import (calculate_humidity, insert_level, interpolate,
                            sortby_ndarray)
+from checks import check_input
 
 # Set constants
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("../../cases/era5_2013.yaml") as f:
+with open("../../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -66,6 +67,23 @@ for date in datelist[:]:
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
+
+    # Convert precip and evap from accumulations to fluxes
+    density = 1000  # [kg/m3]
+    timestep = pd.Timedelta(precip.time.diff('time')[0].values)
+    nseconds = timestep.total_seconds()
+    precip = (density * precip / nseconds).assign_attrs(units="kg m-2 s-1")
+    evap = (density * evap / nseconds).assign_attrs(units="kg m-2 s-1")
+
+    # Valid time are now midway throught the timestep, better to be consistent
+    # Extrapolation introduces a small inconsistency at the last midnight...
+    original_time = precip.time
+    midpoint_time = original_time - timestep / 2
+    precip["time"] = precip.time - timestep / 2
+    evap["time"] = precip.time - timestep / 2
+    precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+
 
     # Create pressure array with the same dimensions as u, q, and v and convert
     # from hPa to Pa
@@ -131,11 +149,10 @@ for date in datelist[:]:
 
     # water vapor voxels
     cwv = q * dp / g  # column water vapor (kg/m2)
-
     if config["vertical_integral_available"]:
         # calculate column water instead of column water vapour
         tcw = load_data("tcw", date)  # kg/m2
-        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+        cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
         # TODO: warning if cw >> cwv
     else:
         # fluxes will be calculated based on the column water vapour
@@ -159,18 +176,24 @@ for date in datelist[:]:
     fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
     fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
-    # Save preprocessed data
-    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-    output_path = output_dir / filename
-    xr.Dataset(
+    # Combine everything into one dataset
+    ds = xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
-            "fx_upper": fx_upper,
-            "fy_upper": fy_upper,
-            "fx_lower": fx_lower,
-            "fy_lower": fy_lower,
-            "s_upper": s_upper,
-            "s_lower": s_lower,
+            "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
+            "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
+            "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
+            "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+            "s_upper": s_upper.assign_attrs(units="kg m-2"),
+            "s_lower": s_lower.assign_attrs(units="kg m-2"),
             "evap": evap,
             "precip": precip,
         }
-    ).to_netcdf(output_path)
+    )
+
+    # Verify that the data meets all the requirements for the model
+    check_input(ds)
+
+    # Save preprocessed data
+    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+    output_path = output_dir / filename
+    ds.to_netcdf(output_path)

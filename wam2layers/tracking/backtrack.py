@@ -130,23 +130,18 @@ def split_vertical_flux(Kvf, fv):
 
 def resample(ds, target_freq):
     """Increase time resolution; states at midpoints, fluxes at the edges."""
-    target_seconds = pd.Timedelta(target_freq).total_seconds()
-    current_seconds = ds.time.diff('time').dt.seconds.values[0]
-    resample_ratio = current_seconds / target_seconds
-
     time = ds.time.values
     newtime_states = pd.date_range(time[0], time[-1], freq=target_freq)
     newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
 
     states = ds[['s_upper', 's_lower']].interp(time=newtime_states)
-    fluxes = ds[['fx_upper', 'fx_lower', 'fy_upper', 'fy_lower']].interp(time=newtime_fluxes)
-    surface = ds[['precip', 'evap']].reindex(time=newtime_fluxes, method="bfill") / resample_ratio
-    return fluxes.merge(surface), states
+    fluxes = ds[['fx_upper', 'fx_lower', 'fy_upper', 'fy_lower', 'precip', 'evap']].interp(time=newtime_fluxes)
+    return fluxes, states
 
 
 def change_units(fluxes, target_freq):
     """Change units to m3.
-    Multiply by edge length to get flux in m3
+    Multiply by edge length or area to get flux in m3
     Multiply by time to get accumulation instead of flux
     Divide by density of water to go from kg to m3
     """
@@ -158,14 +153,14 @@ def change_units(fluxes, target_freq):
     fluxes["fx_lower"] *= total_seconds / density * ly
     fluxes["fy_upper"] *= total_seconds / density * lx[None, :, None]
     fluxes["fy_lower"] *= total_seconds / density * lx[None, :, None]
-    fluxes["evap"] *= a[None, :, None]
-    fluxes["precip"] *= a[None, :, None]
+    fluxes["evap"] *= total_seconds / density * a[None, :, None]
+    fluxes["precip"] *= total_seconds / density * a[None, :, None]
+    states["s_upper"] *= a[None, :, None] / density
+    states["s_lower"] *= a[None, :, None] / density
 
     for variable in fluxes.data_vars:
         fluxes[variable] = fluxes[variable].assign_attrs(units="m**3")
 
-    states["s_upper"] *= a[None, :, None] / density
-    states["s_lower"] *= a[None, :, None] / density
     for variable in states.data_vars:
         states[variable] = states[variable].assign_attrs(units="m**3")
 
