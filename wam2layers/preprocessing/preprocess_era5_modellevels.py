@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from checks import check_input  # TODO move to other module
+from wam2layers.analysis.checks import check_input
 
 # Set constants
 g = 9.80665  # [m/s2]

@@ -5,11 +5,10 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from analysis.visualization import make_diagnostic_figures
-from preprocessing import get_grid_info
+from wam2layers.preprocessing.preprocessing import get_grid_info
 
 # Read case configuration
-with open("cases/era5_2021.yaml") as f:
+with open("../../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 
@@ -139,7 +138,7 @@ def resample(ds, target_freq):
     return fluxes, states
 
 
-def change_units(fluxes, target_freq):
+def change_units(fluxes, states, target_freq):
     """Change units to m3.
     Multiply by edge length or area to get flux in m3
     Multiply by time to get accumulation instead of flux
@@ -373,19 +372,6 @@ def backtrack(
         # Aggregate daily accumulations for calculating the daily means
         s_track_lower_mean += s_track_lower / ntime
         s_track_upper_mean += s_track_upper / ntime
-
-    make_diagnostic_figures(
-        date,
-        region,
-        fx_upper,
-        fy_upper,
-        fx_lower,
-        fy_lower,
-        precip,
-        s_track_upper_mean,
-        s_track_lower_mean,
-        e_track,
-    )
 
     # Pack processed data into new dataset
     ds = xr.Dataset(

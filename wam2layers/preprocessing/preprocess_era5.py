@@ -5,9 +5,9 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from preprocessing import (calculate_humidity, insert_level, interpolate,
+from .preprocessing import (calculate_humidity, insert_level, interpolate,
                            sortby_ndarray)
-from checks import check_input
+from wam2layers.analysis.checks import check_input
 
 # Set constants
 g = 9.80665  # [m/s2]
