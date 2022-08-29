@@ -8,21 +8,24 @@ message: >-
   WAM2layers code in your (academic) work.
 type: software
 authors:
-  - given-names: Ruud
-    name-particle: van der
-    family-names: Ent
+  - given-names: Ruud J
+    family-names: van der Ent
     affiliation: Delft University of Technology
     orcid: 'https://orcid.org/0000-0001-5450-4333'
   - given-names: Imme Bo
     family-names: Benedict
     affiliation: Wageningen University
     orcid: 'https://orcid.org/0000-0002-1946-6332'
+  - given-names: Chris 
+    family-names: Weijenborg
+    affiliation: Wageningen University
+    orcid: 'https://orcid.org/0000-0003-1663-2806'
   - given-names: Tolga
-    name-particle: Cömert
+    family-names: Cömert
   - given-names: Niek
-    name-particle: van de Koppel
+    family-names: van de Koppel
   - given-names: Liang
-    name-particle: Guo
+    family-names: Guo
     orcid: 'https://orcid.org/0000-0002-6004-3884'
   - given-names: Peter
     family-names: Kalverla
