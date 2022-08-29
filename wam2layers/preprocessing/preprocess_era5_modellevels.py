@@ -1,25 +1,38 @@
-import os
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-import numpy as np
-from pathlib import Path
 
-from preprocessing import get_grid_info
+from checks import check_input  # TODO move to other module
 
+# Set constants
+g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("cases/era5_2021.yaml") as f:
+with open("../../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
 output_dir = Path(config["preprocessed_data_folder"]).expanduser()
 output_dir.mkdir(exist_ok=True, parents=True)
 
-# Set constants
-g = 9.80665  # [m/s2]
-density_water = 1000  # [kg/m3]
+
+def load_data(variable, date, levels=None):
+    """Load data for given variable and date."""
+    # TODO: remove hardcoded filename pattern
+    prefix = "FloodCase_202107_ml" if levels is not None else "FloodCase_202107"
+    filepath = Path(config["input_folder"]) / f"{prefix}_{variable}.nc"
+    da = xr.open_dataset(filepath)[variable]
+
+    # Include midnight of the next day (if available)
+    extra = date + pd.Timedelta(days=1)
+
+    if levels is not None:
+        return da.sel(time=slice(date, extra)).sel(lev=levels)
+    return da.sel(time=slice(date, extra))
+
 
 # Preselection of model levels
 modellevels = config["modellevels"]
@@ -27,39 +40,16 @@ print("Number of model levels:", len(modellevels))
 
 # Load a and b coefficients
 df = pd.read_csv("tableERA5model_to_pressure.csv")
-a = df["a [Pa]"].to_xarray().rename(index="lev")  # .sel(lev=modellevels)
-b = df["b"].to_xarray().rename(index="lev")  # .sel(lev=modellevels)
+a = df["a [Pa]"].to_xarray().rename(index="lev")
+b = df["b"].to_xarray().rename(index="lev")
 
 # Calculate a and b at mid levels (model levels)
 a_full = ((a[1:] + a[:-1].values) / 2.0).sel(lev=modellevels)
 b_full = ((b[1:] + b[:-1].values) / 2.0).sel(lev=modellevels)
 
 # Construct a and b at edges for selected levels
-a_edge = xr.concat([a[0], (a_full[1:].values + a_full[:-1]) / 2.0, a[-1]], dim="lev")
-b_edge = xr.concat([b[0], (b_full[1:].values + b_full[:-1]) / 2.0, b[-1]], dim="lev")
-
-
-def load_surface_data(variable, date):
-    """Load data for given variable and date."""
-    filename = f"FloodCase_202107_{variable}.nc"
-    filepath = os.path.join(config["input_folder"], filename)
-    da = xr.open_dataset(filepath)[variable]
-
-    # Include midnight of the next day (if available)
-    extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra))
-
-
-def load_modellevel_data(variable, date):
-    """Load model level data for given variable and date."""
-    filename = f"FloodCase_202107_ml_{variable}.nc"
-    filepath = os.path.join(config["input_folder"], filename)
-    da = xr.open_dataset(filepath)[variable]
-
-    # Include midnight of the next day (if available)
-    extra = date + pd.Timedelta(days=1)
-    return da.sel(time=slice(date, extra)).sel(lev=modellevels)
-
+a_edge = xr.concat([a[0], (a_full[1:].values + a_full[:-1]) / 2, a[-1]], dim="lev")
+b_edge = xr.concat([b[0], (b_full[1:].values + b_full[:-1]) / 2, b[-1]], dim="lev")
 
 datelist = pd.date_range(
     start=config["preprocess_start_date"],
@@ -71,76 +61,85 @@ datelist = pd.date_range(
 for date in datelist[:]:
     print(date)
 
-    # Load data
-    u = load_modellevel_data("u", date)
-    v = load_modellevel_data("v", date)
-    q = load_modellevel_data("q", date)
-    sp = load_surface_data("sp", date)  # in Pa
-    evap = load_surface_data("e", date)
-    cp = load_surface_data("cp", date)
-    lsp = load_surface_data("lsp", date)
-    precip = cp + lsp
+    # 4d fields
+    u = load_data("u", date, levels=modellevels)  # in m/s
+    v = load_data("v", date, levels=modellevels)  # in m/s
+    q = load_data("q", date, levels=modellevels)  # in kg kg-1
 
-    # Get grid info
-    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
+    # Precipitation and evaporation
+    evap = load_data("e", date)  # in m (accumulated hourly)
+    cp = load_data("cp", date)  # convective precip in m (accumulated hourly)
+    lsp = load_data("lsp", date)  # large scale precip in m (accumulated)
+    precip = (cp + lsp)
+
+    # 3d fields
+    p_surf = load_data("sp", date)  # in Pa
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
+    precip = precip.assign_attrs(units="m")  # xr doesn't preserve attributes in arithmetic
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
+    # Convert precip and evap from accumulations to fluxes
+    density = 1000  # [kg/m3]
+    timestep = pd.Timedelta(precip.time.diff('time')[0].values)
+    nseconds = timestep.total_seconds()
+    precip = (density * precip / nseconds).assign_attrs(units="kg m-2 s-1")
+    evap = (density * evap / nseconds).assign_attrs(units="kg m-2 s-1")
+
+    # Valid time are now midway throught the timestep, better to be consistent
+    # Extrapolation introduces a small inconsistency at the last midnight...
+    original_time = precip.time
+    midpoint_time = original_time - timestep / 2
+    precip["time"] = precip.time - timestep / 2
+    evap["time"] = precip.time - timestep / 2
+    precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+
+    # Split in 2 layers
     # Convert model levels to pressure values
-    sp_modellevels2 = sp.expand_dims({"lev": modellevels}, axis=1)
+    sp_modellevels2 = p_surf.expand_dims({"lev": modellevels}, axis=1)
     p_modellevels = a_edge + b_edge * sp_modellevels2  # in Pa
 
     # calculate the difference between the pressure levels
     dp_modellevels = p_modellevels.diff(dim="lev")  # in Pa
-
-    # Split in 2 layers
     # To do: Check if this is a reasonable choice
     boundary = 111  # set boundary model level 111
+
+    cwv = q * dp_modellevels / g  # column water vapor (kg/m2)
+
+    if config["vertical_integral_available"]:
+        # calculate column water instead of column water vapour
+        tcw = load_data("tcw", date)  # kg/m2
+        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
+        # TODO: warning if cw >> cwv
+    else:
+        # fluxes will be calculated based on the column water vapour
+        cw = cwv
+    cw = cw.assign_attrs(units="kg m-2")
 
     # Integrate fluxes and states to upper and lower layer
     lower_layer = dp_modellevels.lev > boundary
     upper_layer = ~lower_layer
 
-    cwv = q * dp_modellevels / g  #  # column water vapor (kg/m2)
-
-    if config["vertical_integral_available"] == True:
-        # calculate column water instead of column water vapour
-        tcw = load_surface_data("tcw", date)  # kg/m2
-        cw = (tcw / cwv.sum(dim="lev")) * cwv  # column water (kg/m2)
-    else:
-        # calculate the fluxes based on the column water vapour
-        cw = cwv
-
     # Vertically integrate state over two layers
-    s_lower = (
-        cw.where(lower_layer).sum(dim="lev")
-        * a_gridcell[None, :, None]
-        / density_water
-    )  # m3
-    s_upper = (
-        cw.where(upper_layer).sum(dim="lev")
-        * a_gridcell[None, :, None]
-        / density_water
-    )  # m3
+    s_lower = cw.where(lower_layer).sum(dim="lev", keep_attrs=True)
+    s_upper = cw.where(upper_layer).sum(dim="lev", keep_attrs=True)
 
     # Determine the fluxes
-    fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
-    fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+    fx = (u * cw).assign_attrs(units="kg m-1 s-1")  # eastward atmospheric moisture flux (kg m-1 s-1)
+    fy = (v * cw).assign_attrs(units="kg m-1 s-1")  # northward atmospheric moisture flux (kg m-1 s-1)
 
     # Vertically integrate fluxes over two layers
-    fx_lower = fx.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
-    fy_lower = fy.where(lower_layer).sum(dim="lev")  # kg m-1 s-1
+    fx_lower = fx.where(lower_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+    fy_lower = fy.where(lower_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+    fx_upper = fx.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
+    fy_upper = fy.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
 
-    fx_upper = fx.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
-    fy_upper = fy.where(upper_layer).sum(dim="lev")  # kg m-1 s-1
 
-    # Save preprocessed data
-    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-    output_path = os.path.join(config["preprocessed_data_folder"], filename)
-    xr.Dataset(
+    # Combine everything into one dataset
+    ds = xr.Dataset(
         {  # TODO: would be nice to add coordinates and units as well
             "fx_upper": fx_upper,
             "fy_upper": fy_upper,
@@ -151,4 +150,12 @@ for date in datelist[:]:
             "evap": evap,
             "precip": precip,
         }
-    ).to_netcdf(output_path)
+    )
+
+    # Verify that the data meets all the requirements for the model
+    check_input(ds)
+
+    # Save preprocessed data
+    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+    output_path = output_dir / filename
+    ds.to_netcdf(output_path)
