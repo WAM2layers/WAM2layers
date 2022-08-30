@@ -43,6 +43,11 @@ def time_in_range(start, end, current):
     return start <= current <= end
 
 
+def load_region(config):
+    # TODO: make variable name more generic
+    return xr.open_dataset(config["region"]).source_region
+
+
 def input_path(date, config):
     input_dir = config["preprocessed_data_folder"]
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
@@ -401,7 +406,7 @@ def backtrack(
 def initialize(config_file):
     """Read config, region, and initial states."""
     config = parse_config(config_file)
-    region = xr.open_dataset(config["region"]).region_flood.values
+    region = load_region(config).values
     if config["restart"]:
         date = config["datelist"][-1] + pd.Timedelta(days=1)
         # Reload last state from existing output
@@ -417,10 +422,10 @@ def initialize(config_file):
     return config, region, s_track_lower, s_track_upper
 
 
-####################################################################################
+#############################################################################
 # With the correct import statements, the code in the function below could
 # alternatively be be used as a script in a separate python file or notebook.
-####################################################################################
+#############################################################################
 
 
 def run_experiment(config_file):
@@ -468,7 +473,7 @@ def run_experiment(config_file):
 
 
 @click.command()
-@click.argument('config_file')
+@click.argument('config_file', type=click.Path(exists=True))
 def cli(config_file):
     """Run WAM2layers backtrack experiment from the command line.
 

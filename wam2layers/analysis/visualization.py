@@ -1,133 +1,114 @@
-from pathlib import Path
-
-import cartopy
-import cartopy.crs as ccrs
+from cartopy import crs, feature as cfeature
+import click
 import matplotlib.pyplot as plt
-import numpy as np
 import xarray as xr
-from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
+import numpy as np
+from pathlib import Path
+from wam2layers.preprocessing.preprocessing import get_grid_info
+from wam2layers.tracking.backtrack import parse_config, input_path, output_path, load_region
 
-from ..preprocessing import get_grid_info
+def polish(ax, region):
+    ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
+    ax.add_feature(cfeature.BORDERS, linestyle="-", linewidth=0.2)
+    ax.set_xlim(region.longitude.min(), region.longitude.max())
+    ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
-def make_diagnostic_figures(
-    date,
-    region,
-    fx_upper,
-    fy_upper,
-    fx_lower,
-    fy_lower,
-    precip,
-    s_track_upper_mean,
-    s_track_lower_mean,
-    e_track,
-):
-    """Visualize fields during the simulation."""
-    # import IPython; IPython.embed(); quit()
-    output_dir = Path("../figures")
-    output_dir.mkdir(exist_ok=True)
+def visualize_input_data(config_file):
+    raise NotImplementedError()
+    config = parse_config(config_file)
+    for date in config["datelist"]:
+        ds = xr.open_dataset(input_path(date, config))
+        import IPython; IPython.embed(); quit()
+    # do stuff
 
-    # Load data
-    u = xr.open_dataset("/data/volume_2/era5_2021/FloodCase_202107_u.nc")
 
-    # Get grid info
-    lat = u.latitude.values
-    lon = u.longitude.values
-    a_gridcell, l_ew_gridcell, l_mid_gridcell = get_grid_info(u)
+def visualize_output_data(config_file):
+    raise NotImplementedError()
+    config = parse_config(config_file)
+    for date in config["datelist"]:
+        ds = xr.open_dataset(output_path(date, config))
+        import IPython; IPython.embed(); quit()
+    # do stuff
 
-    # TODO: improve this
-    a_gridcell = a_gridcell[:, None]
 
-    my_projection = ccrs.PlateCarree(central_longitude=0)
 
-    def polish(ax):
-        ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.8)
-        ax.add_feature(cartopy.feature.BORDERS, linestyle="-", linewidth=0.2)
+def visualize_both(config_file):
+    """Diagnostic figure with four subplots combining input and output data."""
+    config = parse_config(config_file)
+    region = load_region(config)
+    a_gridcell, lx, ly = get_grid_info(region)
 
-        ax.set_xticks(np.arange(-180, 181, 20), crs=my_projection)
-        ax.set_yticks(np.arange(-90, 91, 20), crs=my_projection)
-        lon_formatter = LongitudeFormatter(zero_direction_label=True)
-        lat_formatter = LatitudeFormatter()
-        ax.xaxis.set_major_formatter(lon_formatter)
-        ax.yaxis.set_major_formatter(lat_formatter)
-        ax.contour(lon, lat, region)
-        ax.set_xlim(-50, 30)
-        ax.set_ylim(30, 60)
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
 
-    precip_track = np.arange(0.0, 50.0, 5)
-    S_track = np.arange(0.0, 5, 0.5)
-    E_track = np.arange(0.0, 1.0, 0.1)
+    for date in config["datelist"]:
+        print(date)
+        ds_in = xr.open_dataset(input_path(date, config))
+        ds_out = xr.open_dataset(output_path(date, config))
 
-    fig1 = plt.figure(figsize=(14, 8))
+        # Make figure
+        fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2, subplot_kw=dict(projection=crs.PlateCarree()), figsize=(14,8))
 
-    ax1 = plt.subplot(221, projection=my_projection)
-    cb1 = ax1.contourf(
-        lon,
-        lat,
-        (precip.sum(axis=0) * region / a_gridcell) * 1000,
-        precip_track,
-        cmap=plt.cm.Blues,
-        extend="max",
-    )  # We plot a colormesh using the gist_ncar colormap.
-    polish(ax1)
-    ax1.set_title("Tracked precipitation" + date.strftime("%Y%m%d"))
+        ax1.set_title("Tracked precipitation" + date.strftime("%Y%m%d"))
+        precip = ds_in.precip.sum('time') * region / a_gridcell[:, None] * 1000
+        precip.plot.contourf(ax=ax1, cmap='Blues', levels=np.arange(0, 50, 5))
+        polish(ax1)
 
-    ax2 = plt.subplot(222, projection=my_projection)
-    cb2 = ax2.contourf(
-        lon, lat, (e_track / a_gridcell) * 1000, E_track, cmap=plt.cm.GnBu, extend="max"
-    )  # We plot a colormesh using the gist_ncar colormap.
-    polish(ax2)
-    ax2.set_title("Moisture source")
+        ax2.set_title("Moisture source")
+        e_track = ds_out.e_track / a_gridcell[:, None] * 1000
+        e_track.plot.contourf(ax=ax2, cmap='GnBu', levels=np.arange(0.0, 1.0, 0.1))
+        polish(ax2)
 
-    ax3 = plt.subplot(223, projection=my_projection)
-    cb3 = ax3.contourf(
-        lon,
-        lat,
-        (s_track_upper_mean / a_gridcell) * 1000,
-        S_track,
-        cmap=plt.cm.YlOrRd,
-        extend="max",
-    )  # We plot a colormesh using the gist_ncar colormap.
-    ax3.quiver(
-        lon[::5],
-        lat[::5],
-        fx_upper.mean(axis=0)[::5, ::5],
-        fy_upper.mean(axis=0)[::5, ::5],
-        color="black",
-        width=0.003,
-        alpha=0.5,
-    )
-    polish(ax3)
-    ax3.set_title("S track upper layer")
+        ax3.set_title("S track upper layer")
+        s_track_upper = ds_out.s_track_upper / a_gridcell[:, None] * 1000
+        s_track_upper.plot.contourf(ax=ax3, cmap="YlOrRd", levels=np.arange(0.0, 5, 0.5))
+        ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_upper", v="fy_upper", ax=ax3, color="black")
+        polish(ax3)
 
-    ax4 = plt.subplot(224, projection=my_projection)
-    cb3 = ax4.contourf(
-        lon,
-        lat,
-        (s_track_lower_mean / a_gridcell) * 1000,
-        S_track,
-        cmap=plt.cm.YlOrRd,
-        extend="max",
-    )  # We plot a colormesh using the gist_ncar colormap.
-    ax4.quiver(
-        lon[::5],
-        lat[::5],
-        fx_lower.mean(axis=0)[::5, ::5],
-        fy_lower.mean(axis=0)[::5, ::5],
-        color="black",
-        width=0.003,
-        alpha=0.5,
-    )
-    polish(ax4)
-    ax4.set_title("S track lower layer")
+        ax4.set_title("S track lower layer")
+        s_track_lower = ds_out.s_track_lower / a_gridcell[:, None] * 1000
+        s_track_lower.plot.contourf(ax=ax4, cmap="YlOrRd", levels=np.arange(0.0, 5, 0.5))
+        ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_lower", v="fy_lower", ax=ax4, color="black")
+        polish(ax4)
 
-    new_axis = fig1.add_axes([0.55, 0.50, 0.35, 0.015])  # left, bottom, width, height
-    fig1.colorbar(cb2, cax=new_axis, orientation="horizontal")
+        # Save
+        output_file = out_dir / f"input_output_{date.strftime('%Y%m%d')}.png"
+        fig.savefig(output_file)
+        plt.close()
 
-    new_axis2 = fig1.add_axes([0.15, 0.50, 0.35, 0.015])
-    fig1.colorbar(cb1, cax=new_axis2, orientation="horizontal")
+###########################################################################
+# The code below makes it possible to run wam2layers from the command line:
+# >>> python visualization.py input path/to/cases/era5_2021.yaml
+# or even:
+# >>> wam2layers visualize output path/to/cases/era5_2021.yaml
+###########################################################################
 
-    new_axis3 = fig1.add_axes([0.30, 0.08, 0.35, 0.015])
-    fig1.colorbar(cb3, cax=new_axis3, orientation="horizontal")
-    plt.savefig(output_dir / f"tracking_{date.strftime('%Y%m%d')}.png")
-    plt.close()
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+@click.argument('config_file', type=click.Path(exists=True))
+def input(config_file):
+    """Visualize input data for experiment."""
+    visualize_input_data(config_file)
+
+
+@cli.command()
+@click.argument('config_file', type=click.Path(exists=True))
+def output(config_file):
+    """Visualize output data for experiment."""
+    visualize_output_data(config_file)
+
+
+@cli.command()
+@click.argument('config_file', type=click.Path(exists=True))
+def both(config_file):
+    """Visualize both input and output data for experiment."""
+    visualize_both(config_file)
+
+if __name__ == "__main__":
+    cli()

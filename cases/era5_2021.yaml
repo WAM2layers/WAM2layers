@@ -11,7 +11,7 @@ modellevels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,
 periodic_boundary: false #true if input data goes from 180W to 180E, false if not
 
 # Settings needed to define the tracking region (in space and time)
-region: /data/volume_2/era5_2021/region_flood.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
+region: /data/volume_2/era5_2021/source_region.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
 track_start_date: '20210701' #YYYYMMDD
 track_end_date: '20210716' #YYYYMMDD
 
