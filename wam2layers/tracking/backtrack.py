@@ -1,10 +1,10 @@
 from pathlib import Path
 
+import click
 import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-
 from wam2layers.preprocessing.preprocessing import get_grid_info
 
 
@@ -417,6 +417,12 @@ def initialize(config_file):
     return config, region, s_track_lower, s_track_upper
 
 
+####################################################################################
+# With the correct import statements, the code in the function below could
+# alternatively be be used as a script in a separate python file or notebook.
+####################################################################################
+
+
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     config, region, s_track_lower, s_track_upper = initialize(config_file)
@@ -438,7 +444,6 @@ def run_experiment(config_file):
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
 
-
         (s_track_upper, s_track_lower, processed_data) = backtrack(
             date,
             fluxes,
@@ -454,5 +459,29 @@ def run_experiment(config_file):
         processed_data.to_netcdf(output_path(date, config))
 
 
-if __name__=="__main__":
-    run_experiment("../../cases/era5_2021_local.yaml")
+###########################################################################
+# The code below makes it possible to run wam2layers from the command line:
+# >>> python backtrack.py path/to/cases/era5_2021.yaml
+# or even:
+# >>> wam2layers backtrack path/to/cases/era5_2021.yaml
+###########################################################################
+
+
+@click.command()
+@click.argument('config_file')
+def cli(config_file):
+    """Run WAM2layers backtrack experiment from the command line.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        - python backtrack.py path/to/cases/era5_2021.yaml
+
+        - wam2layers backtrack path/to/cases/era5_2021.yaml
+    """
+    run_experiment(config_file)
+
+
+if __name__ == "__main__":
+    cli()
