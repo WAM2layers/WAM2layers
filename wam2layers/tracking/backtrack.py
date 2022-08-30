@@ -7,30 +7,35 @@ import yaml
 
 from wam2layers.preprocessing.preprocessing import get_grid_info
 
-# Read case configuration
-with open("../../cases/era5_2021.yaml") as f:
-    config = yaml.safe_load(f)
 
+def parse_config(config_file):
+    """Load and parse config file into dictionary."""
+    with open(config_file) as f:
+        config = yaml.safe_load(f)
 
-datelist = pd.date_range(
-    start=config["track_start_date"],
-    end=config["track_end_date"],
-    freq="d",
-    inclusive="left",
-)
-
-input_dir = Path(config["preprocessed_data_folder"]).expanduser()
-output_dir = Path(config["output_folder"]).expanduser() / "backtrack"
-
-# Check if input dir exists
-if not input_dir.exists():
-    raise ValueError(
-        "Please create the preprocessed_data_folder before running the script"
+    # Add datelist
+    config["datelist"] = pd.date_range(
+        start=config["track_start_date"],
+        end=config["track_end_date"],
+        freq="d",
+        inclusive="left",
     )
 
-# Create output dir if it doesn't exist yet
-if not output_dir.exists():
-    output_dir.mkdir(parents=True)
+    # Parse directories with pathlib
+    config["preprocessed_data_folder"] = Path(config["preprocessed_data_folder"]).expanduser()
+    config["output_folder"] = Path(config["output_folder"]).expanduser() / "backtrack"
+
+    # Check if input dir exists
+    if not config["preprocessed_data_folder"].exists():
+        raise ValueError(
+            "Please create the preprocessed_data_folder before running the script"
+        )
+
+    # Create output dir if it doesn't exist yet
+    if not config["output_folder"].exists():
+        config["output_folder"].mkdir(parents=True)
+
+    return config
 
 
 def time_in_range(start, end, current):
@@ -38,11 +43,13 @@ def time_in_range(start, end, current):
     return start <= current <= end
 
 
-def input_path(date):
+def input_path(date, config):
+    input_dir = config["preprocessed_data_folder"]
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
-def output_path(date):
+def output_path(date, config):
+    output_dir = config["output_folder"]
     return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
 
 
@@ -236,7 +243,7 @@ def backtrack(
     s_track_upper,
     s_track_lower,
     region,
-    kvf,
+    config,
 ):
 
     # Unpack preprocessed data
@@ -279,7 +286,7 @@ def backtrack(
         s_total = s_upper[t+1] + s_lower[t+1]
 
         # separate the direction of the vertical flux and make it absolute
-        f_downward, f_upward = split_vertical_flux(kvf, f_vert[t])
+        f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert[t])
 
         # Determine horizontal fluxes over the grid-cell boundaries
         f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
@@ -391,46 +398,61 @@ def backtrack(
     return (s_track_upper, s_track_lower, ds)
 
 
-region = xr.open_dataset(config["region"]).region_flood.values
+def initialize(config_file):
+    """Read config, region, and initial states."""
+    config = parse_config(config_file)
+    region = xr.open_dataset(config["region"]).region_flood.values
+    if config["restart"]:
+        date = config["datelist"][-1] + pd.Timedelta(days=1)
+        # Reload last state from existing output
+        ds = xr.open_dataset(output_path(date, config))
+        s_track_upper = ds.s_track_upper_restart.values
+        s_track_lower = ds.s_track_lower_restart.values
 
-for i, date in enumerate(reversed(datelist[:])):
-    print(date)
-    preprocessed_data = xr.open_dataset(input_path(date))
+    else:
+        # Allocate empty arrays based on shape of input data
+        s_track_upper = np.zeros_like(region)
+        s_track_lower = np.zeros_like(region)
 
-    # Resample to (higher) target frequency
-    # After this, the fluxes will be "in between" the states
-    fluxes, states = resample(preprocessed_data, config['target_frequency'])
+    return config, region, s_track_lower, s_track_upper
 
-    # Convert data to volumes
-    change_units(fluxes, states, config["target_frequency"])
 
-    # Apply a stability correction if needed
-    stabilize_fluxes(fluxes, states)
+def run_experiment(config_file):
+    """Run a backtracking experiment from start to finish."""
+    config, region, s_track_lower, s_track_upper = initialize(config_file)
 
-    # Determine the vertical moisture flux
-    fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
+    for i, date in enumerate(reversed(config["datelist"])):
+        print(date)
+        preprocessed_data = xr.open_dataset(input_path(date, config))
 
-    if i == 0:
-        if config["restart"]:
-            # Reload last state from existing output
-            ds = xr.open_dataset(output_path(date + pd.Timedelta(days=1)))
-            s_track_upper = ds.s_track_upper_restart.values
-            s_track_lower = ds.s_track_lower_restart.values
-        else:
-            # Allocate empty arrays based on shape of input data
-            s_track_upper = np.zeros_like(states.s_upper[0])
-            s_track_lower = np.zeros_like(states.s_upper[0])
+        # Resample to (higher) target frequency
+        # After this, the fluxes will be "in between" the states
+        fluxes, states = resample(preprocessed_data, config['target_frequency'])
 
-    (s_track_upper, s_track_lower, processed_data) = backtrack(
-        date,
-        fluxes,
-        states,
-        s_track_upper,
-        s_track_lower,
-        region,
-        config["kvf"],
-    )
+        # Convert data to volumes
+        change_units(fluxes, states, config["target_frequency"])
 
-    # Write output to file
-    # TODO: add (and cleanup) coordinates and units
-    processed_data.to_netcdf(output_path(date))
+        # Apply a stability correction if needed
+        stabilize_fluxes(fluxes, states)
+
+        # Determine the vertical moisture flux
+        fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
+
+
+        (s_track_upper, s_track_lower, processed_data) = backtrack(
+            date,
+            fluxes,
+            states,
+            s_track_upper,
+            s_track_lower,
+            region,
+            config,
+        )
+
+        # Write output to file
+        # TODO: add (and cleanup) coordinates and units
+        processed_data.to_netcdf(output_path(date, config))
+
+
+if __name__=="__main__":
+    run_experiment("../../cases/era5_2021_local.yaml")
