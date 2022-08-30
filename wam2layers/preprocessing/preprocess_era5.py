@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from .preprocessing import (calculate_humidity, insert_level, interpolate,
+from wam2layers.preprocessing.preprocessing import (calculate_humidity, insert_level, interpolate,
                            sortby_ndarray)
 from wam2layers.analysis.checks import check_input
 
@@ -13,7 +13,7 @@ from wam2layers.analysis.checks import check_input
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("../../cases/era5_2021.yaml") as f:
+with open("../../cases/era5_2021_local.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -75,14 +75,14 @@ for date in datelist[:]:
     precip = (density * precip / nseconds).assign_attrs(units="kg m-2 s-1")
     evap = (density * evap / nseconds).assign_attrs(units="kg m-2 s-1")
 
-    # Valid time are now midway throught the timestep, better to be consistent
-    # Extrapolation introduces a small inconsistency at the last midnight...
-    original_time = precip.time
-    midpoint_time = original_time - timestep / 2
-    precip["time"] = precip.time - timestep / 2
-    evap["time"] = precip.time - timestep / 2
-    precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
-    evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    # # Valid time are now midway throught the timestep, better to be consistent
+    # # Extrapolation introduces a small inconsistency at the last midnight...
+    # original_time = precip.time
+    # midpoint_time = original_time - timestep / 2
+    # precip["time"] = precip.time - timestep / 2
+    # evap["time"] = precip.time - timestep / 2
+    # precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    # evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
 
 
     # Create pressure array with the same dimensions as u, q, and v and convert

@@ -2,7 +2,6 @@ from cartopy import crs, feature as cfeature
 import click
 import matplotlib.pyplot as plt
 import xarray as xr
-import numpy as np
 from pathlib import Path
 from wam2layers.preprocessing.preprocessing import get_grid_info
 from wam2layers.tracking.backtrack import parse_config, input_path, output_path, load_region
@@ -52,25 +51,25 @@ def visualize_both(config_file):
 
         ax1.set_title("Tracked precipitation" + date.strftime("%Y%m%d"))
         precip = ds_in.precip.sum('time') * region / a_gridcell[:, None] * 1000
-        precip.plot.contourf(ax=ax1, cmap='Blues', levels=np.arange(0, 50, 5))
-        polish(ax1)
+        precip.plot(ax=ax1, cmap='Blues')
+        polish(ax1, region)
 
         ax2.set_title("Moisture source")
         e_track = ds_out.e_track / a_gridcell[:, None] * 1000
-        e_track.plot.contourf(ax=ax2, cmap='GnBu', levels=np.arange(0.0, 1.0, 0.1))
-        polish(ax2)
+        e_track.plot(ax=ax2, cmap='GnBu')
+        polish(ax2, region)
 
         ax3.set_title("S track upper layer")
         s_track_upper = ds_out.s_track_upper / a_gridcell[:, None] * 1000
-        s_track_upper.plot.contourf(ax=ax3, cmap="YlOrRd", levels=np.arange(0.0, 5, 0.5))
+        s_track_upper.plot(ax=ax3, cmap="YlOrRd")
         ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_upper", v="fy_upper", ax=ax3, color="black")
-        polish(ax3)
+        polish(ax3, region)
 
         ax4.set_title("S track lower layer")
         s_track_lower = ds_out.s_track_lower / a_gridcell[:, None] * 1000
-        s_track_lower.plot.contourf(ax=ax4, cmap="YlOrRd", levels=np.arange(0.0, 5, 0.5))
+        s_track_lower.plot(ax=ax4, cmap="YlOrRd")
         ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_lower", v="fy_lower", ax=ax4, color="black")
-        polish(ax4)
+        polish(ax4, region)
 
         # Save
         output_file = out_dir / f"input_output_{date.strftime('%Y%m%d')}.png"

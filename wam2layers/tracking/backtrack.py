@@ -389,15 +389,15 @@ def backtrack(
     ds = xr.Dataset(
         {
             # Keep last state for a restart
-            "s_track_upper_restart": (["lat", "lon"],s_track_upper),
-            "s_track_lower_restart": (["lat", "lon"], s_track_lower),
-            "s_track_upper": (["lat", "lon"], s_track_upper_mean),
-            "s_track_lower": (["lat", "lon"], s_track_lower_mean),
-            "e_track": (["lat", "lon"], e_track),
-            "north_loss": (["lon"], north_loss),
-            "south_loss": (["lon"], south_loss),
-            "east_loss": (["lat"], east_loss),
-            "west_loss": (["lat"],west_loss),
+            "s_track_upper_restart": (["latitude", "longitude"], s_track_upper),
+            "s_track_lower_restart": (["latitude", "longitude"], s_track_lower),
+            "s_track_upper": (["latitude", "longitude"], s_track_upper_mean),
+            "s_track_lower": (["latitude", "longitude"], s_track_lower_mean),
+            "e_track": (["latitude", "longitude"], e_track),
+            "north_loss": (["longitude"], north_loss),
+            "south_loss": (["longitude"], south_loss),
+            "east_loss": (["latitude"], east_loss),
+            "west_loss": (["latitude"], west_loss),
         }
     )
     return (s_track_upper, s_track_lower, ds)
@@ -432,7 +432,7 @@ def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     config, region, s_track_lower, s_track_upper = initialize(config_file)
 
-    for i, date in enumerate(reversed(config["datelist"])):
+    for date in reversed(config["datelist"]):
         print(date)
         preprocessed_data = xr.open_dataset(input_path(date, config))
 
@@ -461,6 +461,8 @@ def run_experiment(config_file):
 
         # Write output to file
         # TODO: add (and cleanup) coordinates and units
+        processed_data["longitude"] = preprocessed_data.longitude
+        processed_data["latitude"] = preprocessed_data.latitude
         processed_data.to_netcdf(output_path(date, config))
 
 

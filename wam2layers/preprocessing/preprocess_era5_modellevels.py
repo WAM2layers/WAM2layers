@@ -11,7 +11,7 @@ from wam2layers.analysis.checks import check_input
 g = 9.80665  # [m/s2]
 
 # Read case configuration
-with open("../../cases/era5_2021.yaml") as f:
+with open("../../cases/era5_2021_local.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
@@ -90,12 +90,12 @@ for date in datelist[:]:
 
     # Valid time are now midway throught the timestep, better to be consistent
     # Extrapolation introduces a small inconsistency at the last midnight...
-    original_time = precip.time
-    midpoint_time = original_time - timestep / 2
-    precip["time"] = precip.time - timestep / 2
-    evap["time"] = precip.time - timestep / 2
-    precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
-    evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    # original_time = precip.time
+    # midpoint_time = original_time - timestep / 2
+    # precip["time"] = precip.time - timestep / 2
+    # evap["time"] = precip.time - timestep / 2
+    # precip.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    # evap.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
 
     # Split in 2 layers
     # Convert model levels to pressure values
@@ -136,7 +136,6 @@ for date in datelist[:]:
     fy_lower = fy.where(lower_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
     fx_upper = fx.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
     fy_upper = fy.where(upper_layer).sum(dim="lev", keep_attrs=True)  # kg m-1 s-1
-
 
     # Combine everything into one dataset
     ds = xr.Dataset(

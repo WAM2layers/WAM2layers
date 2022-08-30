@@ -81,6 +81,5 @@ as Jupyter Lab, you can import WAM2layers functionality and build your own scrip
 ```python
 import wam2layers
 config_file = "path_to/example_data/example_case.yaml"
-config = wam2layers.read_config(config_file)
-wam2layers.tracking.backtrack.run_experiment(config)
+wam2layers.tracking.backtrack.run_experiment(config_file)
 ```
