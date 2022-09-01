@@ -37,6 +37,14 @@ This dataset adheres to the following requirements:
 - `evap` and `precip` are given in units of "kg m-2 s-2"
 - Latitude should be decreasing, time and longitude increasing.
 
+## Tracking region
+
+In addition to the time-dependent forcing data, WAM2layers also needs a file
+called `source_region.nc` containing a variable called `source_region`, with
+values between 0 and 1. It must have the same lat/lon coordinates as the other
+input data. This file is used to define the source region from where to track
+moisture.
+
 ## Data checking utility functions
 
 To aid in pre-processing, WAM2layers comes with some handy data checking

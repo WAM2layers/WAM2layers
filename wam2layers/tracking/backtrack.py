@@ -483,8 +483,8 @@ def cli(config_file):
 
     Usage examples:
 
-        - python backtrack.py path/to/cases/era5_2021.yaml
-
+        \b
+        - python path/to/backtrack.py path/to/cases/era5_2021.yaml
         - wam2layers backtrack path/to/cases/era5_2021.yaml
     """
     run_experiment(config_file)

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import click
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -26,14 +27,13 @@ def load_data(variable, date, config):
     if "lev" in da.coords:
         da = da.rename(lev="level")
 
-
     if variable in ["u", "v", "q", "t"] and isinstance(config["levels"], list):
         return da.sel(level=config["levels"])
 
     return da.sel(time=slice(date, extra))
 
 
-def preprocess_precip_and_evap(date):
+def preprocess_precip_and_evap(date, config):
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
     evap = load_data("e", date, config)
@@ -57,7 +57,8 @@ def preprocess_precip_and_evap(date):
 def get_edges(era5_modellevels):
     """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
     # Load a and b coefficients
-    df = pd.read_csv("tableERA5model_to_pressure.csv")
+    table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
+    df = pd.read_csv(table)
     a = df["a [Pa]"].to_xarray().rename(index="level")
     b = df["b"].to_xarray().rename(index="level")
 
@@ -170,83 +171,138 @@ def parse_config(config_file):
     return config
 
 
-config = parse_config("../../cases/era5_2021_local.yaml")
-for date in config["datelist"]:
-    print(date)
-    precip, evap = preprocess_precip_and_evap(date)
+#############################################################################
+# With the correct import statements, the code in the function below could
+# alternatively be be used as a script in a separate python file or notebook.
+#############################################################################
 
-    # 4d fields
-    levels = config["levels"]
-    q = load_data("q", date, config)  # in kg kg-1
-    u = load_data("u", date, config)  # in m/s
-    v = load_data("v", date, config)  # in m/s
-    sp = load_data("sp", date, config)  # in Pa
 
-    if config["level_type"] == "model_levels":
-        dp = get_dp_modellevels(sp, levels)
+def prep_experiment(config_file):
+    """Pre-process all data for a given config file.
 
-    if config["level_type"] == "pressure_levels":
-        d2m = load_data("d2m", date, config)  # Dew point in K
-        q2m = calculate_humidity(d2m, sp)  # kg kg-1
-        u10 = load_data("u10", date, config)  # in m/s
-        v10 = load_data("v10", date, config)  # in m/s
-        dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
+    This function expects the following configuration settings:
 
-    # Calculate column water vapour
-    g = 9.80665  # gravitational accelleration [m/s2]
-    cwv = q * dp / g  # (kg/m2)
+    - preprocess_start_date: formatted as YYYYMMDD, e.g. '20210701'
+    - preprocess_end_date: formatted as YYYYMMDD, e.g. '20210716'
+    - level_type: either "pressure_levels" or "model_levels"
+    - levels: "all" or a list of integers with the desired (model or pressure)
+      levels.
+    - input_folder: path where raw era5 input data can be found, e.g.
+      /home/peter/WAM2layers/era5_2021
+    - preprocessed_data_folder: path where preprocessed data should be stored.
+      This directory will be created if it does not exist. E.g.
+      /home/peter/WAM2layers/preprocessed_data_2021
+    - filename_prefix: Fixed part of filename. This function will infer the
+      variable name and add _ml for model level data. E.g. with prefix =
+      "FloodCase_202107" this function will be able to find
+      FloodCase_202107_ml_u.nc or FloodCase_202107_u.nc and
+      FloodCase_202107_sp.nc
+    """
+    config = parse_config(config_file)
+    for date in config["datelist"]:
+        print(date)
+        precip, evap = preprocess_precip_and_evap(date, config)
 
-    if config["vertical_integral_available"]:
-        # calculate column water instead of column water vapour
-        tcw = load_data("tcw", date, config)  # kg/m2
-        cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
-        # TODO: warning if cw >> cwv
-    else:
-        # fluxes will be calculated based on the column water vapour
-        cw = cwv
+        # 4d fields
+        levels = config["levels"]
+        q = load_data("q", date, config)  # in kg kg-1
+        u = load_data("u", date, config)  # in m/s
+        v = load_data("v", date, config)  # in m/s
+        sp = load_data("sp", date, config)  # in Pa
 
-    # Integrate fluxes and states to upper and lower layer
-    if config["level_type"] == "model_levels":
-        # TODO: Check if this is a reasonable choice for boundary
-        boundary = 111
-        lower_layer = dp.level > boundary
-        upper_layer = ~lower_layer
-    if config["level_type"] == "pressure_levels":
-        upper_layer = p < pb[:, None, :, :]
-        lower_layer = pb[:, None, :, :] < p
+        if config["level_type"] == "model_levels":
+            dp = get_dp_modellevels(sp, levels)
 
-    # Vertically integrate state over two layers
-    s_lower = cw.where(lower_layer).sum(dim="level")
-    s_upper = cw.where(upper_layer).sum(dim="level")
+        if config["level_type"] == "pressure_levels":
+            d2m = load_data("d2m", date, config)  # Dew point in K
+            q2m = calculate_humidity(d2m, sp)  # kg kg-1
+            u10 = load_data("u10", date, config)  # in m/s
+            v10 = load_data("v10", date, config)  # in m/s
+            dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
 
-    # Determine the fluxes
-    fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
-    fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+        # Calculate column water vapour
+        g = 9.80665  # gravitational accelleration [m/s2]
+        cwv = q * dp / g  # (kg/m2)
 
-    # Vertically integrate fluxes over two layers
-    fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
-    fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
-    fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
-    fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+        try:
+            # Calculate column water instead of column water vapour
+            tcw = load_data("tcw", date, config)  # kg/m2
+            cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
+            # TODO: warning if cw >> cwv
+        except FileNotFoundError:
+            # Fluxes will be calculated based on the column water vapour
+            cw = cwv
 
-    # Combine everything into one dataset
-    ds = xr.Dataset(
-        {
-            "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
-            "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
-            "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
-            "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
-            "s_upper": s_upper.assign_attrs(units="kg m-2"),
-            "s_lower": s_lower.assign_attrs(units="kg m-2"),
-            "evap": evap,
-            "precip": precip,
-        }
-    )
+        # Integrate fluxes and states to upper and lower layer
+        if config["level_type"] == "model_levels":
+            # TODO: Check if this is a reasonable choice for boundary
+            boundary = 111
+            lower_layer = dp.level > boundary
+            upper_layer = ~lower_layer
+        if config["level_type"] == "pressure_levels":
+            upper_layer = p < pb[:, None, :, :]
+            lower_layer = pb[:, None, :, :] < p
 
-    # Verify that the data meets all the requirements for the model
-    check_input(ds)
+        # Vertically integrate state over two layers
+        s_lower = cw.where(lower_layer).sum(dim="level")
+        s_upper = cw.where(upper_layer).sum(dim="level")
 
-    # Save preprocessed data
-    filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-    output_path = config["output_dir"] / filename
-    ds.to_netcdf(output_path)
+        # Determine the fluxes
+        fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
+        fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+
+        # Vertically integrate fluxes over two layers
+        fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+        fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+        fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+        fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+
+        # Combine everything into one dataset
+        ds = xr.Dataset(
+            {
+                "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
+                "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
+                "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
+                "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+                "s_upper": s_upper.assign_attrs(units="kg m-2"),
+                "s_lower": s_lower.assign_attrs(units="kg m-2"),
+                "evap": evap,
+                "precip": precip,
+            }
+        )
+
+        # Verify that the data meets all the requirements for the model
+        check_input(ds)
+
+        # Save preprocessed data
+        filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+        output_path = config["output_dir"] / filename
+        ds.to_netcdf(output_path)
+
+
+###########################################################################
+# The code below makes it possible to run wam2layers from the command line:
+# >>> python backtrack.py path/to/cases/era5_2021.yaml
+# or even:
+# >>> wam2layers backtrack path/to/cases/era5_2021.yaml
+###########################################################################
+
+
+@click.command()
+@click.argument('config_file', type=click.Path(exists=True))
+def cli(config_file):
+    """Preprocess ERA5 data for WAM2layers tracking experiments.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        \b
+        - python path/to/preprocessing/era5.py path/to/cases/era5_2021.yaml
+        - wam2layers preprocess era5 path/to/cases/era5_2021.yaml
+    """
+    prep_experiment(config_file)
+
+
+if __name__ == "__main__":
+    cli()

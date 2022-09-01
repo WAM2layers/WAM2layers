@@ -86,6 +86,7 @@ def visualize_both(config_file):
 
 @click.group()
 def cli():
+    """Visualize input or output data of a WAM2layers experiment"""
     pass
 
 

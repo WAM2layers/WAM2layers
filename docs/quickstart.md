@@ -4,8 +4,9 @@ tl;dr
 
 ```
 pip install wam2layers
-curl ....
+# Download example data from rebrand.ly/wam2layers-example-data
 wam2layers backtrack example_data/example_case.yaml
+wam2layers visualize output floodcase_202107.yaml
 ```
 
 ## Installation instructions
@@ -53,25 +54,24 @@ updated code.
 ## Download example data
 
 Before we can start tracking, we need some data. Input data for a simple example
-case is available via Zenodo: ...
+case is currently available via https://rebrand.ly/wam2layers-example-data. Once
+stabilized, we will move it to a more persistent place, such as Zenodo.
 
-You may download the data manually through zenodo, or use the commands below:
-```
-# Download from zenodo
-........
-# Extract
-```
+You will see that the example data comes with a configuration file. You will
+need to update the paths in that file such that they point to your the location
+where you stored the downloaded example data.
 
-For more information, see the documentation on pre-processing.
+For more information, see the documentation on configuration and pre-processing.
 
 ## Start an experiment
 
 Now you are ready to start tracking! There are a few ways to use WAM2layers. One
 way is to use it from the command line:
 ```
-wam2layers download example
-wam2layers track example
+wam2layers backtrack floodcase_202107.yaml
+wam2layers visualize output floodcase_202107.yaml
 ```
+
 This workflow is particularly useful if you are running experiments on HPC
 systems.
 
