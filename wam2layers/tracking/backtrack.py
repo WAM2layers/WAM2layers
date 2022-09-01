@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-from wam2layers.preprocessing.preprocessing import get_grid_info
+from wam2layers.preprocessing.shared import get_grid_info
 
 
 def parse_config(config_file):

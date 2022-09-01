@@ -1,10 +1,14 @@
-from cartopy import crs, feature as cfeature
+from pathlib import Path
+
 import click
 import matplotlib.pyplot as plt
 import xarray as xr
-from pathlib import Path
-from wam2layers.preprocessing.preprocessing import get_grid_info
-from wam2layers.tracking.backtrack import parse_config, input_path, output_path, load_region
+from cartopy import crs
+from cartopy import feature as cfeature
+from wam2layers.preprocessing.shared import get_grid_info
+from wam2layers.tracking.backtrack import (input_path, load_region,
+                                           output_path, parse_config)
+
 
 def polish(ax, region):
     ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
@@ -18,7 +22,6 @@ def visualize_input_data(config_file):
     config = parse_config(config_file)
     for date in config["datelist"]:
         ds = xr.open_dataset(input_path(date, config))
-        import IPython; IPython.embed(); quit()
     # do stuff
 
 
@@ -27,9 +30,7 @@ def visualize_output_data(config_file):
     config = parse_config(config_file)
     for date in config["datelist"]:
         ds = xr.open_dataset(output_path(date, config))
-        import IPython; IPython.embed(); quit()
     # do stuff
-
 
 
 def visualize_both(config_file):

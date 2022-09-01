@@ -6,7 +6,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from .preprocessing import (
+from .shared import (
     resample,
     get_stable_fluxes,
     get_vertical_transport,
