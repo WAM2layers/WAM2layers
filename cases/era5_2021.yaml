@@ -5,19 +5,19 @@ preprocess_end_date: '20210716' #YYYYMMDD
 target_frequency: '15min'  # See https://stackoverflow.com/a/35339226 for options
 
 # Settings shared by preprocessing and backtracking
-preprocessed_data_folder: ~/preprocessed_data_2021
+preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
 vertical_integral_available: True
 modellevels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 periodic_boundary: false #true if input data goes from 180W to 180E, false if not
 
 # Settings needed to define the tracking region (in space and time)
-region: /data/volume_2/era5_2021/source_region.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
+region: ~/floodcase_202107/preprocessed_data/source_region.nc # requirements: a) same extent in space as preprocessed data, c) values between 0 and 1
 track_start_date: '20210701' #YYYYMMDD
 track_end_date: '20210716' #YYYYMMDD
 
 # Settings needed for the tracking run
 name_of_run: 'default_run'
-output_folder: ~/output_data_2021
+output_folder: ~/floodcase_202107/output_data
 restart: false # False: loads tracked water from previous run. True: starts from zero tracked water
 kvf: 3 # Vertical transport parameter for gross vertical transport between the layers during the tracking: "actual exchange = Kvf * F_vertical + F_vertical" in one direction and "-1 * (Kvf * F_vertical)" in opposite direction. # Default = 3.
 timetracking: false
