@@ -2,9 +2,6 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["wam2layers"]
-
 [project]
 name = "wam2layers"
 description = "Atmospheric moisture tracking model"
