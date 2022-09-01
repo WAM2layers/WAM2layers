@@ -13,21 +13,25 @@ See the [documentation](http://wam2layers.rtfd.io/) for a more detailed descript
 # How to use
 
 ```
-# Clone the source code repository
-git clone git@github.com:WAM2layers/WAM2layers.git
-
-# Enter the source code directory
-cd WAM2layers/
-
-# Install dependencies and activate environment
-conda env create -f environment.yaml
+# Advised but not strictly needed
+conda create -n wam2layers -c conda-forge python=3.9 jupyterlab cartopy matplotlib
 conda activate wam2layers
 
-# Download sample data
-# TODO
+# Simple user installation
+pip install git@github.com:WAM2layers/WAM2layers.git
+
+
+# Editable (develop) installation
+git clone git@github.com:WAM2layers/WAM2layers.git
+cd WAM2layers/
+pip install -e .[develop]
+
+# Download sample data and update paths in config file
+https://rebrand.ly/wam2layers-example-data
 
 # Run the example backtrack script
-python backtrack.py cases/FloodCase_202107.yaml
+wam2layers backtrack floodCase_202107.yaml
+wam2layers visualize output floodCase_202107.yaml
 ```
 
 ## Other versions
