@@ -14,33 +14,37 @@ from wam2layers.preprocessing.shared import (accumulation_to_flux,
 
 def load_data(variable, date, config):
     """Load data for given variable and date."""
-    prefix = config["filename_prefix"]
-    # Include midnight of the next day (if available)
-    extra = date + pd.Timedelta(days=1)
+    template = config["filename_template"]
+    
+    # If it's a 4d variable, we need to set the level type
+    if variable in ["u", "v", "q"]:
+        if config["level_type"] == "model_levels":
+            prefix = '_ml'
+        elif config["level_type"] == "pressure_levels":
+            prefix = '_pl'
+    # If it's a 3d variable we do not need to set the level type
+    else:
+        prefix = ""
 
-    if variable in ["u", "v", "q", "t"] and config["level_type"] == "model_levels":
-        prefix += "_ml"
-
-    filepath = Path(config["input_folder"]) / f"{prefix}_{variable}.nc"
-    da = xr.open_dataset(filepath)[variable].sel(time=slice(date, extra))
-
+    # Load data
+    filepath = template.format(year=date.year, month=date.month, day= date.day, levtype=prefix, variable = variable)
+    da = xr.open_dataset(filepath,chunks='auto')[variable]
+            
     if "lev" in da.coords:
         da = da.rename(lev="level")
-
-    if variable in ["u", "v", "q", "t"] and isinstance(config["levels"], list):
+        
+    # If it's 4d data we want to select a subset of the levels
+    if variable in ["u", "v", "q"] and isinstance(config["levels"], list):
         return da.sel(level=config["levels"])
-
-    return da.sel(time=slice(date, extra))
-
+    
+    return da
 
 def preprocess_precip_and_evap(date, config):
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
     evap = load_data("e", date, config)
-    cp = load_data("cp", date, config)  # convective precipitation
-    lsp = load_data("lsp", date, config)  # large scale precipitation
-    precip = (cp + lsp)
-
+    precip = load_data("tp", date, config)  # total precipitation
+    
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     precip = precip
@@ -50,9 +54,8 @@ def preprocess_precip_and_evap(date, config):
 
     precip = accumulation_to_flux(precip)
     evap = accumulation_to_flux(evap)
-
+    print('loaded evap & precip')
     return precip, evap
-
 
 def get_edges(era5_modellevels):
     """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
@@ -214,6 +217,8 @@ def prep_experiment(config_file):
             v10 = load_data("v10", date, config)  # in m/s
             dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
 
+        print('loaded 4d data')    
+            
         # Calculate column water vapour
         g = 9.80665  # gravitational accelleration [m/s2]
         cwv = q * dp / g  # (kg/m2)
@@ -241,6 +246,8 @@ def prep_experiment(config_file):
         s_lower = cw.where(lower_layer).sum(dim="level")
         s_upper = cw.where(upper_layer).sum(dim="level")
 
+        print('check here')
+        
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
         fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
@@ -251,6 +258,8 @@ def prep_experiment(config_file):
         fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
         fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
+        print('Done the integration to two layers')
+        
         # Combine everything into one dataset
         ds = xr.Dataset(
             {
