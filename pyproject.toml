@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"wam2layers.preprocessing" = ["*.csv"]
+
+[project]
+name = "wam2layers"
+description = "Atmospheric moisture tracking model"
+version = "3.0.0-beta.2"
+readme = "README.md"
+keywords = [
+  "atmospheric rivers",
+  "hydrological cycle",
+  "meteorology",
+  "moisture recycling",
+  "moisture tracking",
+]
+
+requires-python = ">=3.8,<3.10"
+dependencies = [
+    "numpy",
+    "pyyaml",
+    "scipy",
+    "xarray", # or xarray[io,parallel,complete,...]
+    "netcdf4",
+    "scipy",
+    "click",
+    ## Cartopy requires GEOS and PROJ
+    ## recommend installing with conda instead
+    # cartopy
+]
+
+[project.optional-dependencies]
+develop = [
+    "black",
+    "cffconvert",
+    "isort",
+    "myst-nb",
+    "sphinx_rtd_theme",
+    "sphinx",
+]
+
+[project.scripts]
+wam2layers = "wam2layers.cli:cli"

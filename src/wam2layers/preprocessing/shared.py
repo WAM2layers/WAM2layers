@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.interpolate import interp1d
 import xarray as xr
+import pandas as pd
 
 
 # old, keep only for reference and ecearth starting case
@@ -250,3 +251,27 @@ def calculate_humidity(dewpoint, pressure):
     spec_hum = (Rd / Rv) * svp / (pressure - ((1 - Rd / Rv) * svp))
 
     return spec_hum
+
+
+def accumulation_to_flux(data):
+    """Convert precip and evap from accumulations to fluxes.
+
+    Incoming data should have units of "m"
+
+    Note: this does not currently modify the time labels. It can be argued
+    that the times should be shifted. A good fix for this is welcome.
+    """
+    density = 1000  # [kg/m3]
+    timestep = pd.Timedelta(data.time.diff('time')[0].values)
+    nseconds = timestep.total_seconds()
+
+    fluxdata = (density * data / nseconds).assign_attrs(units="kg m-2 s-1")
+
+    # TODO: Adjust time points?
+    # original_time = data.time
+    # midpoint_time = original_time - timestep / 2
+    # data["time"] = midpoint_time
+
+    # Extrapolation introduces a small inconsistency at the last midnight...
+    # data.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
+    return fluxdata
