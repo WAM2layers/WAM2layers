@@ -6,10 +6,10 @@ import xarray as xr
 import yaml
 
 from analysis.visualization import make_diagnostic_figures
-from preprocessing import get_grid_info
+from preprocessing.preprocessing import get_grid_info
 
 # Read case configuration
-with open("cases/era5_2021.yaml") as f:
+with open("../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 

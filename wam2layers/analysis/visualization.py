@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr
 from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
 
-from preprocessing import get_grid_info
+from preprocessing.preprocessing import get_grid_info
 
 
 def make_diagnostic_figures(

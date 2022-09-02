@@ -6,11 +6,10 @@ import yaml
 import numpy as np
 from pathlib import Path
 
-from preprocessing import get_grid_info
-
+from preprocessing.preprocessing import get_grid_info
 
 # Read case configuration
-with open("cases/era5_2021.yaml") as f:
+with open("../cases/era5_2021.yaml") as f:
     config = yaml.safe_load(f)
 
 # Create the preprocessed data folder if it does not exist yet
