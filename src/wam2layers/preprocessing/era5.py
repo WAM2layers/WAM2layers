@@ -171,12 +171,6 @@ def parse_config(config_file):
     return config
 
 
-#############################################################################
-# With the correct import statements, the code in the function below could
-# alternatively be be used as a script in a separate python file or notebook.
-#############################################################################
-
-
 def prep_experiment(config_file):
     """Pre-process all data for a given config file.
 
@@ -279,6 +273,10 @@ def prep_experiment(config_file):
         output_path = config["output_dir"] / filename
         ds.to_netcdf(output_path)
 
+################################################################################
+# To run this script interactively in e.g. Spyder, uncomment the following line:
+# prep_experiment("../../cases/era5_2021.yaml")
+################################################################################
 
 ###########################################################################
 # The code below makes it possible to run wam2layers from the command line:
