@@ -2,11 +2,8 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.setuptools.package-data]
-wam2layers = ["*.csv"]
+wam2layers.preprocessing = ["*.csv"]
 
 [project]
 name = "wam2layers"
