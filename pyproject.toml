@@ -2,14 +2,20 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.package-data]
-"wam2layers.preprocessing" = ["*.csv"]
-
 [project]
 name = "wam2layers"
 description = "Atmospheric moisture tracking model"
 version = "3.0.0-beta.2"
 readme = "README.md"
+license = "Apache 2.0 licence"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
 keywords = [
   "atmospheric rivers",
   "hydrological cycle",
@@ -17,7 +23,6 @@ keywords = [
   "moisture recycling",
   "moisture tracking",
 ]
-
 requires-python = ">=3.8,<3.10"
 dependencies = [
     "numpy",
@@ -42,5 +47,12 @@ develop = [
     "sphinx",
 ]
 
+[project.urls]
+Documentation = "https://wam2layers.readthedocs.io/en/latest"
+"Source code" = "https://github.com/WAM2layers/WAM2layers"
+
 [project.scripts]
 wam2layers = "wam2layers.cli:cli"
+
+[tool.setuptools.package-data]
+"wam2layers.preprocessing" = ["*.csv"]
