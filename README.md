@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/471007521.svg)](https://zenodo.org/badge/latestdoi/471007521)
 [![Documentation Status](https://readthedocs.org/projects/wam2layers/badge/?version=latest)](https://wam2layers.readthedocs.io/en/latest/?badge=latest)
-[![Latest Version](https://pypip.in/version/wam2layers/badge.svg)](https://pypi.python.org/pypi/wam2layers/)
+[![PyPI](https://img.shields.io/pypi/v/wam2layers)](https://pypi.org/project/wam2layers/)
 
 # Atmospheric moisture tracking
 
