@@ -7,7 +7,7 @@ name = "wam2layers"
 description = "Atmospheric moisture tracking model"
 version = "3.0.0-beta.2"
 readme = "README.md"
-license = "Apache 2.0 licence"
+license = { text = "Apache 2.0" }
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python",
@@ -28,6 +28,7 @@ dependencies = [
     "numpy",
     "pyyaml",
     "scipy",
+    "pandas>=1.4.0",
     "xarray", # or xarray[io,parallel,complete,...]
     "netcdf4",
     "scipy",
