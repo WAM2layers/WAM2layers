@@ -5,7 +5,7 @@ tl;dr
 ```
 pip install wam2layers
 # Download example data from rebrand.ly/wam2layers-example-data
-wam2layers backtrack example_data/example_case.yaml
+wam2layers backtrack floodcase2021.yaml
 wam2layers visualize output floodcase_202107.yaml
 ```
 
@@ -80,6 +80,6 @@ as Jupyter Lab, you can import WAM2layers functionality and build your own scrip
 
 ```python
 import wam2layers
-config_file = "path_to/example_data/example_case.yaml"
+config_file = "path_to/example_data/floodcase_2021.yaml"
 wam2layers.tracking.backtrack.run_experiment(config_file)
 ```
