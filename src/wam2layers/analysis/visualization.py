@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 from cartopy import crs
 from cartopy import feature as cfeature
+from cmocean import cm
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import (input_path, load_region,
                                            output_path, parse_config)
@@ -26,11 +27,30 @@ def visualize_input_data(config_file):
 
 
 def visualize_output_data(config_file):
-    raise NotImplementedError()
+    """An figure showing the cumulative moisture origins."""
+    # Load config and some usful stuf.
     config = parse_config(config_file)
-    for date in config["datelist"]:
-        ds = xr.open_dataset(output_path(date, config))
-    # do stuff
+    region = load_region(config)
+    a_gridcell, lx, ly = get_grid_info(region)
+
+    # Load data
+    output_files = f"{config['output_folder']}/*.nc"
+    ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
+    e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
+
+    # Make figure
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+    e_track.plot(ax=ax, vmin=0, vmax=3, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=['lightgrey', 'grey'])
+    ax.set_title('Moisture source of extreme precip [mm]', loc = 'left')
+    polish(ax, region)
+
+    # Save
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
+
 
 
 def visualize_both(config_file):

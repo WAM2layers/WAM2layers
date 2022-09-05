@@ -5,7 +5,7 @@ We recommend to create an editable installation in a dedicated conda environment
 
 ```
 # Create a dedicated conda environment
-conda create -n wam2layers -c conda-forge python=3.9 jupyterlab cartopy matplotlib
+conda create -n wam2layers -c conda-forge python=3.9 jupyterlab cartopy matplotlib cmocean
 conda activate wam2layers
 
 # Clone the source code repository
