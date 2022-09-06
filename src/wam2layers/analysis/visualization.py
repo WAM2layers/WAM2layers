@@ -192,5 +192,13 @@ def both(config_file):
     """Visualize both input and output data for experiment."""
     visualize_both(config_file)
 
+
+@cli.command()
+@click.argument('config_file', type=click.Path(exists=True))
+def snapshots(config_file):
+    """Visualize input and output snapshots for experiment."""
+    visualize_snapshots(config_file)
+
+
 if __name__ == "__main__":
     cli()
