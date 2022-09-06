@@ -2,6 +2,7 @@
 
 getSingleLevel=false
 getModelLevel=true
+getPressureLevel=true
 
 # Single level data can be downloaded using era5cli
 if [ "$getSingleLevel" = true ]
