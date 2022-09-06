@@ -83,9 +83,9 @@ elif(config['level_type'] == 'pressure_levels'):
     varp= ['specific_humidity', 'u_component_of_wind', 'v_component_of_wind']  
     varpshort = ['q','u','v']
     
-    sfc_short = ['tp','e','sp']
-    sfc_long = ['mean_sea_level_pressure', 'evaporation', 'total_precipitation']
-    
+    sfc_short = ['tp','e','sp','d2m','u10','v10']
+    sfc_long = ['mean_sea_level_pressure', 'evaporation', 'total_precipitation','2m_dewpoint_temperature','10m_u_component_of_wind', '10m_v_component_of_wind']
+     
     for date in datelist:
         #For first day of month, datadir should be created
         dtstr = date.strftime("%Y-%m-%d")            
