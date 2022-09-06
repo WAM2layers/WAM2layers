@@ -6,13 +6,8 @@ from pathlib import Path
 c = cdsapi.Client()
 
 # Read case configuration
-with open("cases/era5_2021.yaml") as f:
-    config = yaml.safe_load(f)
-    
-# Use the preprocessing dates to select which dates to download
-datelist = pd.date_range(
-    start=config["preprocess_start_date"], end=config["preprocess_end_date"], freq="d"
-)
+from wam2layers.preprocessing.era5 import parse_config
+config=parse_config("cases/era5_2021.yaml")
 
 #Construct level list
 if((config['levels'] == 'All') & (config['level_type'] == 'model_levels')):
