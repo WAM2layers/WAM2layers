@@ -41,16 +41,17 @@ if(config['level_type'] == 'model_levels'):
     sfc_short = ['tp','e','sp']
     sfc_long = ['mean_sea_level_pressure', 'evaporation', 'total_precipitation']
     
-    for date in datelist:
+    for date in config['datelist']:
         dtstr = date.strftime("%Y-%m-%d")
 
         # Create yearly parent dir if it doesn't exist yet
-        parent = Path(config["input_folder"]).expand_user() / str(date.year)
+        parent = Path(config["input_folder"]).expanduser() / str(date.year)
         parent.mkdir(exist_ok=True, parents=True)
         
         # Create monthly subdirectories
         child = parent / str(date.month)
         child.mkdir(exist_ok=True)    # note: expanduser not necessary, already done above
+        
         #Loop over model level variables
         for i in range(len(var_names)):
             outfile =  'ERA5_' + dtstr + "_" + var_names[i] + '_ml.nc'
@@ -100,22 +101,22 @@ elif(config['level_type'] == 'pressure_levels'):
     varp= ['specific_humidity', 'u_component_of_wind', 'v_component_of_wind']  
     varpshort = ['q','u','v']
     
-    sfc_short = ['tp','e','sp','d2m','u10','v10']
-    sfc_long = ['mean_sea_level_pressure', 'evaporation', 'total_precipitation','2m_dewpoint_temperature','10m_u_component_of_wind', '10m_v_component_of_wind']
+    sfc_short = ['tp','e','sp','d2m','u10','v10','tcw']
+    sfc_long = ['mean_sea_level_pressure', 'evaporation', 'total_precipitation','2m_dewpoint_temperature','10m_u_component_of_wind', '10m_v_component_of_wind','total_column_water']
      
-    for date in datelist:
+    for date in config['datelist']:
         dtstr = date.strftime("%Y-%m-%d")            
         
-        #For first day of month, datadir should be created
-        data_dir = Path(config["input_folder"] + "/" + str(date.year) ).expanduser()
-        data_dir.mkdir(exist_ok=True, parents=True)
+        # Create yearly parent dir if it doesn't exist yet
+        parent = Path(config["input_folder"]).expanduser() / str(date.year)
+        parent.mkdir(exist_ok=True, parents=True)
         
-        #Subdirectory for every month 
-        data_dir = Path(config["input_folder"] + "/" + str(date.year) + '/' + str(date.month) ).expanduser()
-        data_dir.mkdir(exist_ok=True, parents=True)
+        # Create monthly subdirectories
+        child = parent / str(date.month)
+        child.mkdir(exist_ok=True)    # note: expanduser not necessary, already done above
         
         for i in range(len(varp)):
-            outfile = 'ERA5_' + dtstr + "_" + varpshort[i] + '_pl_.nc'
+            outfile = 'ERA5_' + dtstr + "_" + varpshort[i] + '_pl.nc'
             outfile = data_dir / outfile
 
             c.retrieve(
