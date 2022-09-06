@@ -1,5 +1,4 @@
 # Settings needed for preprocessing
-#input_folder: /data/volume_2/era5_2021
 input_folder: /data/volume_2/ERA5
 filename_prefix: 'FloodCase_202107'
 preprocess_start_date: '20210701'
