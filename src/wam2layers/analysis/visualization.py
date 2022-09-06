@@ -19,15 +19,42 @@ def polish(ax, region):
 
 
 def visualize_input_data(config_file):
-    raise NotImplementedError()
+    """An figure showing the cumulative moisture inputs.
+
+    TODO: make figure creation independent of case.
+    """
+    # Load config and some usful stuf.
     config = parse_config(config_file)
-    for date in config["datelist"]:
-        ds = xr.open_dataset(input_path(date, config))
-    # do stuff
+    region = load_region(config)
+    a_gridcell, lx, ly = get_grid_info(region)
+
+    # Load data
+    input_files = f"{config['preprocessed_data_folder']}/*.nc"
+    ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
+    # TODO: make region time-dependent
+    start = config["event_start_date"]
+    end = config["event_end_date"]
+    subset = ds.precip.sel(time=slice(start, end))
+    precip = (subset * region * 3600).sum('time').compute()
+
+    # Make figure
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+    precip.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    ax.set_title('Cumulative precipitation during event [mm]', loc='left')
+    polish(ax, region.where(region>0, drop=True))
+
+    # Save
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "input_event.png", dpi=200)
 
 
 def visualize_output_data(config_file):
-    """An figure showing the cumulative moisture origins."""
+    """An figure showing the cumulative moisture origins.
+
+    TODO: make figure creation independent of case.
+    """
     # Load config and some usful stuf.
     config = parse_config(config_file)
     region = load_region(config)
