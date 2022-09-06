@@ -28,5 +28,5 @@ event_end_date: '20210715'
 
 # Settings for downloading the data
 data_freq: 'hourly'
-data_area: [60, -50,30,30] # North, West, South, East. Default: global
+data_area: [60, -50, 30, 30]  # North, West, South, East. Default: global
 data_resolution: 0.25
