@@ -22,10 +22,17 @@ elif((config['levels'] == 'All') & (config['level_type'] == 'pressure_levels')):
 else:
     s = '/'
     levlist = s.join(str(e) for e in config['levels'])
+
+# Construct list of downloading times
+if (config['data_freq'] == 'hourly'):
+    timlist  = '00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00'
+elif(config['data_freq'] == '3hourly'): 
+    timlist = '00:00:00/03:00:00/06:00:00/09:00:00/12:00:00/15:00:00/18:00:00/21:00:00'
+elif(config['data_freq'] == '6hourly'): 
+    timlist = '00:00:00/06:00:00/12:00:00/18:00:00'
     
-timlist  = '00:00:00/01:00:00/02:00:00/03:00:00/04:00:00/05:00:00/06:00:00/07:00:00/08:00:00/09:00:00/10:00:00/11:00:00/12:00:00/13:00:00/14:00:00/15:00:00/16:00:00/17:00:00/18:00:00/19:00:00/20:00:00/21:00:00/22:00:00/23:00:00'
-area = [60, -50,30,30] # North, West, South, East. Default: global
-grid = [0.25, 0.25]  # Latitude/longitude grid.  Default: 0.25 x 0.25
+area = config['data_area'] # North, West, South, East. Default: global
+grid = [config['data_resolution'], config['data_resolution']]  
 
 ######################################################################
 # For model levels the following variables are downloaded:
