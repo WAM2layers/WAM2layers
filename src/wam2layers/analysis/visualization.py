@@ -18,15 +18,10 @@ def polish(ax, region):
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
-def visualize_input_data(config_file):
-    """An figure showing the cumulative moisture inputs.
-
-    TODO: make figure creation independent of case.
-    """
+def _plot_precip(config, ax):
+    """Return subplot with precip."""
     # Load config and some usful stuf.
-    config = parse_config(config_file)
     region = load_region(config)
-    a_gridcell, lx, ly = get_grid_info(region)
 
     # Load data
     input_files = f"{config['preprocessed_data_folder']}/*.nc"
@@ -38,11 +33,43 @@ def visualize_input_data(config_file):
     precip = (subset * region * 3600).sum('time').compute()
 
     # Make figure
-    fig = plt.figure(figsize=(16, 10))
-    ax = fig.add_subplot(111, projection=crs.PlateCarree())
     precip.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
     ax.set_title('Cumulative precipitation during event [mm]', loc='left')
     polish(ax, region.where(region>0, drop=True))
+
+
+def _plot_evap(config, ax):
+    """Return subplot with tracked evaporation."""
+    region = load_region(config)
+    a_gridcell, lx, ly = get_grid_info(region)
+
+    # Load data
+    output_files = f"{config['output_folder']}/*.nc"
+    ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
+    e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
+
+    # Make figure
+    e_track.plot(ax=ax, vmin=0, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=['lightgrey', 'grey'])
+    ax.set_title('Moisture source of extreme precip [mm]', loc = 'left')
+
+    # Add source region outline
+    region.plot.contour(ax=ax, levels=[1], colors='k')
+    polish(ax, region)
+
+
+def visualize_input_data(config_file):
+    """An figure showing the cumulative moisture inputs.
+
+    TODO: make figure creation independent of case.
+    """
+    config = parse_config(config_file)
+
+    # Make figure
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+
+    _plot_precip(config, ax)
 
     # Save
     out_dir = Path(config["output_folder"]) / "figures"
@@ -57,21 +84,12 @@ def visualize_output_data(config_file):
     """
     # Load config and some usful stuf.
     config = parse_config(config_file)
-    region = load_region(config)
-    a_gridcell, lx, ly = get_grid_info(region)
-
-    # Load data
-    output_files = f"{config['output_folder']}/*.nc"
-    ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
-    e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
 
     # Make figure
     fig = plt.figure(figsize=(16, 10))
     ax = fig.add_subplot(111, projection=crs.PlateCarree())
-    e_track.plot(ax=ax, vmin=0, vmax=3, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
-    e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=['lightgrey', 'grey'])
-    ax.set_title('Moisture source of extreme precip [mm]', loc = 'left')
-    polish(ax, region)
+
+    _plot_evap(config, ax)
 
     # Save
     out_dir = Path(config["output_folder"]) / "figures"
@@ -79,8 +97,24 @@ def visualize_output_data(config_file):
     fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
 
 
-
 def visualize_both(config_file):
+    """Diagnostic figure with four subplots combining input and output data."""
+    # Load config and some usful stuf.
+    config = parse_config(config_file)
+
+    # Make figure
+    fig, [ax1, ax2] = plt.subplots(2, 1, figsize=(16, 10), subplot_kw=dict(projection=crs.PlateCarree()))
+
+    _plot_precip(config, ax1)
+    _plot_evap(config, ax2)
+
+        # Save
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "summary_subplots.png", dpi=200)
+
+
+def visualize_snapshots(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
     config = parse_config(config_file)
     region = load_region(config)
