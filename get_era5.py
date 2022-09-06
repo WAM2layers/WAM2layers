@@ -49,14 +49,13 @@ if(config['level_type'] == 'model_levels'):
     for date in datelist:
         dtstr = date.strftime("%Y-%m-%d")
 
-        #For first day of month, datadir should be created
-        data_dir = Path(config["input_folder"] + "/" + str(date.year) ).expanduser()
-        data_dir.mkdir(exist_ok=True, parents=True)
+        # Create yearly parent dir if it doesn't exist yet
+        parent = Path(config["input_folder"]).expand_user() / str(date.year)
+        parent.mkdir(exist_ok=True, parents=True)
         
-        #Subdirectory for every month 
-        data_dir = Path(config["input_folder"] + "/" + str(date.year) + '/' + str(date.month) ).expanduser()
-        data_dir.mkdir(exist_ok=True, parents=True)
-        
+        # Create monthly subdirectories
+        child = parent / str(date.month)
+        child.mkdir(exist_ok=True)    # note: expanduser not necessary, already done above
         #Loop over model level variables
         for i in range(len(var_names)):
             outfile =  'ERA5_' + dtstr + "_" + var_names[i] + '_ml.nc'
