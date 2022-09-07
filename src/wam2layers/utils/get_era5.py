@@ -6,7 +6,7 @@ from pathlib import Path
 c = cdsapi.Client()
 
 # Read case configuration
-from wam2layers.preprocessing.era5 import parse_config
+#from wam2layers.preprocessing.era5 import parse_config
 config=parse_config("cases/era5_2021.yaml")
 
 #Construct level list
@@ -55,7 +55,7 @@ if(config['level_type'] == 'model_levels'):
         #Loop over model level variables
         for i in range(len(var_names)):
             outfile =  'ERA5_' + dtstr + "_" + var_names[i] + '_ml.nc'
-            outfile = data_dir / outfile
+            outfile = child / outfile
             
             c.retrieve('reanalysis-era5-complete', {
             'class': 'ea',
@@ -75,7 +75,7 @@ if(config['level_type'] == 'model_levels'):
         #Loop over single level variables
         for i in range(len(sfc_long)):
             outfile = 'ERA5_' + dtstr + "_" + sfc_short[i] + '.nc' 
-            outfile = data_dir / outfile
+            outfile = child / outfile
             
             c.retrieve(
             'reanalysis-era5-single-levels',
@@ -117,7 +117,7 @@ elif(config['level_type'] == 'pressure_levels'):
         
         for i in range(len(varp)):
             outfile = 'ERA5_' + dtstr + "_" + varpshort[i] + '_pl.nc'
-            outfile = data_dir / outfile
+            outfile = child / outfile
 
             c.retrieve(
             'reanalysis-era5-pressure-levels',
@@ -136,7 +136,7 @@ elif(config['level_type'] == 'pressure_levels'):
             #Loop over single level variables
         for i in range(len(sfc_long)):
             outfile =  'ERA5_' + dtstr + "_" + sfc_short[i] + '.nc' 
-            outfile = data_dir / outfile
+            outfile = child / outfile
 
             c.retrieve(
             'reanalysis-era5-single-levels',
