@@ -25,29 +25,69 @@ area = None  # None for global, or [N, W, S, E]
 grid = [0.25, 0.25]
 
 times = [
-  '00:00', '01:00', '02:00',
-  '03:00', '04:00', '05:00',
-  '06:00', '07:00', '08:00',
-  '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00',
-  '15:00', '16:00', '17:00',
-  '18:00', '19:00', '20:00',
-  '21:00', '22:00', '23:00',
+    '00:00',
+    '01:00',
+    '02:00',
+    '03:00',
+    '04:00',
+    '05:00',
+    '06:00',
+    '07:00',
+    '08:00',
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00',
+    '21:00',
+    '22:00',
+    '23:00',
 ]
 
 levels = [
-    '1', '2', '3',
-    '5', '7', '10',
-    '20', '30', '50',
-    '70', '100', '125',
-    '150', '175', '200',
-    '225', '250', '300',
-    '350', '400', '450',
-    '500', '550', '600',
-    '650', '700', '750',
-    '775', '800', '825',
-    '850', '875', '900',
-    '925', '950', '975',
+    '1',
+    '2',
+    '3',
+    '5',
+    '7',
+    '10',
+    '20',
+    '30',
+    '50',
+    '70',
+    '100',
+    '125',
+    '150',
+    '175',
+    '200',
+    '225',
+    '250',
+    '300',
+    '350',
+    '400',
+    '450',
+    '500',
+    '550',
+    '600',
+    '650',
+    '700',
+    '750',
+    '775',
+    '800',
+    '825',
+    '850',
+    '875',
+    '900',
+    '925',
+    '950',
+    '975',
     '1000',
 ]
 
@@ -97,8 +137,11 @@ for date in datelist:
                         'format': 'netcdf',
                     }, str(outfolder / outfile))
             except:
-                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
-
+                print("""
+                   Request failed for {variable}, {date}. Proceeding. You can
+                   run the code again and set 'skip_exist' to true to avoid
+                   duplicate downloads.
+                """)
 
     # Download 3d variables
     for variable, long_name in pl_variables.items():
@@ -108,15 +151,19 @@ for date in datelist:
         else:
             try:
                 c.retrieve(
-                'reanalysis-era5-pressure-levels', {
-                    'time': times,
-                    'date': date.strftime("%Y-%m-%d"),
-                    'pressure_level': levels,
-                    'variable': long_name,
-                    'area': area,
-                    'grid': grid,
-                    'product_type': 'reanalysis',
-                    'format': 'netcdf',
-                }, str(outfolder / outfile))
+                    'reanalysis-era5-pressure-levels', {
+                        'time': times,
+                        'date': date.strftime("%Y-%m-%d"),
+                        'pressure_level': levels,
+                        'variable': long_name,
+                        'area': area,
+                        'grid': grid,
+                        'product_type': 'reanalysis',
+                        'format': 'netcdf',
+                    }, str(outfolder / outfile))
             except:
-                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
+                print("""
+                   Request failed for {variable}, {date}. Proceeding. You can
+                   run the code again and set 'skip_exist' to true to avoid
+                   duplicate downloads.
+                """)

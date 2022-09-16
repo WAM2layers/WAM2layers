@@ -25,22 +25,38 @@ area = None  # None for global, or [N, W, S, E]
 grid = [0.25, 0.25]
 
 times = [
-  '00:00', '01:00', '02:00',
-  '03:00', '04:00', '05:00',
-  '06:00', '07:00', '08:00',
-  '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00',
-  '15:00', '16:00', '17:00',
-  '18:00', '19:00', '20:00',
-  '21:00', '22:00', '23:00',
+    '00:00',
+    '01:00',
+    '02:00',
+    '03:00',
+    '04:00',
+    '05:00',
+    '06:00',
+    '07:00',
+    '08:00',
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00',
+    '21:00',
+    '22:00',
+    '23:00',
 ]
 
 levels = list(range(137))
 
 ml_variables = {
-  "u": 131,
-  "v": 132,
-  "q": 133,
+    "u": 131,
+    "v": 132,
+    "q": 133,
 }
 
 surface_variables = {
@@ -59,7 +75,7 @@ c = cdsapi.Client()
 for date in datelist:
 
     # Create data directory if it doesn't exist yet
-    outfolder =  Path(target_dir) / str(date.year) / str(date.month)
+    outfolder = Path(target_dir) / str(date.year) / str(date.month)
     outfolder.mkdir(exist_ok=True, parents=True)
 
     # Download surface variables
@@ -80,8 +96,11 @@ for date in datelist:
                         'format': 'netcdf',
                     }, str(outfolder / outfile))
             except:
-                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
-
+                print("""
+                   Request failed for {variable}, {date}. Proceeding. You can
+                   run the code again and set 'skip_exist' to true to avoid
+                   duplicate downloads.
+                """)
 
     # Download 3d variables
     for variable, param in ml_variables.items():
@@ -106,4 +125,8 @@ for date in datelist:
                         'grid': grid,
                     }, str(outfolder / outfile))
             except:
-                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
+                print("""
+                   Request failed for {variable}, {date}. Proceeding. You can
+                   run the code again and set 'skip_exist' to true to avoid
+                   duplicate downloads.
+                """)
