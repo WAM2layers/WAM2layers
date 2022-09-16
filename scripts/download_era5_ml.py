@@ -82,7 +82,9 @@ for date in datelist:
     for variable, long_name in surface_variables.items():
         outfile = f"ERA5_{date.strftime('%Y-%m-%d')}_{variable}.nc"
         if (outfolder / outfile).exists() and skip_exist:
-            pass
+            print(
+                f"{outfolder / outfile} already exists, skipping. Set skip_exist = False to force re-download"
+            )
         else:
             try:
                 c.retrieve(
@@ -95,18 +97,22 @@ for date in datelist:
                         'grid': grid,
                         'format': 'netcdf',
                     }, str(outfolder / outfile))
-            except:
-                print("""
-                   Request failed for {variable}, {date}. Proceeding. You can
-                   run the code again and set 'skip_exist' to true to avoid
-                   duplicate downloads.
-                """)
+            except Exception as e:
+                print(e)
+                print(
+                    ""
+                    f"Request failed for {variable}, {date}. Proceeding. You can"
+                    " run the code again and set 'skip_exist' to true to avoid"
+                    " duplicate downloads."
+                    "")
 
     # Download 3d variables
     for variable, param in ml_variables.items():
         outfile = f"ERA5_{date.strftime('%Y-%m-%d')}_{variable}_ml.nc"
         if (outfolder / outfile).exists() and skip_exist:
-            pass
+            print(
+                f"{outfolder / outfile} already exists, skipping. Set skip_exist = False to force re-download"
+            )
         else:
             try:
                 c.retrieve(
@@ -124,9 +130,11 @@ for date in datelist:
                         'area': area,
                         'grid': grid,
                     }, str(outfolder / outfile))
-            except:
-                print("""
-                   Request failed for {variable}, {date}. Proceeding. You can
-                   run the code again and set 'skip_exist' to true to avoid
-                   duplicate downloads.
-                """)
+            except Exception as e:
+                print(e)
+                print(
+                    ""
+                    f"Request failed for {variable}, {date}. Proceeding. You can"
+                    " run the code again and set 'skip_exist' to true to avoid"
+                    " duplicate downloads."
+                    "")
