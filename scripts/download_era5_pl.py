@@ -85,16 +85,20 @@ for date in datelist:
         if (outfolder / outfile).exists() and skip_exist:
             pass
         else:
-            c.retrieve(
-                'reanalysis-era5-single-levels', {
-                    'product_type': 'reanalysis',
-                    'variable': long_name,
-                    'date': date.strftime("%Y-%m-%d"),
-                    'time': times,
-                    'area': area,
-                    'grid': grid,
-                    'format': 'netcdf',
-                }, str(outfolder / outfile))
+            try:
+                c.retrieve(
+                    'reanalysis-era5-single-levels', {
+                        'product_type': 'reanalysis',
+                        'variable': long_name,
+                        'date': date.strftime("%Y-%m-%d"),
+                        'time': times,
+                        'area': area,
+                        'grid': grid,
+                        'format': 'netcdf',
+                    }, str(outfolder / outfile))
+            except:
+                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
+
 
     # Download 3d variables
     for variable, long_name in pl_variables.items():
@@ -102,14 +106,17 @@ for date in datelist:
         if (outfolder / outfile).exists() and skip_exist:
             pass
         else:
-            c.retrieve(
-            'reanalysis-era5-pressure-levels', {
-                'time': times,
-                'date': date.strftime("%Y-%m-%d"),
-                'pressure_level': levels,
-                'variable': long_name,
-                'area': area,
-                'grid': grid,
-                'product_type': 'reanalysis',
-                'format': 'netcdf',
-            }, str(outfolder / outfile))
+            try:
+                c.retrieve(
+                'reanalysis-era5-pressure-levels', {
+                    'time': times,
+                    'date': date.strftime("%Y-%m-%d"),
+                    'pressure_level': levels,
+                    'variable': long_name,
+                    'area': area,
+                    'grid': grid,
+                    'product_type': 'reanalysis',
+                    'format': 'netcdf',
+                }, str(outfolder / outfile))
+            except:
+                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")

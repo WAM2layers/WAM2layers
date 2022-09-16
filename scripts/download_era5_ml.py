@@ -68,16 +68,20 @@ for date in datelist:
         if (outfolder / outfile).exists() and skip_exist:
             pass
         else:
-            c.retrieve(
-                'reanalysis-era5-single-levels', {
-                    'product_type': 'reanalysis',
-                    'variable': long_name,
-                    'date': date.strftime("%Y-%m-%d"),
-                    'time': times,
-                    'area': area,
-                    'grid': grid,
-                    'format': 'netcdf',
-                }, str(outfolder / outfile))
+            try:
+                c.retrieve(
+                    'reanalysis-era5-single-levels', {
+                        'product_type': 'reanalysis',
+                        'variable': long_name,
+                        'date': date.strftime("%Y-%m-%d"),
+                        'time': times,
+                        'area': area,
+                        'grid': grid,
+                        'format': 'netcdf',
+                    }, str(outfolder / outfile))
+            except:
+                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
+
 
     # Download 3d variables
     for variable, param in ml_variables.items():
@@ -85,18 +89,21 @@ for date in datelist:
         if (outfolder / outfile).exists() and skip_exist:
             pass
         else:
-            c.retrieve(
-                'reanalysis-era5-complete', {
-                    'time': times,
-                    'date': date.strftime("%Y-%m-%d"),
-                    'levelist': levels,
-                    'param': param,
-                    'class': 'ea',
-                    'expver': '1',
-                    'levtype': 'ml',
-                    'stream': 'oper',
-                    'type': 'an',
-                    'format': 'netcdf',
-                    'area': area,
-                    'grid': grid,
-                }, str(outfolder / outfile))
+            try:
+                c.retrieve(
+                    'reanalysis-era5-complete', {
+                        'time': times,
+                        'date': date.strftime("%Y-%m-%d"),
+                        'levelist': levels,
+                        'param': param,
+                        'class': 'ea',
+                        'expver': '1',
+                        'levtype': 'ml',
+                        'stream': 'oper',
+                        'type': 'an',
+                        'format': 'netcdf',
+                        'area': area,
+                        'grid': grid,
+                    }, str(outfolder / outfile))
+            except:
+                print("Request failed for {variable}, {date}. Proceeding. You can run the code again and set 'skip_exist' to true to avoid duplicate downloads.")
