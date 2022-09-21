@@ -75,7 +75,7 @@ c = cdsapi.Client()
 for date in datelist:
 
     # Create data directory if it doesn't exist yet
-    outfolder = Path(target_dir) / str(date.year) / str(date.month)
+    outfolder = Path(target_dir) / f"{date.year:04d}" / f"{date.year:02d}" / f"{date.day:02d}"
     outfolder.mkdir(exist_ok=True, parents=True)
 
     # Download surface variables
