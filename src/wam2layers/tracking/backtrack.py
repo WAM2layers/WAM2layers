@@ -14,11 +14,17 @@ def parse_config(config_file):
         config = yaml.safe_load(f)
 
     # Add datelist
-    config["datelist"] = pd.date_range(
+    input_dates = pd.date_range(
         start=config["track_start_date"],
         end=config["track_end_date"],
-        freq="d",
+        freq=config["input_frequency"],
         inclusive="left",
+    )
+    config["datelist"] = pd.date_range(
+        start=input_dates[0],
+        end=input_dates[-1],
+        freq=config["target_frequency"],
+        inclusive="right",
     )
 
     # Parse directories with pathlib
@@ -419,6 +425,7 @@ def initialize(config_file):
     """Read config, region, and initial states."""
     config = parse_config(config_file)
     region = load_region(config).values
+
     if config["restart"]:
         date = config["datelist"][-1] + pd.Timedelta(days=1)
         # Reload last state from existing output
@@ -438,45 +445,84 @@ def initialize(config_file):
 # With the correct import statements, the code in the function below could
 # alternatively be be used as a script in a separate python file or notebook.
 #############################################################################
+def read_data_at_date(d, config):
+    """Load input data for given date."""
+    file = input_path(d, config)
+    return xr.open_dataset(file, cache=False)
+
+
+def read_data_at_time(t, config):
+    """Get a single time slice from input data at time t."""
+    ds = read_data_at_date(t, config)
+    return ds.sel(time=t)
+
+
+def read_variable_at_time(t, variable, config):
+    return read_data_at_time(t, config)[variable].values
+
+
+def load_variable(t, variable, config):
+    """Load variable at t, interpolate if needed."""
+    t1 = t.ceil(config["input_frequency"])
+    da1 = read_variable_at_time(t1, variable, config)
+    if t == t1:
+        return da1
+
+    t0 = t.floor(config["input_frequency"])
+    da0 = read_variable_at_time(t0, variable, config)
+    if t == t0:
+        return da0
+
+    return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
+
+
+def load_variables(t, variables, config):
+    return {
+        variable: load_variable(t, variable, config)
+        for variable in variables
+    }
+
 
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     config, region, s_track_lower, s_track_upper = initialize(config_file)
 
-    for date in reversed(config["datelist"]):
-        print(date)
-        preprocessed_data = xr.open_dataset(input_path(date, config))
+    states = ["s_upper", "s_lower"]
+    fluxes = ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"]
 
-        # Resample to (higher) target frequency
-        # After this, the fluxes will be "in between" the states
-        fluxes, states = resample(preprocessed_data, config['target_frequency'])
+    for time in reversed(config["datelist"]):
+        t_next = time - pd.Timedelta(config["target_frequency"])
+        input_current = load_variables(time, states+fluxes, config)
+        states_next = load_variables(t_next, states, config)
 
+
+        print(time, input_current['precip'].mean())
         # Convert data to volumes
-        change_units(fluxes, states, config["target_frequency"])
+        # change_units(input_current, config["target_frequency"])
+        # change_units(states_next, config["target_frequency"])
 
-        # Apply a stability correction if needed
-        stabilize_fluxes(fluxes, states)
+        # # Apply a stability correction if needed
+        # stabilize_fluxes(fluxes, states)
 
-        # Determine the vertical moisture flux
-        fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
+        # # Determine the vertical moisture flux
+        # fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
 
-        (s_track_upper, s_track_lower, processed_data) = backtrack(
-            date,
-            fluxes,
-            states,
-            s_track_upper,
-            s_track_lower,
-            region,
-            config,
-        )
+        # (s_track_upper, s_track_lower, processed_data) = backtrack(
+        #     time,
+        #     fluxes,
+        #     states,
+        #     s_track_upper,
+        #     s_track_lower,
+        #     region,
+        #     config,
+        # )
 
-        # Write output to file
-        # TODO: add (and cleanup) coordinates and units
-        processed_data["longitude"] = preprocessed_data.longitude
-        processed_data["latitude"] = preprocessed_data.latitude
-        processed_data.to_netcdf(output_path(date, config))
-
+        # # Write output to file
+        # # TODO: add (and cleanup) coordinates and units
+        # processed_data["longitude"] = preprocessed_data.longitude
+        # processed_data["latitude"] = preprocessed_data.latitude
+        # processed_data.to_netcdf(output_path(time, config))
 
 ###########################################################################
 # The code below makes it possible to run wam2layers from the command line:
