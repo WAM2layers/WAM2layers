@@ -483,6 +483,24 @@ def load_variables(t, variables, config):
     }
 
 
+import time
+import psutil
+class Profiler:
+    def __init__(self):
+        self.t0 = time.time()
+        self.mem0 = self._current_memory()
+
+    def __call__(self):
+        """Report memory and time increments."""
+        dt = round((time.time() - self.t0), 2)
+        dmem = self._current_memory() - self.mem0
+        # self.t0 = time.time()
+        # self.mem0 = self._current_memory()
+        return dt, dmem
+
+    def _current_memory(self):
+        return psutil.Process().memory_info().rss / (1024 * 1024)
+
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
@@ -491,13 +509,13 @@ def run_experiment(config_file):
     states = ["s_upper", "s_lower"]
     fluxes = ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"]
 
+    profile = Profiler()
     for time in reversed(config["datelist"]):
         t_next = time - pd.Timedelta(config["target_frequency"])
         input_current = load_variables(time, states+fluxes, config)
         states_next = load_variables(t_next, states, config)
 
-
-        print(time, input_current['precip'].mean())
+        print(time, input_current['precip'].mean(), profile())
         # Convert data to volumes
         # change_units(input_current, config["target_frequency"])
         # change_units(states_next, config["target_frequency"])
