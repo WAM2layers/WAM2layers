@@ -457,30 +457,19 @@ def read_data_at_time(t, config):
     return ds.sel(time=t)
 
 
-def read_variable_at_time(t, variable, config):
-    return read_data_at_time(t, config)[variable].values
-
-
-def load_variable(t, variable, config):
+def load_data(t, config):
     """Load variable at t, interpolate if needed."""
     t1 = t.ceil(config["input_frequency"])
-    da1 = read_variable_at_time(t1, variable, config)
+    da1 = read_data_at_time(t1, config)
     if t == t1:
         return da1
 
     t0 = t.floor(config["input_frequency"])
-    da0 = read_variable_at_time(t0, variable, config)
+    da0 = read_data_at_time(t0, config)
     if t == t0:
         return da0
 
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
-
-
-def load_variables(t, variables, config):
-    return {
-        variable: load_variable(t, variable, config)
-        for variable in variables
-    }
 
 
 import time
@@ -512,10 +501,10 @@ def run_experiment(config_file):
     profile = Profiler()
     for time in reversed(config["datelist"]):
         t_next = time - pd.Timedelta(config["target_frequency"])
-        input_current = load_variables(time, states+fluxes, config)
-        states_next = load_variables(t_next, states, config)
+        input_current = load_data(time, config)[states+fluxes]
+        states_next = load_data(t_next, config)[states]
 
-        print(time, input_current['precip'].mean(), profile())
+        print(time, input_current['precip'].mean().values, profile())
         # Convert data to volumes
         # change_units(input_current, config["target_frequency"])
         # change_units(states_next, config["target_frequency"])
