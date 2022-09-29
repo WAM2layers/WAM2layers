@@ -183,26 +183,24 @@ def change_units(data, target_freq):
 
 
 
-def stabilize_fluxes(fluxes, states):
+def stabilize_fluxes(current, previous):
     """Stabilize the outfluxes / influxes.
 
-    During the reduced timestep the water cannot move further than 1/x * the
-    gridcell, In other words at least x * the reduced timestep is needed to
-    cross a gridcell.
+    CFL: Water cannot move further than one grid cell per timestep.
     """
     for level in ["upper", "lower"]:
-        fx = fluxes["fx_" + level]
-        fy = fluxes["fy_" + level]
-        s = states["s_" + level]
+        fx = current["fx_" + level]
+        fy = current["fy_" + level]
+        s = previous["s_" + level]
 
         fx_abs = np.abs(fx)
         fy_abs = np.abs(fy)
         ft_abs = fx_abs + fy_abs
 
-        fx_corrected = 1/2 * fx_abs / ft_abs * s[:-1, :, :].values
+        fx_corrected = 1/2 * fx_abs / ft_abs * s.values
         fx_stable = np.minimum(fx_abs, fx_corrected)
 
-        fy_corrected = 1/2 * fy_abs / ft_abs * s[:-1, :, :].values
+        fy_corrected = 1/2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
 
         # Get rid of any nan values
@@ -210,8 +208,8 @@ def stabilize_fluxes(fluxes, states):
         fy_stable.fillna(0)
 
         # Re-instate the sign
-        fluxes["fx_"+ level] = np.sign(fx) * fx_stable
-        fluxes["fy_"+ level] = np.sign(fy) * fy_stable
+        current["fx_"+ level] = np.sign(fx) * fx_stable
+        current["fy_"+ level] = np.sign(fy) * fy_stable
 
 
 def convergence(fx, fy):
@@ -512,8 +510,8 @@ def run_experiment(config_file):
         change_units(states_next, config["target_frequency"])
 
         print(time, input_current['precip'].mean().values, profile())
-        # # Apply a stability correction if needed
-        # stabilize_fluxes(fluxes, states)
+        # Apply a stability correction if needed
+        stabilize_fluxes(input_current, states_next)
 
         # # Determine the vertical moisture flux
         # fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
