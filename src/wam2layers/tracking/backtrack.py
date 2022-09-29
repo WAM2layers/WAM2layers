@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 import click
@@ -445,27 +446,28 @@ def initialize(config_file):
 # With the correct import statements, the code in the function below could
 # alternatively be be used as a script in a separate python file or notebook.
 #############################################################################
-def read_data_at_date(d, config):
+@lru_cache(maxsize=2)
+def read_data_at_date(d):
     """Load input data for given date."""
     file = input_path(d, config)
     return xr.open_dataset(file, cache=False)
 
-
-def read_data_at_time(t, config):
+@lru_cache(maxsize=2)
+def read_data_at_time(t):
     """Get a single time slice from input data at time t."""
-    ds = read_data_at_date(t, config)
+    ds = read_data_at_date(t)
     return ds.sel(time=t)
 
-
-def load_data(t, config):
+@lru_cache(maxsize=2)
+def load_data(t):
     """Load variable at t, interpolate if needed."""
     t1 = t.ceil(config["input_frequency"])
-    da1 = read_data_at_time(t1, config)
+    da1 = read_data_at_time(t1)
     if t == t1:
         return da1
 
     t0 = t.floor(config["input_frequency"])
-    da0 = read_data_at_time(t0, config)
+    da0 = read_data_at_time(t0)
     if t == t0:
         return da0
 
@@ -493,6 +495,7 @@ class Profiler:
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
+    global config
     config, region, s_track_lower, s_track_upper = initialize(config_file)
 
     states = ["s_upper", "s_lower"]
@@ -501,8 +504,8 @@ def run_experiment(config_file):
     profile = Profiler()
     for time in reversed(config["datelist"]):
         t_next = time - pd.Timedelta(config["target_frequency"])
-        input_current = load_data(time, config)[states+fluxes]
-        states_next = load_data(t_next, config)[states]
+        input_current = load_data(time)[states+fluxes]
+        states_next = load_data(t_next)[states]
 
         print(time, input_current['precip'].mean().values, profile())
         # Convert data to volumes
