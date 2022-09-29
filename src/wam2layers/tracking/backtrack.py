@@ -157,30 +157,30 @@ def resample(ds, target_freq):
     return fluxes, states
 
 
-def change_units(fluxes, states, target_freq):
+def change_units(data, target_freq):
     """Change units to m3.
     Multiply by edge length or area to get flux in m3
     Multiply by time to get accumulation instead of flux
     Divide by density of water to go from kg to m3
     """
     density = 1000  # [kg/m3]
-    a, ly, lx = get_grid_info(fluxes)
+    a, ly, lx = get_grid_info(data)
 
     total_seconds = pd.Timedelta(target_freq).total_seconds()
-    fluxes["fx_upper"] *= total_seconds / density * ly
-    fluxes["fx_lower"] *= total_seconds / density * ly
-    fluxes["fy_upper"] *= total_seconds / density * lx[None, :, None]
-    fluxes["fy_lower"] *= total_seconds / density * lx[None, :, None]
-    fluxes["evap"] *= total_seconds / density * a[None, :, None]
-    fluxes["precip"] *= total_seconds / density * a[None, :, None]
-    states["s_upper"] *= a[None, :, None] / density
-    states["s_lower"] *= a[None, :, None] / density
 
-    for variable in fluxes.data_vars:
-        fluxes[variable] = fluxes[variable].assign_attrs(units="m**3")
+    for variable in data.data_vars:
+        if variable in ['fx_upper', 'fx_lower']:
+            data[variable] *= total_seconds / density * ly
+        elif variable in ['fy_upper', 'fy_lower']:
+            data[variable] *= total_seconds / density * lx[:, None]
+        elif variable in ['evap', 'precip']:
+            data[variable] *= total_seconds / density * a[:, None]
+        elif variable in ['s_upper', 's_lower']:
+            data[variable] *= a[:, None] / density
+        else:
+            raise ValueError(f"Unrecognized variable {variable}")
+        data[variable] = data[variable].assign_attrs(units="m**3")
 
-    for variable in states.data_vars:
-        states[variable] = states[variable].assign_attrs(units="m**3")
 
 
 def stabilize_fluxes(fluxes, states):
@@ -507,11 +507,11 @@ def run_experiment(config_file):
         input_current = load_data(time)[states+fluxes]
         states_next = load_data(t_next)[states]
 
-        print(time, input_current['precip'].mean().values, profile())
         # Convert data to volumes
-        # change_units(input_current, config["target_frequency"])
-        # change_units(states_next, config["target_frequency"])
+        change_units(input_current, config["target_frequency"])
+        change_units(states_next, config["target_frequency"])
 
+        print(time, input_current['precip'].mean().values, profile())
         # # Apply a stability correction if needed
         # stabilize_fluxes(fluxes, states)
 
