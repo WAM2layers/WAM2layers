@@ -146,17 +146,6 @@ def split_vertical_flux(Kvf, fv):
     return f_downward, f_upward
 
 
-def resample(ds, target_freq):
-    """Increase time resolution; states at midpoints, fluxes at the edges."""
-    time = ds.time.values
-    newtime_states = pd.date_range(time[0], time[-1], freq=target_freq)
-    newtime_fluxes = newtime_states[:-1] + pd.Timedelta(target_freq) / 2
-
-    states = ds[['s_upper', 's_lower']].interp(time=newtime_states)
-    fluxes = ds[['fx_upper', 'fx_lower', 'fy_upper', 'fy_lower', 'precip', 'evap']].interp(time=newtime_fluxes)
-    return fluxes, states
-
-
 def change_units(data, target_freq):
     """Change units to m3.
     Multiply by edge length or area to get flux in m3
@@ -456,16 +445,21 @@ def read_data_at_time(t):
     ds = read_data_at_date(t)
     return ds.sel(time=t)
 
-@lru_cache(maxsize=2)
-def load_data(t):
+@lru_cache(maxsize=3)
+def load_data(t, subset='fluxes'):
     """Load variable at t, interpolate if needed."""
+    variables = {
+        "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
+        "states": ["s_upper", "s_lower"],
+    }
+
     t1 = t.ceil(config["input_frequency"])
-    da1 = read_data_at_time(t1)
+    da1 = read_data_at_time(t1)[variables[subset]]
     if t == t1:
         return da1
 
     t0 = t.floor(config["input_frequency"])
-    da0 = read_data_at_time(t0)
+    da0 = read_data_at_time(t0)[variables[subset]]
     if t == t0:
         return da0
 
@@ -496,23 +490,24 @@ def run_experiment(config_file):
     global config
     config, region, s_track_lower, s_track_upper = initialize(config_file)
 
-    states = ["s_upper", "s_lower"]
-    fluxes = ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"]
-
     profile = Profiler()
-    for time in reversed(config["datelist"]):
-        t_next = time - pd.Timedelta(config["target_frequency"])
-        input_current = load_data(time)[states+fluxes]
-        states_next = load_data(t_next)[states]
+    for t_prev in reversed(config["datelist"]):
+        t_now = t_prev - pd.Timedelta(config["target_frequency"]) / 2
+        t_next = t_prev - pd.Timedelta(config["target_frequency"])
+
+        states_prev = load_data(t_prev, "states")
+        fluxes_now = load_data(t_now, "fluxes")
+        states_next = load_data(t_next, "states")
 
         # Convert data to volumes
-        change_units(input_current, config["target_frequency"])
+        change_units(states_prev, config["target_frequency"])
         change_units(states_next, config["target_frequency"])
+        change_units(fluxes_now, config["target_frequency"])
 
-        print(time, input_current['precip'].mean().values, profile())
         # Apply a stability correction if needed
-        stabilize_fluxes(input_current, states_next)
+        stabilize_fluxes(fluxes_now, states_next)
 
+        print(t_prev, fluxes_now['precip'].mean().values, profile())
         # # Determine the vertical moisture flux
         # fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
 
