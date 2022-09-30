@@ -206,29 +206,30 @@ def convergence(fx, fy):
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
-def calculate_fv(fluxes, states, kvf, periodic):
+def calculate_fv(fluxes, states_prev, states_next):
     """Calculate the vertical fluxes.
 
     Note: fluxes are given at temporal midpoints between states.
     """
-    s_total = states.s_upper + states.s_lower
-    s_rel_upper = (states.s_upper / s_total).interp(time=fluxes.time)
-    s_rel_lower = (states.s_lower / s_total).interp(time=fluxes.time)
+    s_diff = states_prev - states_next
+    s_mean = (states_prev + states_next) / 2
+    s_total = s_mean.s_upper + s_mean.s_lower
+    s_rel = s_mean / s_total
 
-    tendency_upper = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel_upper
-    tendency_lower = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel_lower + fluxes.evap
+    tendency_upper = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel.s_upper
+    tendency_lower = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel.s_lower + fluxes.evap
 
-    residual_upper = states.s_upper.diff("time").values - tendency_upper
-    residual_lower = states.s_lower.diff("time").values - tendency_lower
+    residual_upper = s_diff.s_upper - tendency_upper
+    residual_lower = s_diff.s_lower - tendency_lower
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
-    fv = s_rel_lower * (residual_upper + residual_lower) - residual_lower
+    fv = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
-    stab = 1.0 / (kvf + 1.0)
-    flux_limit = np.minimum(states.s_upper, states.s_lower).interp(time=fluxes.time)
+    stab = 1.0 / (config['kvf'] + 1.0)
+    flux_limit = np.minimum(s_mean.s_upper, s_mean.s_lower)
     fv_stable = np.minimum(np.abs(fv), stab * flux_limit)
 
     # Reinstate the sign
@@ -443,7 +444,7 @@ def read_data_at_date(d):
 def read_data_at_time(t):
     """Get a single time slice from input data at time t."""
     ds = read_data_at_date(t)
-    return ds.sel(time=t)
+    return ds.sel(time=t, drop=True)
 
 @lru_cache(maxsize=4)
 def load_data(t, subset='fluxes'):
@@ -517,10 +518,11 @@ def run_experiment(config_file):
         # Apply a stability correction if needed
         stabilize_fluxes(fluxes, states_next)
 
-        print(t, fluxes['precip'].mean().values, profile())
-        # # Determine the vertical moisture flux
-        # fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
 
+        # Determine the vertical moisture flux
+        fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
+
+        print(t, fluxes['f_vert'].mean().values, profile())
         # (s_track_upper, s_track_lower, processed_data) = backtrack(
         #     time,
         #     fluxes,
