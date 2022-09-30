@@ -445,7 +445,7 @@ def read_data_at_time(t):
     ds = read_data_at_date(t)
     return ds.sel(time=t)
 
-@lru_cache(maxsize=3)
+@lru_cache(maxsize=4)
 def load_data(t, subset='fluxes'):
     """Load variable at t, interpolate if needed."""
     variables = {
@@ -456,6 +456,7 @@ def load_data(t, subset='fluxes'):
     t1 = t.ceil(config["input_frequency"])
     da1 = read_data_at_time(t1)[variables[subset]]
     if t == t1:
+        # this saves a lot of work if times are aligned with input
         return da1
 
     t0 = t.floor(config["input_frequency"])
@@ -464,6 +465,18 @@ def load_data(t, subset='fluxes'):
         return da0
 
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
+
+def load_fluxes(t):
+    t_current = t - pd.Timedelta(config['target_frequency']) / 2
+    return load_data(t_current, 'fluxes')
+
+
+def load_states(t):
+    t_prev = t
+    t_next = t - pd.Timedelta(config['target_frequency'])
+    states_prev = load_data(t_prev, 'states')
+    states_next = load_data(t_next, 'states')
+    return states_prev, states_next
 
 
 import time
@@ -491,23 +504,20 @@ def run_experiment(config_file):
     config, region, s_track_lower, s_track_upper = initialize(config_file)
 
     profile = Profiler()
-    for t_prev in reversed(config["datelist"]):
-        t_now = t_prev - pd.Timedelta(config["target_frequency"]) / 2
-        t_next = t_prev - pd.Timedelta(config["target_frequency"])
+    for t in reversed(config["datelist"]):
 
-        states_prev = load_data(t_prev, "states")
-        fluxes_now = load_data(t_now, "fluxes")
-        states_next = load_data(t_next, "states")
+        fluxes = load_fluxes(t)
+        states_prev, states_next = load_states(t)
 
         # Convert data to volumes
         change_units(states_prev, config["target_frequency"])
         change_units(states_next, config["target_frequency"])
-        change_units(fluxes_now, config["target_frequency"])
+        change_units(fluxes, config["target_frequency"])
 
         # Apply a stability correction if needed
-        stabilize_fluxes(fluxes_now, states_next)
+        stabilize_fluxes(fluxes, states_next)
 
-        print(t_prev, fluxes_now['precip'].mean().values, profile())
+        print(t, fluxes['precip'].mean().values, profile())
         # # Determine the vertical moisture flux
         # fluxes["f_vert"] = calculate_fv(fluxes, states, config["periodic_boundary"], config["kvf"])
 
