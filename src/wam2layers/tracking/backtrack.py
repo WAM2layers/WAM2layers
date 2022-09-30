@@ -237,16 +237,14 @@ def calculate_fv(fluxes, states_prev, states_next):
 
 
 def backtrack(
-    date,
     fluxes,
-    states,
-    s_track_upper,
-    s_track_lower,
+    states_prev,
+    states_next,
     region,
-    config,
+    output,
 ):
 
-    # Unpack preprocessed data
+    # Unpack input data
     fx_upper = fluxes["fx_upper"].values
     fy_upper = fluxes["fy_upper"].values
     fx_lower = fluxes["fx_lower"].values
@@ -254,160 +252,114 @@ def backtrack(
     evap = fluxes["evap"].values
     precip = fluxes["precip"].values
     f_vert = fluxes["f_vert"].values
-    s_upper = states["s_upper"].values
-    s_lower = states["s_lower"].values
+    s_upper = states_prev["s_upper"].values
+    s_lower = states_prev["s_lower"].values
 
-    # Allocate arrays for daily accumulations
-    ntime, nlat, nlon = fx_upper.shape
+    s_track_upper = output["s_track_upper_restart"]
+    s_track_lower = output["s_track_lower_restart"]
 
-    s_track_upper_mean = np.zeros((nlat, nlon))
-    s_track_lower_mean = np.zeros((nlat, nlon))
-    e_track = np.zeros((nlat, nlon))
+    P_region = region * precip
+    s_total = s_upper + s_lower
 
-    north_loss = np.zeros(nlon)
-    south_loss = np.zeros(nlon)
-    east_loss = np.zeros(nlat)
-    west_loss = np.zeros(nlat)
+    # # Keep track of total tagged moisture
+    # total_tagged_moisture += P_region.sum()
 
-    total_tagged_moisture = (s_track_upper + s_track_lower).sum()
+    # separate the direction of the vertical flux and make it absolute
+    f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert)
 
-    # Only track the precipitation at certain dates
-    if (
-        time_in_range(
-            config["event_start_date"],
-            config["event_end_date"],
-            date.strftime("%Y%m%d"),
-        )
-        == False
-    ):
-        precip = precip * 0
-
-    # Sa calculation backward in time
-    for t in reversed(range(ntime)):
-        P_region = region * precip[t]
-        s_total = s_upper[t+1] + s_lower[t+1]
-
-        # Keep track of total tagged moisture
-        total_tagged_moisture += P_region.sum()
-
-        # separate the direction of the vertical flux and make it absolute
-        f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert[t])
-
-        # Determine horizontal fluxes over the grid-cell boundaries
-        f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
-            fx_lower[t]
-        )
-        f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(
-            fx_upper[t]
-        )
-
-        (
-            fy_n_lower_sn,
-            fy_n_lower_ns,
-            fy_s_lower_sn,
-            fy_s_lower_ns,
-        ) = to_edges_meridional(fy_lower[t])
-        (
-            fy_n_upper_sn,
-            fy_n_upper_ns,
-            fy_s_upper_sn,
-            fy_s_upper_ns,
-        ) = to_edges_meridional(fy_upper[t])
-
-        # Short name for often used expressions
-        s_track_relative_lower = (
-            s_track_lower / s_lower[t+1]
-        )  # fraction of tracked relative to total moisture
-        s_track_relative_upper = s_track_upper / s_upper[t+1]
-        inner = np.s_[1:-1, 1:-1]
-
-        # Actual tracking (note: backtracking, all terms have been negated)
-        s_track_lower[inner] += (
-            + f_e_lower_we * look_east(s_track_relative_lower)
-            + f_w_lower_ew * look_west(s_track_relative_lower)
-            + fy_n_lower_sn * look_north(s_track_relative_lower)
-            + fy_s_lower_ns * look_south(s_track_relative_lower)
-            + f_upward * s_track_relative_upper
-            - f_downward * s_track_relative_lower
-            - fy_s_lower_sn * s_track_relative_lower
-            - fy_n_lower_ns * s_track_relative_lower
-            - f_e_lower_ew * s_track_relative_lower
-            - f_w_lower_we * s_track_relative_lower
-            + P_region * (s_lower[t+1] / s_total)
-            - evap[t] * s_track_relative_lower
-        )[inner]
-
-        s_track_upper[inner] += (
-            + f_e_upper_we * look_east(s_track_relative_upper)
-            + f_w_upper_ew * look_west(s_track_relative_upper)
-            + fy_n_upper_sn * look_north(s_track_relative_upper)
-            + fy_s_upper_ns * look_south(s_track_relative_upper)
-            + f_downward * s_track_relative_lower
-            - f_upward * s_track_relative_upper
-            - fy_s_upper_sn * s_track_relative_upper
-            - fy_n_upper_ns * s_track_relative_upper
-            - f_w_upper_we * s_track_relative_upper
-            - f_e_upper_ew * s_track_relative_upper
-            + P_region * (s_upper[t+1] / s_total)
-        )[inner]
-
-        # down and top: redistribute unaccounted water that is otherwise lost from the sytem
-        lower_to_upper = np.maximum(0, s_track_lower - s_lower[t])
-        upper_to_lower = np.maximum(0, s_track_upper - s_upper[t])
-        s_track_lower[inner] = (s_track_lower - lower_to_upper + upper_to_lower)[inner]
-        s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
-
-        # compute tracked evaporation
-        e_track += evap[t] * (s_track_lower / s_lower[t+1])
-
-        # losses to the north and south
-        north_loss += (
-            fy_n_upper_ns * s_track_relative_upper
-            + fy_n_lower_ns * s_track_relative_lower
-        )[1, :]
-
-        south_loss += (
-            fy_s_upper_sn * s_track_relative_upper
-            + fy_s_lower_sn * s_track_relative_lower
-        )[-2, :]
-
-        east_loss += (
-            f_e_upper_ew * s_track_relative_upper
-            + f_e_lower_ew * s_track_relative_lower
-        )[:, -2]
-
-        west_loss += (
-            f_w_upper_we * s_track_relative_upper
-            + f_w_lower_we * s_track_relative_lower
-        )[:, 1]
-
-        # Aggregate daily accumulations for calculating the daily means
-        s_track_lower_mean += s_track_lower / ntime
-        s_track_upper_mean += s_track_upper / ntime
-
-    # Pack processed data into new dataset
-    ds = xr.Dataset(
-        {
-            # Keep last state for a restart
-            "s_track_upper_restart": (["latitude", "longitude"], s_track_upper),
-            "s_track_lower_restart": (["latitude", "longitude"], s_track_lower),
-            "s_track_upper": (["latitude", "longitude"], s_track_upper_mean),
-            "s_track_lower": (["latitude", "longitude"], s_track_lower_mean),
-            "e_track": (["latitude", "longitude"], e_track),
-            "north_loss": (["longitude"], north_loss),
-            "south_loss": (["longitude"], south_loss),
-            "east_loss": (["latitude"], east_loss),
-            "west_loss": (["latitude"], west_loss),
-        }
+    # Determine horizontal fluxes over the grid-cell boundaries
+    f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
+        fx_lower
+    )
+    f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(
+        fx_upper
     )
 
-    if config["log_level"] == "high":
-        # Check whether any tagged moisture is lost during this day
-        boundary_loss = north_loss.sum() + south_loss.sum() + east_loss.sum() + west_loss.sum()
-        total_tracked_moisture = s_track_upper.sum() + s_track_lower.sum() + e_track.sum() + boundary_loss
-        print(f"Lost moisture: {(1 - total_tracked_moisture / total_tagged_moisture) * 100:.2f}%")
+    (
+        fy_n_lower_sn,
+        fy_n_lower_ns,
+        fy_s_lower_sn,
+        fy_s_lower_ns,
+    ) = to_edges_meridional(fy_lower)
+    (
+        fy_n_upper_sn,
+        fy_n_upper_ns,
+        fy_s_upper_sn,
+        fy_s_upper_ns,
+    ) = to_edges_meridional(fy_upper)
 
-    return (s_track_upper, s_track_lower, ds)
+    # Short name for often used expressions
+    s_track_relative_lower = s_track_lower / s_lower
+    s_track_relative_upper = s_track_upper / s_upper
+    inner = np.s_[1:-1, 1:-1]
+
+    # Actual tracking (note: backtracking, all terms have been negated)
+    s_track_lower[inner] += (
+        + f_e_lower_we * look_east(s_track_relative_lower)
+        + f_w_lower_ew * look_west(s_track_relative_lower)
+        + fy_n_lower_sn * look_north(s_track_relative_lower)
+        + fy_s_lower_ns * look_south(s_track_relative_lower)
+        + f_upward * s_track_relative_upper
+        - f_downward * s_track_relative_lower
+        - fy_s_lower_sn * s_track_relative_lower
+        - fy_n_lower_ns * s_track_relative_lower
+        - f_e_lower_ew * s_track_relative_lower
+        - f_w_lower_we * s_track_relative_lower
+        + P_region * (s_lower / s_total)
+        - evap * s_track_relative_lower
+    )[inner]
+
+    s_track_upper[inner] += (
+        + f_e_upper_we * look_east(s_track_relative_upper)
+        + f_w_upper_ew * look_west(s_track_relative_upper)
+        + fy_n_upper_sn * look_north(s_track_relative_upper)
+        + fy_s_upper_ns * look_south(s_track_relative_upper)
+        + f_downward * s_track_relative_lower
+        - f_upward * s_track_relative_upper
+        - fy_s_upper_sn * s_track_relative_upper
+        - fy_n_upper_ns * s_track_relative_upper
+        - f_w_upper_we * s_track_relative_upper
+        - f_e_upper_ew * s_track_relative_upper
+        + P_region * (s_upper / s_total)
+    )[inner]
+
+    # down and top: redistribute unaccounted water that is otherwise lost from the sytem
+    lower_to_upper = np.maximum(0, s_track_lower - states_next.s_lower)
+    upper_to_lower = np.maximum(0, s_track_upper - states_next.s_upper)
+    s_track_lower[inner] = (s_track_lower - lower_to_upper + upper_to_lower)[inner]
+    s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
+
+    # Update output fields
+    output["e_track"] += evap * (s_track_lower / s_lower)
+    output["north_loss"] += (
+        fy_n_upper_ns * s_track_relative_upper
+        + fy_n_lower_ns * s_track_relative_lower
+    )[1, :]
+    output["south_loss"] += (
+        fy_s_upper_sn * s_track_relative_upper
+        + fy_s_lower_sn * s_track_relative_lower
+    )[-2, :]
+    output["east_loss"] += (
+        f_e_upper_ew * s_track_relative_upper
+        + f_e_lower_ew * s_track_relative_lower
+    )[:, -2]
+    output["west_loss"] += (
+        f_w_upper_we * s_track_relative_upper
+        + f_w_lower_we * s_track_relative_lower
+    )[:, 1]
+    output["s_track_lower"] += s_track_lower
+    output["s_track_upper"] += s_track_upper
+
+    output["s_track_lower_restart"] = s_track_lower
+    output["s_track_upper_restart"] = s_track_upper
+
+    # if config["log_level"] == "high":
+    #     # Check whether any tagged moisture is lost during this day
+    #     boundary_loss = north_loss.sum() + south_loss.sum() + east_loss.sum() + west_loss.sum()
+    #     total_tracked_moisture = s_track_upper.sum() + s_track_lower.sum() + e_track.sum() + boundary_loss
+    #     print(f"Lost moisture: {(1 - total_tracked_moisture / total_tagged_moisture) * 100:.2f}%")
+
+    return
 
 
 def initialize(config_file):
@@ -500,11 +452,44 @@ class Profiler:
         return psutil.Process().memory_info().rss / (1024 * 1024)
 
 
+def initialize_outputs(s_track_upper, s_track_lower):
+    """Allocate output arrays."""
+
+    # total_tagged_moisture = (s_track_upper + s_track_lower).sum()
+    nlat, nlon = s_track_upper.shape
+    output = xr.Dataset(
+        {
+            # Keep last state for a restart
+            "s_track_upper_restart": (["latitude", "longitude"], s_track_upper),
+            "s_track_lower_restart": (["latitude", "longitude"], s_track_lower),
+            "s_track_upper": (["latitude", "longitude"], np.zeros((nlat, nlon))),
+            "s_track_lower": (["latitude", "longitude"], np.zeros((nlat, nlon))),
+            "e_track": (["latitude", "longitude"], np.zeros((nlat, nlon))),
+            "north_loss": (["longitude"], np.zeros(nlon)),
+            "south_loss": (["longitude"], np.zeros(nlon)),
+            "east_loss": (["latitude"], np.zeros(nlat)),
+            "west_loss": (["latitude"], np.zeros(nlat)),
+        }
+    )
+    return output
+
+def write_output(output, t):
+    # TODO: add back (and cleanup) coordinates and units
+    path = output_path(t, config)
+
+    print(f"Writing output to file {path}")
+
+    output.to_netcdf(path)
+
+    # Clear previous output variables
+    output[["s_track_upper", "s_track_lower", "e_track", "north_loss", "south_loss", "east_loss", "west_loss"]] *= 0
+
+
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     global config
     config, region, s_track_lower, s_track_upper = initialize(config_file)
-
+    output = initialize_outputs(s_track_upper, s_track_lower)
     profile = Profiler()
     for t in reversed(config["datelist"]):
 
@@ -519,26 +504,35 @@ def run_experiment(config_file):
         # Apply a stability correction if needed
         stabilize_fluxes(fluxes, states_next)
 
-
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
 
-        print(t, fluxes['f_vert'].mean().values, profile())
-        # (s_track_upper, s_track_lower, processed_data) = backtrack(
-        #     time,
-        #     fluxes,
-        #     states,
-        #     s_track_upper,
-        #     s_track_lower,
-        #     region,
-        #     config,
-        # )
+        # Only track the precipitation at certain dates
+        if (
+            time_in_range(
+                config["event_start_date"],
+                config["event_end_date"],
+                t.strftime("%Y%m%d"),
+            )
+            == False
+        ):
+            fluxes["precip"] = 0
 
-        # # Write output to file
-        # # TODO: add (and cleanup) coordinates and units
-        # processed_data["longitude"] = preprocessed_data.longitude
-        # processed_data["latitude"] = preprocessed_data.latitude
-        # processed_data.to_netcdf(output_path(time, config))
+
+        backtrack(
+            fluxes,
+            states_prev,
+            states_next,
+            region,
+            output,
+        )
+
+        print(t, output['e_track'].sum().values, profile())
+
+        # Daily output
+        if t == t.floor('1d'):
+            write_output(output, t)
+
 
 ###########################################################################
 # The code below makes it possible to run wam2layers from the command line:
