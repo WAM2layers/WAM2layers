@@ -217,7 +217,7 @@ def calculate_fv(fluxes, states_prev, states_next):
     s_rel = s_mean / s_total
 
     tendency_upper = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel.s_upper
-    tendency_lower = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel.s_lower + fluxes.evap
+    tendency_lower = convergence(fluxes.fx_lower, fluxes.fy_lower) - fluxes.precip.values * s_rel.s_lower + fluxes.evap
 
     residual_upper = s_diff.s_upper - tendency_upper
     residual_lower = s_diff.s_lower - tendency_lower
@@ -434,19 +434,19 @@ def initialize(config_file):
 # With the correct import statements, the code in the function below could
 # alternatively be be used as a script in a separate python file or notebook.
 #############################################################################
-@lru_cache(maxsize=2)
+# @lru_cache(maxsize=2)
 def read_data_at_date(d):
     """Load input data for given date."""
     file = input_path(d, config)
     return xr.open_dataset(file, cache=False)
 
-@lru_cache(maxsize=2)
+# @lru_cache(maxsize=2)
 def read_data_at_time(t):
     """Get a single time slice from input data at time t."""
     ds = read_data_at_date(t)
     return ds.sel(time=t, drop=True)
 
-@lru_cache(maxsize=4)
+# @lru_cache(maxsize=4)
 def load_data(t, subset='fluxes'):
     """Load variable at t, interpolate if needed."""
     variables = {
@@ -466,6 +466,7 @@ def load_data(t, subset='fluxes'):
         return da0
 
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
+
 
 def load_fluxes(t):
     t_current = t - pd.Timedelta(config['target_frequency']) / 2
