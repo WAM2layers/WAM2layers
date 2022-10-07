@@ -47,6 +47,7 @@ The configuration files are written in [yaml]() format and can/should include th
   default choice is kvf=3.
 - `timetracking`: true or false. Currently nothing is done with this setting
 - `distancetracking`: true or false. Currently nothing is done with this setting
+- `log_level`: "high" or "low". Setting it too high will print more info/warning messages.
 
 **Settings that control the period in which water is tracked**
 - `event_start_date`: formatted as 'YYYYMMDD', e.g. '20210713'

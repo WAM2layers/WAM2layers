@@ -15,7 +15,7 @@ cd WAM2layers
 # Install the package from source
 pip install -e .
 
-# Download example data and update configuration file
+# Download example data and update the paths in the configuration file
 https://rebrand.ly/wam2layers-example-data
 
 # Run example case
@@ -93,6 +93,6 @@ as Jupyter Lab, you can import WAM2layers functionality and build your own scrip
 
 ```python
 import wam2layers
-config_file = "path_to/example_data/example_case.yaml"
+config_file = "path_to/example_data/floodcase_2021.yaml"
 wam2layers.tracking.backtrack.run_experiment(config_file)
 ```

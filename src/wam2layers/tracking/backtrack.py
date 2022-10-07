@@ -274,6 +274,8 @@ def backtrack(
     east_loss = np.zeros(nlat)
     west_loss = np.zeros(nlat)
 
+    total_tagged_moisture = (s_track_upper + s_track_lower).sum()
+
     # Only track the precipitation at certain dates
     if (
         time_in_range(
@@ -289,6 +291,9 @@ def backtrack(
     for t in reversed(range(ntime)):
         P_region = region * precip[t]
         s_total = s_upper[t+1] + s_lower[t+1]
+
+        # Keep track of total tagged moisture
+        total_tagged_moisture += P_region.sum()
 
         # separate the direction of the vertical flux and make it absolute
         f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert[t])
@@ -400,6 +405,13 @@ def backtrack(
             "west_loss": (["latitude"], west_loss),
         }
     )
+
+    if config["log_level"] == "high":
+        # Check whether any tagged moisture is lost during this day
+        boundary_loss = north_loss.sum() + south_loss.sum() + east_loss.sum() + west_loss.sum()
+        total_tracked_moisture = s_track_upper.sum() + s_track_lower.sum() + e_track.sum() + boundary_loss
+        print(f"Lost moisture: {(1 - total_tracked_moisture / total_tagged_moisture) * 100:.2f}%")
+
     return (s_track_upper, s_track_lower, ds)
 
 

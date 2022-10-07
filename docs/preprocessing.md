@@ -51,3 +51,12 @@ To aid in pre-processing, WAM2layers comes with some handy data checking
 utilities. Specifically, the function `check_input` takes a single input file
 (opened with `xarray`) as input and checks it against most of the requirements
 enumerated above.
+
+## Data download
+
+Though it is not our main focus to provide data download utilities, we think it
+may be helpful to share some commonly used scripts so that not everyone will
+have to reimplement the wheel. Our download script for ERA5 data is shipped with
+the repository and can be found in
+https://github.com/WAM2layers/WAM2layers/tree/master/scripts. Please see the
+docstrings inside this script for instructions on how to use it.

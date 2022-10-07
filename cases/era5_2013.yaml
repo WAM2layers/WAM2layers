@@ -22,6 +22,7 @@ restart: false
 kvf: 3
 timetracking: false
 distancetracking: false
+log_level: low
 
 event_start_date: '20130603'
 event_end_date: '20130604'
