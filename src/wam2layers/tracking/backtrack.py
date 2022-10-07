@@ -304,14 +304,11 @@ def backtrack(
     s_upper = states_prev["s_upper"].values
     s_lower = states_prev["s_lower"].values
 
-    s_track_upper = output["s_track_upper_restart"]
-    s_track_lower = output["s_track_lower_restart"]
+    s_track_upper = output["s_track_upper_restart"].values
+    s_track_lower = output["s_track_lower_restart"].values
 
     P_region = region * precip
     s_total = s_upper + s_lower
-
-    # # Keep track of total tagged moisture
-    # total_tagged_moisture += P_region.sum()
 
     # separate the direction of the vertical flux and make it absolute
     f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert)
@@ -396,19 +393,33 @@ def backtrack(
         f_w_upper_we * s_track_relative_upper
         + f_w_lower_we * s_track_relative_lower
     )[:, 1]
-    output["s_track_lower"] += s_track_lower
-    output["s_track_upper"] += s_track_upper
 
-    output["s_track_lower_restart"] = s_track_lower
-    output["s_track_upper_restart"] = s_track_upper
+    output["s_track_lower_restart"].values = s_track_lower
+    output["s_track_upper_restart"].values = s_track_upper
 
-    # if config["log_level"] == "high":
-    #     # Check whether any tagged moisture is lost during this day
-    #     boundary_loss = north_loss.sum() + south_loss.sum() + east_loss.sum() + west_loss.sum()
-    #     total_tracked_moisture = s_track_upper.sum() + s_track_lower.sum() + e_track.sum() + boundary_loss
-    #     print(f"Lost moisture: {(1 - total_tracked_moisture / total_tagged_moisture) * 100:.2f}%")
+    # Keep track of total tagged moisture
+    return P_region.sum()
 
-    return
+
+def log_progress(t, output, profile, total_tagged_moisture):
+    """Print some useful runtime diagnostics."""
+    totals = output.sum()
+    tracked = totals["e_track"]
+    boundary = (totals["north_loss"] + totals["south_loss"] + totals["east_loss"] + totals["west_loss"])
+    still_in_atmosphere = (totals["s_track_upper_restart"] + totals["s_track_lower_restart"])
+    total_tracked_moisture = (tracked + still_in_atmosphere + boundary)
+
+    tracked_percentage = (tracked + boundary) / total_tagged_moisture * 100
+    lost_percentage = (1 - total_tracked_moisture / total_tagged_moisture) * 100
+
+    time, memory = profile()
+
+    print(
+        f"{t} - "
+        f"Tracked moisture: {tracked_percentage.item():.2f}%. "
+        f"Lost moisture: {lost_percentage.item():.2f}%. "
+        f"Time since start: {time}s, RAM: {memory:.2f} MB"
+    )
 
 
 def initialize(config_file):
@@ -438,8 +449,6 @@ def initialize_outputs(region):
             # Keep last state for a restart
             "s_track_upper_restart": xr.zeros_like(proto),
             "s_track_lower_restart": xr.zeros_like(proto),
-            "s_track_upper": xr.zeros_like(proto),
-            "s_track_lower": xr.zeros_like(proto),
             "e_track": xr.zeros_like(proto),
             "north_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
             "south_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
@@ -458,9 +467,6 @@ def write_output(output, t):
 
     output.to_netcdf(path)
 
-    # Clear previous output variables
-    output[["s_track_upper", "s_track_lower", "e_track", "north_loss", "south_loss", "east_loss", "west_loss"]] *= 0
-
 
 #############################################################################
 # With the correct import statements, the code in the function below could
@@ -474,6 +480,7 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     profile = Profiler()
+    total_tagged_moisture = 0
     for t in reversed(config["datelist"]):
 
         fluxes = load_fluxes(t)
@@ -501,7 +508,7 @@ def run_experiment(config_file):
         ):
             fluxes["precip"] = 0
 
-        backtrack(
+        total_tagged_moisture += backtrack(
             fluxes,
             states_prev,
             states_next,
@@ -509,12 +516,11 @@ def run_experiment(config_file):
             output,
         )
 
-        print(t, output['e_track'].sum().values, profile())
+        log_progress(t, output, profile, total_tagged_moisture)
 
         # Daily output
         if t == t.floor(config['output_frequency']):
             write_output(output, t)
-            # exit()  # Profiling for only one day
 
 
 ###########################################################################
