@@ -414,40 +414,37 @@ def backtrack(
 def initialize(config_file):
     """Read config, region, and initial states."""
     config = parse_config(config_file)
-    region = load_region(config).values
+    region = load_region(config)
+
+    output = initialize_outputs(region)
+    region = region.values
 
     if config["restart"]:
-        date = config["datelist"][-1] + pd.Timedelta(days=1)
         # Reload last state from existing output
+        date = config["datelist"][-1] + pd.Timedelta(days=1)
         ds = xr.open_dataset(output_path(date, config))
-        s_track_upper = ds.s_track_upper_restart.values
-        s_track_lower = ds.s_track_lower_restart.values
+        output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
+        output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
-    else:
-        # Allocate empty arrays based on shape of input data
-        s_track_upper = np.zeros_like(region)
-        s_track_lower = np.zeros_like(region)
-
-    return config, region, s_track_lower, s_track_upper
+    return config, region, output
 
 
-def initialize_outputs(s_track_upper, s_track_lower):
+def initialize_outputs(region):
     """Allocate output arrays."""
 
-    # total_tagged_moisture = (s_track_upper + s_track_lower).sum()
-    nlat, nlon = s_track_upper.shape
+    proto = region
     output = xr.Dataset(
         {
             # Keep last state for a restart
-            "s_track_upper_restart": (["latitude", "longitude"], s_track_upper),
-            "s_track_lower_restart": (["latitude", "longitude"], s_track_lower),
-            "s_track_upper": (["latitude", "longitude"], np.zeros((nlat, nlon))),
-            "s_track_lower": (["latitude", "longitude"], np.zeros((nlat, nlon))),
-            "e_track": (["latitude", "longitude"], np.zeros((nlat, nlon))),
-            "north_loss": (["longitude"], np.zeros(nlon)),
-            "south_loss": (["longitude"], np.zeros(nlon)),
-            "east_loss": (["latitude"], np.zeros(nlat)),
-            "west_loss": (["latitude"], np.zeros(nlat)),
+            "s_track_upper_restart": xr.zeros_like(proto),
+            "s_track_lower_restart": xr.zeros_like(proto),
+            "s_track_upper": xr.zeros_like(proto),
+            "s_track_lower": xr.zeros_like(proto),
+            "e_track": xr.zeros_like(proto),
+            "north_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
+            "south_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
+            "east_loss": xr.zeros_like(proto.isel(longitude=0, drop=True)),
+            "west_loss": xr.zeros_like(proto.isel(longitude=0, drop=True)),
         }
     )
     return output
@@ -474,8 +471,7 @@ def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     global config
 
-    config, region, s_track_lower, s_track_upper = initialize(config_file)
-    output = initialize_outputs(s_track_upper, s_track_lower)
+    config, region, output = initialize(config_file)
 
     profile = Profiler()
     for t in reversed(config["datelist"]):
@@ -516,8 +512,9 @@ def run_experiment(config_file):
         print(t, output['e_track'].sum().values, profile())
 
         # Daily output
-        if t == t.floor('1d'):
+        if t == t.floor(config['output_frequency']):
             write_output(output, t)
+            # exit()  # Profiling for only one day
 
 
 ###########################################################################

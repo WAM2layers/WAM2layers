@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 import matplotlib.pyplot as plt
 import xarray as xr
+import pandas as pd
 from cartopy import crs
 from cartopy import feature as cfeature
 from wam2layers.preprocessing.shared import get_grid_info
@@ -36,13 +37,19 @@ def visualize_output_data(config_file):
 def visualize_both(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
     config = parse_config(config_file)
+    dates = pd.date_range(
+        start=config["track_start_date"],
+        end=config["track_end_date"],
+        freq=config["output_frequency"],
+        inclusive="left",
+    )
     region = load_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
 
     out_dir = Path(config["output_folder"]) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
 
-    for date in config["datelist"]:
+    for date in dates:
         print(date)
         ds_in = xr.open_dataset(input_path(date, config))
         ds_out = xr.open_dataset(output_path(date, config))
