@@ -7,6 +7,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 from wam2layers.preprocessing.shared import get_grid_info
+from wam2layers.utils.profiling import Profiler
 
 
 def parse_config(config_file):
@@ -45,16 +46,6 @@ def parse_config(config_file):
     return config
 
 
-def time_in_range(start, end, current):
-    """Returns whether current is in the range [start, end]"""
-    return start <= current <= end
-
-
-def load_region(config):
-    # TODO: make variable name more generic
-    return xr.open_dataset(config["region"]).source_region
-
-
 def input_path(date, config):
     input_dir = config["preprocessed_data_folder"]
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
@@ -63,6 +54,64 @@ def input_path(date, config):
 def output_path(date, config):
     output_dir = config["output_folder"]
     return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
+
+# LRU Cache keeps the file open so we save a bit on I/O
+@lru_cache(maxsize=2)
+def read_data_at_date(d):
+    """Load input data for given date."""
+    file = input_path(d, config)
+    return xr.open_dataset(file, cache=False)
+
+
+# This one can't be cached as we'll be overwriting the content.
+def read_data_at_time(t):
+    """Get a single time slice from input data at time t."""
+    ds = read_data_at_date(t)
+    return ds.sel(time=t, drop=True)
+
+
+def load_data(t, subset='fluxes'):
+    """Load variable at t, interpolate if needed."""
+    variables = {
+        "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
+        "states": ["s_upper", "s_lower"],
+    }
+
+    t1 = t.ceil(config["input_frequency"])
+    da1 = read_data_at_time(t1)[variables[subset]]
+    if t == t1:
+        # this saves a lot of work if times are aligned with input
+        return da1
+
+    t0 = t.floor(config["input_frequency"])
+    da0 = read_data_at_time(t0)[variables[subset]]
+    if t == t0:
+        return da0
+
+    return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
+
+
+def load_fluxes(t):
+    t_current = t - pd.Timedelta(config['target_frequency']) / 2
+    return load_data(t_current, 'fluxes')
+
+
+def load_states(t):
+    t_prev = t
+    t_next = t - pd.Timedelta(config['target_frequency'])
+    states_prev = load_data(t_prev, 'states')
+    states_next = load_data(t_next, 'states')
+    return states_prev, states_next
+
+
+def time_in_range(start, end, current):
+    """Returns whether current is in the range [start, end]"""
+    return start <= current <= end
+
+
+def load_region(config):
+    # TODO: make variable name more generic
+    return xr.open_dataset(config["region"]).source_region
 
 
 def to_edges_zonal(fx, periodic_boundary=False):
@@ -382,76 +431,6 @@ def initialize(config_file):
     return config, region, s_track_lower, s_track_upper
 
 
-#############################################################################
-# With the correct import statements, the code in the function below could
-# alternatively be be used as a script in a separate python file or notebook.
-#############################################################################
-# @lru_cache(maxsize=2)
-def read_data_at_date(d):
-    """Load input data for given date."""
-    file = input_path(d, config)
-    return xr.open_dataset(file, cache=False)
-
-# @lru_cache(maxsize=2)
-def read_data_at_time(t):
-    """Get a single time slice from input data at time t."""
-    ds = read_data_at_date(t)
-    return ds.sel(time=t, drop=True)
-
-# @lru_cache(maxsize=4)
-def load_data(t, subset='fluxes'):
-    """Load variable at t, interpolate if needed."""
-    variables = {
-        "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
-        "states": ["s_upper", "s_lower"],
-    }
-
-    t1 = t.ceil(config["input_frequency"])
-    da1 = read_data_at_time(t1)[variables[subset]]
-    if t == t1:
-        # this saves a lot of work if times are aligned with input
-        return da1
-
-    t0 = t.floor(config["input_frequency"])
-    da0 = read_data_at_time(t0)[variables[subset]]
-    if t == t0:
-        return da0
-
-    return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
-
-
-def load_fluxes(t):
-    t_current = t - pd.Timedelta(config['target_frequency']) / 2
-    return load_data(t_current, 'fluxes')
-
-
-def load_states(t):
-    t_prev = t
-    t_next = t - pd.Timedelta(config['target_frequency'])
-    states_prev = load_data(t_prev, 'states')
-    states_next = load_data(t_next, 'states')
-    return states_prev, states_next
-
-
-import time
-import psutil
-class Profiler:
-    def __init__(self):
-        self.t0 = time.time()
-        self.mem0 = self._current_memory()
-
-    def __call__(self):
-        """Report memory and time increments."""
-        dt = round((time.time() - self.t0), 2)
-        dmem = self._current_memory() - self.mem0
-        # self.t0 = time.time()
-        # self.mem0 = self._current_memory()
-        return dt, dmem
-
-    def _current_memory(self):
-        return psutil.Process().memory_info().rss / (1024 * 1024)
-
-
 def initialize_outputs(s_track_upper, s_track_lower):
     """Allocate output arrays."""
 
@@ -473,6 +452,7 @@ def initialize_outputs(s_track_upper, s_track_lower):
     )
     return output
 
+
 def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
@@ -485,11 +465,18 @@ def write_output(output, t):
     output[["s_track_upper", "s_track_lower", "e_track", "north_loss", "south_loss", "east_loss", "west_loss"]] *= 0
 
 
+#############################################################################
+# With the correct import statements, the code in the function below could
+# alternatively be be used as a script in a separate python file or notebook.
+#############################################################################
+
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     global config
+
     config, region, s_track_lower, s_track_upper = initialize(config_file)
     output = initialize_outputs(s_track_upper, s_track_lower)
+
     profile = Profiler()
     for t in reversed(config["datelist"]):
 
@@ -517,7 +504,6 @@ def run_experiment(config_file):
             == False
         ):
             fluxes["precip"] = 0
-
 
         backtrack(
             fluxes,
