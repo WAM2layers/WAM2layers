@@ -307,7 +307,7 @@ def backtrack(
     s_track_upper = output["s_track_upper_restart"].values
     s_track_lower = output["s_track_lower_restart"].values
 
-    P_region = region * precip
+    tagged_precip = region * precip
     s_total = s_upper + s_lower
 
     # separate the direction of the vertical flux and make it absolute
@@ -351,7 +351,7 @@ def backtrack(
         - fy_n_lower_ns * s_track_relative_lower
         - f_e_lower_ew * s_track_relative_lower
         - f_w_lower_we * s_track_relative_lower
-        + P_region * (s_lower / s_total)
+        + tagged_precip * (s_lower / s_total)
         - evap * s_track_relative_lower
     )[inner]
 
@@ -366,7 +366,7 @@ def backtrack(
         - fy_n_upper_ns * s_track_relative_upper
         - f_w_upper_we * s_track_relative_upper
         - f_e_upper_ew * s_track_relative_upper
-        + P_region * (s_upper / s_total)
+        + tagged_precip * (s_upper / s_total)
     )[inner]
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
@@ -396,15 +396,15 @@ def backtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
-
-    # Keep track of total tagged moisture
-    return P_region.sum()
+    output["tagged_precip"] += tagged_precip
 
 
-def log_progress(t, output, profile, total_tagged_moisture):
+
+def log_progress(t, output, profile):
     """Print some useful runtime diagnostics."""
     totals = output.sum()
     tracked = totals["e_track"]
+    total_tagged_moisture = totals["tagged_precip"]
     boundary = (totals["north_loss"] + totals["south_loss"] + totals["east_loss"] + totals["west_loss"])
     still_in_atmosphere = (totals["s_track_upper_restart"] + totals["s_track_lower_restart"])
     total_tracked_moisture = (tracked + still_in_atmosphere + boundary)
@@ -424,6 +424,8 @@ def log_progress(t, output, profile, total_tagged_moisture):
 
 def initialize(config_file):
     """Read config, region, and initial states."""
+    print(f"Initializing experiment with config file {config_file}")
+
     config = parse_config(config_file)
     region = load_region(config)
 
@@ -437,6 +439,7 @@ def initialize(config_file):
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
+    print(f"Output will be written to {config['output_folder']}.")
     return config, region, output
 
 
@@ -450,6 +453,7 @@ def initialize_outputs(region):
             "s_track_upper_restart": xr.zeros_like(proto),
             "s_track_lower_restart": xr.zeros_like(proto),
             "e_track": xr.zeros_like(proto),
+            "tagged_precip": xr.zeros_like(proto),
             "north_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
             "south_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
             "east_loss": xr.zeros_like(proto.isel(longitude=0, drop=True)),
@@ -462,9 +466,6 @@ def initialize_outputs(region):
 def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
-
-    print(f"Writing output to file {path}")
-
     output.to_netcdf(path)
 
 
@@ -508,7 +509,7 @@ def run_experiment(config_file):
         ):
             fluxes["precip"] = 0
 
-        total_tagged_moisture += backtrack(
+        backtrack(
             fluxes,
             states_prev,
             states_next,
@@ -516,10 +517,9 @@ def run_experiment(config_file):
             output,
         )
 
-        log_progress(t, output, profile, total_tagged_moisture)
-
         # Daily output
         if t == t.floor(config['output_frequency']):
+            log_progress(t, output, profile)
             write_output(output, t)
 
 
@@ -544,6 +544,8 @@ def cli(config_file):
         - python path/to/backtrack.py path/to/cases/era5_2021.yaml
         - wam2layers backtrack path/to/cases/era5_2021.yaml
     """
+    print("Welcome to WAM2layers.")
+    print("Starting backtrack experiment.")
     run_experiment(config_file)
 
 
