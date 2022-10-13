@@ -15,7 +15,9 @@ track_start_date: '20210701'
 track_end_date: '20210716'
 
 # Settings needed for the tracking run
+input_frequency: '1h'
 target_frequency: '15min'
+output_frequency: '1d'
 periodic_boundary: false
 output_folder: ~/floodcase_202107/output_data
 restart: false
