@@ -6,6 +6,7 @@ import xarray as xr
 import pandas as pd
 from cartopy import crs
 from cartopy import feature as cfeature
+from cmocean import cm
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import (input_path, load_region,
                                            output_path, parse_config)
@@ -18,23 +19,103 @@ def polish(ax, region):
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
+def _plot_precip(config, ax):
+    """Return subplot with precip."""
+    # Load config and some usful stuf.
+    region = load_region(config)
+
+    # Load data
+    input_files = f"{config['preprocessed_data_folder']}/*.nc"
+    ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
+    # TODO: make region time-dependent
+    start = config["event_start_date"]
+    end = config["event_end_date"]
+    subset = ds.precip.sel(time=slice(start, end))
+    precip = (subset * region * 3600).sum('time').compute()
+
+    # Make figure
+    precip.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    ax.set_title('Cumulative precipitation during event [mm]', loc='left')
+    polish(ax, region.where(region>0, drop=True))
+
+
+def _plot_evap(config, ax):
+    """Return subplot with tracked evaporation."""
+    region = load_region(config)
+    a_gridcell, lx, ly = get_grid_info(region)
+
+    # Load data
+    output_files = f"{config['output_folder']}/*.nc"
+    ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
+    e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
+
+    # Make figure
+    e_track.plot(ax=ax, vmin=0, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=['lightgrey', 'grey'])
+    ax.set_title('Moisture source of extreme precip [mm]', loc = 'left')
+
+    # Add source region outline
+    region.plot.contour(ax=ax, levels=[1], colors='k')
+    polish(ax, region)
+
+
 def visualize_input_data(config_file):
-    raise NotImplementedError()
+    """An figure showing the cumulative moisture inputs.
+
+    TODO: make figure creation independent of case.
+    """
     config = parse_config(config_file)
-    for date in config["datelist"]:
-        ds = xr.open_dataset(input_path(date, config))
-    # do stuff
+
+    # Make figure
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+
+    _plot_precip(config, ax)
+
+    # Save
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "input_event.png", dpi=200)
 
 
 def visualize_output_data(config_file):
-    raise NotImplementedError()
+    """An figure showing the cumulative moisture origins.
+
+    TODO: make figure creation independent of case.
+    """
+    # Load config and some usful stuf.
     config = parse_config(config_file)
-    for date in config["datelist"]:
-        ds = xr.open_dataset(output_path(date, config))
-    # do stuff
+
+    # Make figure
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+
+    _plot_evap(config, ax)
+
+    # Save
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
 
 
 def visualize_both(config_file):
+    """Diagnostic figure with four subplots combining input and output data."""
+    # Load config and some usful stuf.
+    config = parse_config(config_file)
+
+    # Make figure
+    fig, [ax1, ax2] = plt.subplots(2, 1, figsize=(16, 10), subplot_kw=dict(projection=crs.PlateCarree()))
+
+    _plot_precip(config, ax1)
+    _plot_evap(config, ax2)
+
+        # Save
+    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "summary_subplots.png", dpi=200)
+
+
+def visualize_snapshots(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
     config = parse_config(config_file)
     dates = pd.date_range(
@@ -117,6 +198,14 @@ def output(config_file):
 def both(config_file):
     """Visualize both input and output data for experiment."""
     visualize_both(config_file)
+
+
+@cli.command()
+@click.argument('config_file', type=click.Path(exists=True))
+def snapshots(config_file):
+    """Visualize input and output snapshots for experiment."""
+    visualize_snapshots(config_file)
+
 
 if __name__ == "__main__":
     cli()
