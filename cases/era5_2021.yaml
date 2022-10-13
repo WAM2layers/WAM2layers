@@ -1,5 +1,5 @@
 # Settings needed for preprocessing
-input_folder: /data/volume_2/era5_2021
+input_folder: /data/volume_2/ERA5
 filename_prefix: 'FloodCase_202107'
 preprocess_start_date: '20210701'
 preprocess_end_date: '20210716'
@@ -15,13 +15,21 @@ track_start_date: '20210701'
 track_end_date: '20210716'
 
 # Settings needed for the tracking run
+input_frequency: '1h'
 target_frequency: '15min'
+output_frequency: '1d'
 periodic_boundary: false
 output_folder: ~/floodcase_202107/output_data
 restart: false
 kvf: 3
 timetracking: false
 distancetracking: false
+log_level: low
 
 event_start_date: '20210713'
 event_end_date: '20210715'
+
+# Settings for downloading the data
+data_freq: 'hourly'
+data_area: [60, -50, 30, 30]  # North, West, South, East. Default: global
+data_resolution: 0.25

@@ -1,15 +1,28 @@
 # How to use
 
-tl;dr
+## Quickstart
+We recommend to create an editable installation in a dedicated conda environment:
 
 ```
-pip install wam2layers
-# Download example data from rebrand.ly/wam2layers-example-data
-wam2layers backtrack example_data/example_case.yaml
-wam2layers visualize output floodcase_202107.yaml
+# Create a dedicated conda environment
+conda create -n wam2layers -c conda-forge python=3.9 jupyterlab cartopy matplotlib cmocean
+conda activate wam2layers
+
+# Clone the source code repository
+git clone git@github.com:WAM2layers/WAM2layers.git
+cd WAM2layers
+
+# Install the package from source
+pip install -e .
+
+# Download example data and update the paths in the configuration file
+https://rebrand.ly/wam2layers-example-data
+
+# Run example case
+wam2layers backtrack floodcase_202107.yaml
 ```
 
-## Installation instructions
+## Detailed installation instructions
 
 The core of WAM2layers - the tracking functionality - is relatively
 lightweight, and can simply be installed with pip:
@@ -80,6 +93,6 @@ as Jupyter Lab, you can import WAM2layers functionality and build your own scrip
 
 ```python
 import wam2layers
-config_file = "path_to/example_data/example_case.yaml"
+config_file = "path_to/example_data/floodcase_2021.yaml"
 wam2layers.tracking.backtrack.run_experiment(config_file)
 ```

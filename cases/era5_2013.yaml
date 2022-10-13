@@ -15,13 +15,16 @@ track_start_date: '20130521'
 track_end_date: '20130604'
 
 # Settings needed for the tracking run
+input_frequency: '1h'
 target_frequency: '15min'
+output_frequency: '1d'
 periodic_boundary: false
 output_folder: ~/output_data
 restart: false
 kvf: 3
 timetracking: false
 distancetracking: false
+log_level: low
 
 event_start_date: '20130603'
 event_end_date: '20130604'
