@@ -7,7 +7,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.utils.profiling import Profiler
+from wam2layers.utils.profiling import Profiler, ProgressTracker
 
 
 def parse_config(config_file):
@@ -54,6 +54,7 @@ def input_path(date, config):
 def output_path(date, config):
     output_dir = config["output_folder"]
     return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
+
 
 # LRU Cache keeps the file open so we save a bit on I/O
 @lru_cache(maxsize=2)
@@ -399,29 +400,6 @@ def backtrack(
     output["tagged_precip"] += tagged_precip
 
 
-
-def log_progress(t, output, profile):
-    """Print some useful runtime diagnostics."""
-    totals = output.sum()
-    tracked = totals["e_track"]
-    total_tagged_moisture = totals["tagged_precip"]
-    boundary = (totals["north_loss"] + totals["south_loss"] + totals["east_loss"] + totals["west_loss"])
-    still_in_atmosphere = (totals["s_track_upper_restart"] + totals["s_track_lower_restart"])
-    total_tracked_moisture = (tracked + still_in_atmosphere + boundary)
-
-    tracked_percentage = (tracked + boundary) / total_tagged_moisture * 100
-    lost_percentage = (1 - total_tracked_moisture / total_tagged_moisture) * 100
-
-    time, memory = profile()
-
-    print(
-        f"{t} - "
-        f"Tracked moisture: {tracked_percentage.item():.2f}%. "
-        f"Lost moisture: {lost_percentage.item():.2f}%. "
-        f"Time since start: {time}s, RAM: {memory:.2f} MB"
-    )
-
-
 def initialize(config_file):
     """Read config, region, and initial states."""
     print(f"Initializing experiment with config file {config_file}")
@@ -466,7 +444,11 @@ def initialize_outputs(region):
 def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
+    print(f"{t} - Writing output to file {path}")
     output.to_netcdf(path)
+
+    # Flush previous outputs
+    output[["e_track", "tagged_precip", "north_loss", "south_loss", "east_loss", "west_loss"]] *= 0
 
 
 #############################################################################
@@ -480,8 +462,7 @@ def run_experiment(config_file):
 
     config, region, output = initialize(config_file)
 
-    profile = Profiler()
-    total_tagged_moisture = 0
+    progress_tracker = ProgressTracker(output)
     for t in reversed(config["datelist"]):
 
         fluxes = load_fluxes(t)
@@ -519,7 +500,8 @@ def run_experiment(config_file):
 
         # Daily output
         if t == t.floor(config['output_frequency']):
-            log_progress(t, output, profile)
+            progress_tracker.print_progress(t, output)
+            progress_tracker.store_intermediate_states(output)
             write_output(output, t)
 
 
