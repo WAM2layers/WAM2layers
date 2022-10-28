@@ -62,7 +62,7 @@ ml_variables = {
 surface_variables = {
     'tp': "total_precipitation",
     'e': "evaporation",
-    'sp': "mean_sea_level_pressure",
+    'sp': "surface_pressure",
     'tcw': "total_column_water",
 }
 
@@ -108,7 +108,7 @@ for date in datelist:
 
     # Download 3d variables
     for variable, param in ml_variables.items():
-        outfile = f"ERA5_{date.strftime('%Y-%m-%d')}_{variable}_ml.nc"
+        outfile = f"ERA5_{date.strftime('%Y-%m-%d')}_ml_{variable}.nc"
         if (outfolder / outfile).exists() and skip_exist:
             print(
                 f"{outfolder / outfile} already exists, skipping. Set skip_exist = False to force re-download"
