@@ -36,12 +36,17 @@ conda create -n wam2layers -c conda-forge python=3.9 jupyterlab cartopy matplotl
 
 # Activate the environment
 conda activate wam2layers
+```
 
+Now, you have two main options:
+
+1. You do not want to modify the source code and use a tested version: install the latest 'release' of WAM2layers from PyPI (which should in principle coincide with the latest release on Zenodo)
+```
 # Install WAM2layers inside the new conda environment
 pip install wam2layers
 ```
 
-If you want to modify the source code, you can create an editable installation:
+2. You want to modify the source code and create an editable installation from the latest master branch on Github (may be ahead of the PyPI/Zenodo release):
 ```
 # Clone the source code repository
 git clone git@github.com:WAM2layers/WAM2layers.git
