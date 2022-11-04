@@ -1,7 +1,7 @@
 # How to use
 
 ## Quickstart
-We recommend to create an editable installation in a dedicated conda environment:
+We recommend to create an editable installation in a dedicated conda environment (assuming you have an installation of Anaconda/Miniconda already):
 
 ```
 # Create a dedicated conda environment
@@ -24,15 +24,7 @@ wam2layers backtrack floodcase_202107.yaml
 
 ## Detailed installation instructions
 
-The core of WAM2layers - the tracking functionality - is relatively
-lightweight, and can simply be installed with pip:
-
-```
-pip install git@github.com:WAM2layers/WAM2layers.git
-# pip install wam2layers  # will come soon
-```
-
-However, a typical tracking experiment also involves plotting and interactive
+A typical tracking experiment involves plotting and interactive
 exploration. In fact, some of the plotting examples we provide are using
 cartopy, which cannot be installed with pip. Thus, for an optimal experience we
 recommend creating a dedicated conda environment for your moisture tracking
@@ -63,6 +55,15 @@ pip install -e .[develop]
 
 Now, if you edit the source code of WAM2layers, the model will run with your
 updated code.
+
+If you do not want to do anything interactive, the core of WAM2layers - the tracking functionality - is relatively
+lightweight, and can simply be installed with pip:
+
+```
+# pip install git@github.com:WAM2layers/WAM2layers.git
+or
+pip install wam2layers
+```
 
 ## Download example data
 
