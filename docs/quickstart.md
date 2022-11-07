@@ -40,7 +40,7 @@ conda activate wam2layers
 
 Now, you have two main options:
 
-1. You do not want to modify the source code and use a tested version: install the latest 'release' of WAM2layers from PyPI (which should in principle coincide with the latest release on Zenodo)
+1. You do not want to modify the source code and use a tested version: install the latest 'release' of WAM2layers from PyPI (which should in principle coincide with the latest release on Zenodo):
 ```
 # Install WAM2layers inside the new conda environment
 pip install wam2layers
