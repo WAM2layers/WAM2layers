@@ -20,11 +20,13 @@ def load_data(variable, date, config):
             prefix = '_ml'
         elif config["level_type"] == "pressure_levels":
             prefix = '_pl'
+    else:
+        prefix = ''
 
     template = config["filename_template"]
     filepath = template.format(year=date.year, month=date.month, day= date.day, levtype=prefix, variable = variable)
 
-    da = xr.open_dataset(filepath)[variable]
+    da = xr.open_dataset(filepath)[variable].sel(time=date.strftime('%Y%m%d'))
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
