@@ -71,37 +71,35 @@ pip install wam2layers
 ```
 
 ## functionalities
-WAM2layers consists of three basic functionalities
+WAM2layers consists of three basic functionalities: preprocessing, tracking and visualizing. You can use these in the following way
 
-1. preprocessing 
-TODO: explain what happens in the preprocessing
+preprocessing 
+TODO: explain what happens (what goes in and what comes out, which files are used)
 ```
-wam2layers preprocess 'filename'.yaml
+wam2layers preprocess 'config_filename'.yaml
 ```
 
-2. tracking (the core of WAM2layers):
-TODO: explain what happens in the tracking
+You can visualize the output of the preprocessing, which is the input to the tracking by
 ```
-wam2layers backtrack 'filename'.yaml
-````
-the other options
-
-3. visualization
-
-These can be called with the following lines of code
-
+wam2layers visualize input 'config_filename'.yaml
 ```
-wam2layers preprocess 'filename'.yaml
 
-wam2layers backtrack 'filename'.yaml
+tracking (the core of WAM2layers):
+TODO: explain what happens (what goes in and what comes out, which files are used)
+```
+wam2layers backtrack 'config_filename'.yaml
+```
 
-wam2layers visualize output floodcase_202107.yaml
+You can visualize the output of the preprocessing by
+```
+wam2layers visualize output 'config_filename'.yaml
 ```
 
 ## Download example data
 
-Before we can start tracking, we need some data. Input data for a simple example
-case is currently available via https://rebrand.ly/wam2layers-example-data. Once
+Before you can start tracking, you need some data. Input data for a simple example
+case in which the preprocessing is already done is currently available through 
+https://rebrand.ly/wam2layers-example-data. Once
 stabilized, we will move it to a more persistent place, such as Zenodo.
 
 You will see that the example data comes with a configuration file. You will
@@ -112,12 +110,15 @@ For more information, see the documentation on configuration and pre-processing.
 
 ## Start an experiment
 
-Now you are ready to start tracking! There are a few ways to use WAM2layers. One
-way is to use it from the command line:
+Now you are ready to start tracking! There are a few ways to use WAM2layers. 
+
+One way is to use it from the command line:
 ```
 wam2layers backtrack floodcase_202107.yaml
 wam2layers visualize output floodcase_202107.yaml
 ```
+
+TODO: explain how it can by used with JupyterLab
 
 This workflow is particularly useful if you are running experiments on HPC
 systems.
