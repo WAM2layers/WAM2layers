@@ -11,11 +11,14 @@ from wam2layers.preprocessing.shared import (accumulation_to_flux,
                                                     insert_level, interpolate,
                                                     sortby_ndarray)
 
+class InvalidConfig(Exception):
+    pass
+
 
 def load_data(variable, date, config):
     """Load data for given variable and date."""
     template = config["filename_template"]
-    
+
     # If it's a 4d variable, we need to set the level type
     if variable in ["u", "v", "q"]:
         if config["level_type"] == "model_levels":
@@ -26,17 +29,29 @@ def load_data(variable, date, config):
     else:
         prefix = ""
 
+    # Check whether we want to use dask
+    if config['use_dask']:
+        # chunks = {'time': 'auto', 'level': -1, 'longitude': 'auto', 'latitude': 'auto'}
+        # chunks = {'time': 'auto', 'level': -1, 'longitude': -1, 'latitude': -1}
+        # chunks = {'time': 'auto'}  # same as above
+        # chunks = 'auto'
+        # chunks = None
+        chunks = {'time': 1}  # same as above
+        dask_args = dict(chunks=chunks)
+    else:
+        dask_args = dict(chunks=None)
+
     # Load data
-    filepath = template.format(year=date.year, month=date.month, day= date.day, levtype=prefix, variable = variable)
-    da = xr.open_dataset(filepath,chunks='auto')[variable]
-            
+    filepath = template.format(year=date.year, month=date.month, day=date.day, levtype=prefix, variable = variable)
+    da = xr.open_dataset(filepath, **dask_args).sel(time=date.strftime("%Y%m%d"))[variable]
+
     if "lev" in da.coords:
         da = da.rename(lev="level")
-        
+
     # If it's 4d data we want to select a subset of the levels
     if variable in ["u", "v", "q"] and isinstance(config["levels"], list):
         return da.sel(level=config["levels"])
-    
+
     return da
 
 def preprocess_precip_and_evap(date, config):
@@ -44,7 +59,7 @@ def preprocess_precip_and_evap(date, config):
     # All incoming units are accumulations (in m) since previous time step
     evap = load_data("e", date, config)
     precip = load_data("tp", date, config)  # total precipitation
-    
+
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
     precip = precip
@@ -54,41 +69,54 @@ def preprocess_precip_and_evap(date, config):
 
     precip = accumulation_to_flux(precip)
     evap = accumulation_to_flux(evap)
-    print('loaded evap & precip')
     return precip, evap
+
 
 def get_edges(era5_modellevels):
     """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
+    if era5_modellevels == "all":
+        era5_modellevels = list(range(138))
+
     # Load a and b coefficients
     table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
     df = pd.read_csv(table)
-    a = df["a [Pa]"].to_xarray().rename(index="level")
-    b = df["b"].to_xarray().rename(index="level")
+    a = df['a [Pa]'].values
+    b = df.b.values
 
-    # Calculate a and b at mid levels (model levels)
-    a_full = ((a[1:] + a[:-1].values) / 2.0).sel(level=era5_modellevels)
-    b_full = ((b[1:] + b[:-1].values) / 2.0).sel(level=era5_modellevels)
+    def midpoints(x):
+        return x[1:] + x[:-1] / 2
 
-    # Interpolate to get parameters at edges between selected levels
-    a_edge = xr.concat([a[0], (a_full[1:].values + a_full[:-1]) / 2, a[-1]], dim="level")
-    b_edge = xr.concat([b[0], (b_full[1:].values + b_full[:-1]) / 2, b[-1]], dim="level")
+    # Calculate the values of a and be at midpoints and extract levels
+    era5_modellevels = [i-1 for i in era5_modellevels]
+    a_full = midpoints(a)[era5_modellevels]
+    b_full = midpoints(b)[era5_modellevels]
+
+    # Calculate the values of a and b at the edges *between* these levels
+    a_edge = midpoints(a_full)
+    b_edge = midpoints(b_full)
+
+    # Reinsert the original outer edges
+    a_edge = np.block([a[0], a_edge, a[-1]])
+    b_edge = np.block([b[0], b_edge, b[-1]])
 
     return a_edge, b_edge
 
 
-def get_dp_modellevels(sp, modellevels):
+def get_dp_modellevels(sp, levels):
     """Calculate pressure jump over subset of era5 modellevels."""
-    if modellevels == "all":
-        modellevels = list(range(138))
+    a, b = get_edges(levels)
 
-    sp_broadcast = sp.expand_dims({"level": modellevels}, axis=1)
-    a_edge, b_edge = get_edges(modellevels)
-    p_edges = a_edge + b_edge * sp_broadcast  # in Pa
+    # Use dummy level -1 to avoid collision with existing levels
+    # first coord will be discarded anyway on taking the diff below.
+    a = xr.DataArray(a, coords={'level': np.insert(levels, 0, -1)})
+    b = xr.DataArray(b, coords={'level': np.insert(levels, 0, -1)})
 
-    # calculate the difference between the pressure levels
-    dp_modellevels = p_edges.diff(dim="level")  # in Pa
+    p_edge = a + b * sp
 
-    return dp_modellevels
+    # Calculate the difference between the pressure levels
+    dp = p_edge.diff('level')  # in Pa
+
+    return dp
 
 
 def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
@@ -196,9 +224,15 @@ def prep_experiment(config_file):
       FloodCase_202107_sp.nc
     """
     config = parse_config(config_file)
+
+    if config['use_dask']:
+        print("Starting dask cluster")
+        from dask.distributed import Client
+        client = Client()
+        print(f"To see the dask dashboard, go to {client.dashboard_link}")
+
     for date in config["datelist"]:
         print(date)
-        precip, evap = preprocess_precip_and_evap(date, config)
 
         # 4d fields
         levels = config["levels"]
@@ -217,8 +251,6 @@ def prep_experiment(config_file):
             v10 = load_data("v10", date, config)  # in m/s
             dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
 
-        print('loaded 4d data')    
-            
         # Calculate column water vapour
         g = 9.80665  # gravitational accelleration [m/s2]
         cwv = q * dp / g  # (kg/m2)
@@ -232,34 +264,44 @@ def prep_experiment(config_file):
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
 
-        # Integrate fluxes and states to upper and lower layer
-        if config["level_type"] == "model_levels":
-            # TODO: Check if this is a reasonable choice for boundary
-            boundary = 111
-            lower_layer = dp.level > boundary
-            upper_layer = ~lower_layer
-        if config["level_type"] == "pressure_levels":
-            upper_layer = p < pb[:, None, :, :]
-            lower_layer = pb[:, None, :, :] < p
-
-        # Vertically integrate state over two layers
-        s_lower = cw.where(lower_layer).sum(dim="level")
-        s_upper = cw.where(upper_layer).sum(dim="level")
-
-        print('check here')
-        
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
         fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
 
-        # Vertically integrate fluxes over two layers
-        fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
-        fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
-        fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
-        fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+        # Integrate fluxes and states to upper and lower layer
+        if config["level_type"] == "model_levels":
+            # TODO: Check if this is a reasonable choice for boundary
+            boundary = 111
+            idx = dp.level.searchsorted(boundary, side='right')
+            upper = np.s_[:, :idx, :, :]
+            lower = np.s_[:, idx:, :, :]
+            s_lower = cw[lower].sum(dim="level")
+            s_upper = cw[upper].sum(dim="level")
+            fx_lower = fx[lower].sum(dim="level")  # kg m-1 s-1
+            fy_lower = fy[lower].sum(dim="level")  # kg m-1 s-1
+            fx_upper = fx[upper].sum(dim="level")  # kg m-1 s-1
+            fy_upper = fy[upper].sum(dim="level")  # kg m-1 s-1
 
-        print('Done the integration to two layers')
-        
+        elif config["level_type"] == "pressure_levels":
+            upper_layer = p < pb[:, None, :, :]
+            lower_layer = pb[:, None, :, :] < p
+
+            # Vertically integrate state over two layers
+            s_lower = cw.where(lower_layer).sum(dim="level")
+            s_upper = cw.where(upper_layer).sum(dim="level")
+            fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+            fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+            fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+            fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+
+        else:
+            raise InvalidConfig(
+                "Expected config level_type to be one of ['model_level', "
+                f"'pressure_level'], but got {config['level_type']}."
+            )
+
+        precip, evap = preprocess_precip_and_evap(date, config)
+
         # Combine everything into one dataset
         ds = xr.Dataset(
             {
@@ -275,12 +317,19 @@ def prep_experiment(config_file):
         )
 
         # Verify that the data meets all the requirements for the model
-        check_input(ds)
+        # check_input(ds)
 
         # Save preprocessed data
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config["output_dir"] / filename
         ds.to_netcdf(output_path)
+        print(output_path)
+
+    # Close the dask cluster when done
+    if config['use_dask']:
+        client.shutdown()
+
+
 
 ################################################################################
 # To run this script interactively in e.g. Spyder, uncomment the following line:
