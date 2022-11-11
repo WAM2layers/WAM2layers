@@ -70,6 +70,34 @@ or
 pip install wam2layers
 ```
 
+## functionalities
+WAM2layers consists of three basic functionalities
+
+1. preprocessing 
+TODO: explain what happens in the preprocessing
+```
+wam2layers preprocess 'filename'.yaml
+```
+
+2. tracking (the core of WAM2layers):
+TODO: explain what happens in the tracking
+```
+wam2layers backtrack 'filename'.yaml
+````
+the other options
+
+3. visualization
+
+These can be called with the following lines of code
+
+```
+wam2layers preprocess 'filename'.yaml
+
+wam2layers backtrack 'filename'.yaml
+
+wam2layers visualize output floodcase_202107.yaml
+```
+
 ## Download example data
 
 Before we can start tracking, we need some data. Input data for a simple example
