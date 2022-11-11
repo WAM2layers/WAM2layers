@@ -32,10 +32,10 @@ experiments, for example:
 
 ```
 # Create a clean conda environment
-conda create -n wam2layers -c conda-forge python=3.9 jupyterlab cartopy matplotlib
+conda create --name wamenv -c conda-forge python=3.9 jupyterlab cartopy matplotlib
 
 # Activate the environment
-conda activate wam2layers
+conda activate wamenv
 ```
 
 Now, you have two main options:
@@ -70,8 +70,8 @@ or
 pip install wam2layers
 ```
 
-## functionalities
-WAM2layers consists of three basic functionalities: preprocessing, tracking and visualizing. You can use these in the following way
+## Functionalities
+WAM2layers consists of three basic functionalities: preprocessing, tracking and visualizing. All of them require a configuration file ('config_file'.yaml in the examples below). The visualize option just provides some basic examples of how you could visualize your data, but please modify that to your own needs. You can use these in the following way
 
 preprocessing 
 TODO: explain what happens (what goes in and what comes out, which files are used)
@@ -94,6 +94,8 @@ You can visualize the output of the preprocessing by
 ```
 wam2layers visualize output 'config_filename'.yaml
 ```
+
+TODO: explain the visualize both and snapshots options
 
 ## Download example data
 
@@ -118,16 +120,19 @@ wam2layers backtrack floodcase_202107.yaml
 wam2layers visualize output floodcase_202107.yaml
 ```
 
-TODO: explain how it can by used with JupyterLab
-
 This workflow is particularly useful if you are running experiments on HPC
 systems.
 
 Alternatively, if you prefer to work in an interactive Python environment such
 as Jupyter Lab, you can import WAM2layers functionality and build your own scripts.
 
+TODO: explain how it can by used with JupyterLab
+
 ```python
 import wam2layers
 config_file = "path_to/example_data/floodcase_2021.yaml"
 wam2layers.tracking.backtrack.run_experiment(config_file)
 ```
+
+## Start developing
+Use the pages "config", "preprocessing" and "theory" (containing the theory of the tracking) to learn more and start developing your own case with WAM2layers!
