@@ -14,15 +14,17 @@ from wam2layers.preprocessing.shared import (accumulation_to_flux,
 
 def load_data(variable, date, config):
     """Load data for given variable and date."""
-    prefix = config["filename_prefix"]
-    # Include midnight of the next day (if available)
-    extra = date + pd.Timedelta(days=1)
+    # If it's a 4d variable, we need to set the level type
+    if variable in ["u", "v", "q"]:
+        if config["level_type"] == "model_levels":
+            prefix = '_ml'
+        elif config["level_type"] == "pressure_levels":
+            prefix = '_pl'
 
-    if variable in ["u", "v", "q", "t"] and config["level_type"] == "model_levels":
-        prefix += "_ml"
+    template = config["filename_template"]
+    filepath = template.format(year=date.year, month=date.month, day= date.day, levtype=prefix, variable = variable)
 
-    filepath = Path(config["input_folder"]) / f"{prefix}_{variable}.nc"
-    da = xr.open_dataset(filepath)[variable].sel(time=slice(date, extra))
+    da = xr.open_dataset(filepath)[variable]
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
@@ -30,16 +32,14 @@ def load_data(variable, date, config):
     if variable in ["u", "v", "q", "t"] and isinstance(config["levels"], list):
         return da.sel(level=config["levels"])
 
-    return da.sel(time=slice(date, extra))
+    return da
 
 
 def preprocess_precip_and_evap(date, config):
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
     evap = load_data("e", date, config)
-    cp = load_data("cp", date, config)  # convective precipitation
-    lsp = load_data("lsp", date, config)  # large scale precipitation
-    precip = (cp + lsp)
+    precip = load_data("tp", date, config)  # convective precipitation
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
