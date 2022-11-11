@@ -83,7 +83,7 @@ pl_variables = {
 surface_variables = {
     'tp': 'total_precipitation',
     'e': 'evaporation',
-    'sp': 'mean_sea_level_pressure',
+    'sp': 'surface_pressure',
     'd2m': '2m_dewpoint_temperature',
     'u10': '10m_u_component_of_wind',
     'v10': '10m_v_component_of_wind',
@@ -132,7 +132,7 @@ for date in datelist:
 
     # Download 3d variables
     for variable, long_name in pl_variables.items():
-        outfile = f"ERA5_{date.strftime('%Y-%m-%d')}_{variable}_pl.nc"
+        outfile = f"ERA5_{date.strftime('%Y-%m-%d')}_pl_{variable}.nc"
         if (outfolder / outfile).exists() and skip_exist:
             print(
                 f"{outfolder / outfile} already exists, skipping. Set skip_exist = False to force re-download"
