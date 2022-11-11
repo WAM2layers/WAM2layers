@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
+
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import Profiler, ProgressTracker
 
@@ -323,8 +324,12 @@ def backtrack(
     f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert)
 
     # Determine horizontal fluxes over the grid-cell boundaries
-    f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(fx_lower)
-    f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(fx_upper)
+    f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
+        fx_lower, config["periodic_boundary"]
+    )
+    f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(
+        fx_upper, config["periodic_boundary"]
+    )
 
     (
         fy_n_lower_sn,
@@ -342,7 +347,7 @@ def backtrack(
     # Short name for often used expressions
     s_track_relative_lower = s_track_lower / s_lower
     s_track_relative_upper = s_track_upper / s_upper
-    inner = np.s_[1:-1, 1:-1]
+    inner = np.s_[1:-1, :]
 
     # Actual tracking (note: backtracking, all terms have been negated)
     s_track_lower[inner] += (
@@ -388,12 +393,16 @@ def backtrack(
     output["south_loss"] += (
         fy_s_upper_sn * s_track_relative_upper + fy_s_lower_sn * s_track_relative_lower
     )[-2, :]
-    output["east_loss"] += (
-        f_e_upper_ew * s_track_relative_upper + f_e_lower_ew * s_track_relative_lower
-    )[:, -2]
-    output["west_loss"] += (
-        f_w_upper_we * s_track_relative_upper + f_w_lower_we * s_track_relative_lower
-    )[:, 1]
+
+    if config["periodic_boundary"] == False:
+        output["east_loss"] += (
+            f_e_upper_ew * s_track_relative_upper
+            + f_e_lower_ew * s_track_relative_lower
+        )[:, -2]
+        output["west_loss"] += (
+            f_w_upper_we * s_track_relative_upper
+            + f_w_lower_we * s_track_relative_lower
+        )[:, 1]
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
