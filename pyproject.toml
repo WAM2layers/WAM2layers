@@ -33,9 +33,11 @@ dependencies = [
     "netcdf4",
     "scipy",
     "click",
+    "dask",
+    "distributed",
     ## Cartopy requires GEOS and PROJ
     ## recommend installing with conda instead
-    # cartopy
+    # cartopy,
 ]
 
 [project.optional-dependencies]
