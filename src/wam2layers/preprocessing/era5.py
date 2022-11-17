@@ -55,6 +55,15 @@ def preprocess_precip_and_evap(date, config):
     return precip, evap
 
 
+def load_era5_ab():
+    """Load a and b coefficients."""
+    table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
+    df = pd.read_csv(table)
+    a = df['a [Pa]'].values
+    b = df.b.values
+    return a, b
+
+
 def midpoints(x):
     """Linearly interpolate between the values of an array."""
     return (x[1:] + x[:-1]) / 2
@@ -62,14 +71,10 @@ def midpoints(x):
 
 def get_edges(era5_modellevels):
     """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
-    if era5_modellevels == "all":
-        era5_modellevels = list(range(1, 138))
+    a, b = load_era5_ab()
 
-    # Load a and b coefficients
-    table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
-    df = pd.read_csv(table)
-    a = df['a [Pa]'].values
-    b = df.b.values
+    if era5_modellevels == "all":
+        return a, b
 
     # With python indexing starting at 0 and 137 full levels,
     # count from 0-136 instead of 1-137.
