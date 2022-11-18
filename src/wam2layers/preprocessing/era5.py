@@ -295,7 +295,7 @@ def prep_experiment(config_file):
         # Save preprocessed data
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config["output_dir"] / filename
-        ds.to_netcdf(output_path)
+        ds.astype("float32").to_netcdf(output_path)
 
 ################################################################################
 # To run this script interactively in e.g. Spyder, uncomment the following line:
