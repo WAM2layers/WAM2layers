@@ -451,7 +451,7 @@ def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
     print(f"{t} - Writing output to file {path}")
-    output.to_netcdf(path)
+    output.to_netcdf(path) #.astype("float32")
 
     # Flush previous outputs
     output[["e_track", "tagged_precip", "north_loss", "south_loss", "east_loss", "west_loss"]] *= 0
