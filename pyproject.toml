@@ -48,6 +48,7 @@ develop = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
+    "pytest",
 ]
 
 [project.urls]
