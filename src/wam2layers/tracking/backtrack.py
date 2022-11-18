@@ -6,11 +6,34 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
+import logging
 
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import Profiler, ProgressTracker
 
 
+logger = logging.getLogger('Imme')
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create file handler
+fh = logging.FileHandler('logfile.log')    
+fh.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+logger.addHandler(fh)
+   
 def parse_config(config_file):
     """Load and parse config file into dictionary."""
     with open(config_file) as f:
@@ -242,7 +265,12 @@ def stabilize_fluxes(current, previous):
 
         fy_corrected = 1/2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
-
+        
+        where_corrected = fy_corrected < fy_abs
+        correction = np.where(where_corrected, fy_abs - fy_corrected, 0)
+        corrected_percent = where_corrected.sum()/where_corrected.count() * 100
+        
+        logger.debug(f'Stabilize fluxes function was used: {corrected_percent} per cent of gridcells during this timestep, average correction was {correction.mean()}')
         # Get rid of any nan values
         fx_stable.fillna(0)
         fy_stable.fillna(0)
@@ -408,7 +436,7 @@ def backtrack(
 
 def initialize(config_file):
     """Read config, region, and initial states."""
-    print(f"Initializing experiment with config file {config_file}")
+    logger.info(f"Initializing experiment with config file {config_file}")
 
     config = parse_config(config_file)
     region = load_region(config)
@@ -423,7 +451,7 @@ def initialize(config_file):
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
-    print(f"Output will be written to {config['output_folder']}.")
+    logger.info(f"Output will be written to {config['output_folder']}.")
     return config, region, output
 
 
@@ -450,7 +478,7 @@ def initialize_outputs(region):
 def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
-    print(f"{t} - Writing output to file {path}")
+    logger.info(f"{t} - Writing output to file {path}")
     output.to_netcdf(path)
 
     # Flush previous outputs
@@ -532,8 +560,10 @@ def cli(config_file):
         - python path/to/backtrack.py path/to/cases/era5_2021.yaml
         - wam2layers backtrack path/to/cases/era5_2021.yaml
     """
-    print("Welcome to WAM2layers.")
-    print("Starting backtrack experiment.")
+       
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting backtrack experiment.")
+    
     run_experiment(config_file)
 
 
