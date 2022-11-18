@@ -1,6 +1,5 @@
 # Settings needed for preprocessing
-input_folder: /data/volume_2/2013
-filename_prefix: 'FloodCase_201305'
+filename_template: '/data/volume_2/era5_2013/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc'
 preprocess_start_date: '20130521'
 preprocess_end_date: '20130604'
 level_type: model_levels
