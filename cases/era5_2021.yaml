@@ -1,5 +1,5 @@
 # Settings needed for preprocessing
-filename_template: '/data/volume_2/ERA5/{year}/{month:02}/{day:02d}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc'
+filename_template: '/data/volume_2/ERA5/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc'
 preprocess_start_date: '20210701'
 preprocess_end_date: '20210716'
 level_type: model_levels
