@@ -21,13 +21,13 @@ warnings.formatwarning = _warning_on_one_line
 def check_monotonic_increase(data, dim="level"):
     """Check if data is monotonically increasing in the given dimension."""
     if not data.diff(dim).min() >= 0:
-        warnings.warn(f"Data is not monotonically increasing in the dimension {dim}.")
+        warnings.warn(f"Data is not monotonically increasing in the dimension {dim} for {data.name}.")
 
 
 def check_monotonic_decrease(data, dim="level"):
     """Check if data is monotonically decreasing in the given dimension."""
     if not data.diff(dim).max() <= 0:
-        warnings.warn(f"Data is not monotonically decreasing in the dimension {dim}.")
+        warnings.warn(f"Data is not monotonically decreasing in the dimension {dim} for {data.name}.")
 
 
 def check_units(data, valid_units):
@@ -41,54 +41,54 @@ def check_units(data, valid_units):
 def check_positive(data):
     """Check if data is positive."""
     if not data.min() >= 0:
-        warnings.warn("Data is not positive.")
+        warnings.warn(f"Data for {data.name} is not positive")
 
 
 def check_negative(data):
     """Check if data is negative."""
     if not data.max() <= 0:
-        warnings.warn("Data is not negative.")
+        warnings.warn(f"Data for {data.name} is not negative.")
 
 
 def check_nonnegative(data):
     """Check if data is nonnegative."""
     if not data.min() >= 0:
-        warnings.warn("Data is not nonnegative.")
+        warnings.warn(f"Data for {data.name} is not nonnegative.")
 
 
 def check_order_of_magnitude(data, order):
     """Check if data is within the given order of magnitude."""
     if not data.min() >= 10 ** order and data.max() <= 10 ** order:
-        warnings.warn(f"Data is not within the order of magnitude {order}.")
+        warnings.warn(f"Data  for {data.name}is not within the order of magnitude {order}.")
 
 
 def check_frequency(data, frequency):
     """Check if data has the given frequency."""
     if not data.time.dt.frequency == frequency:
-        warnings.warn(f"Data has frequency {data.time.dt.frequency} instead of {frequency}.")
+        warnings.warn(f"Data  for {data.name} has frequency {data.time.dt.frequency} instead of {frequency}.")
 
 
 def check_shape(data, ndim):
     if data.ndim != ndim:
-        warnings.warn("Expected 3 dimensions, found {data.ndim}.")
+        warnings.warn("Expected 3 dimensions, found {data.ndim} for {data.name}.")
 
 
 def check_range(data, range):
     if not data.min() >= range[0] and data.max() <= range[1]:
-        warnings.warn(f"Data is not within the range {min} to {max}.")
+        warnings.warn(f"Data for {data.name} is not within the range {min} to {max}.")
 
 
 def check_uniform(coord):
     spacing = np.diff(coord)
     if not spacing.min() == spacing.max():
-        warnings.warn(f"Coordinate spacing is not uniform for coord {coord}")
+        warnings.warn(f"Coordinate spacing is not uniform for coord {coord} of {data.name}")
 
 
 def check_coords(data, coords):
     check_shape(data, ndim=len(coords))
     for coord in coords:
         if coord not in data.coords:
-            warnings.warn(f"Data does not have a coordinate {coord}.")
+            warnings.warn(f"Data for {data.name} does not have a coordinate {coord}.")
         else:
             check_uniform(data[coord])
         if coord == "latitude":
