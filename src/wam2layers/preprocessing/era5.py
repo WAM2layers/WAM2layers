@@ -54,6 +54,7 @@ def load_data(variable, date, config):
 
     return da
 
+
 def preprocess_precip_and_evap(date, config):
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
@@ -72,22 +73,32 @@ def preprocess_precip_and_evap(date, config):
     return precip, evap
 
 
-def get_edges(era5_modellevels):
-    """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
-    if era5_modellevels == "all":
-        era5_modellevels = list(range(138))
-
-    # Load a and b coefficients
+def load_era5_ab():
+    """Load a and b coefficients."""
     table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
     df = pd.read_csv(table)
     a = df['a [Pa]'].values
     b = df.b.values
+    return a, b
 
-    def midpoints(x):
-        return x[1:] + x[:-1] / 2
+
+def midpoints(x):
+    """Linearly interpolate between the values of an array."""
+    return (x[1:] + x[:-1]) / 2
+
+
+def get_edges(era5_modellevels):
+    """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
+    a, b = load_era5_ab()
+
+    if era5_modellevels == "all":
+        return a, b
+
+    # With python indexing starting at 0 and 137 full levels,
+    # count from 0-136 instead of 1-137.
+    era5_modellevels = [i-1 for i in era5_modellevels]
 
     # Calculate the values of a and be at midpoints and extract levels
-    era5_modellevels = [i-1 for i in era5_modellevels]
     a_full = midpoints(a)[era5_modellevels]
     b_full = midpoints(b)[era5_modellevels]
 

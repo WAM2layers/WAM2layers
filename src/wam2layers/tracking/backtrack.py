@@ -347,7 +347,10 @@ def backtrack(
     # Short name for often used expressions
     s_track_relative_lower = s_track_lower / s_lower
     s_track_relative_upper = s_track_upper / s_upper
-    inner = np.s_[1:-1, :]
+    if config["periodic_boundary"]:
+        inner = np.s_[1:-1, :]
+    else:
+        inner = np.s_[1:-1, 1:-1]
 
     # Actual tracking (note: backtracking, all terms have been negated)
     s_track_lower[inner] += (
