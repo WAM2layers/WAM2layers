@@ -1,3 +1,4 @@
+# How to use
 TODO: introduce how this how to use works
 
 ## Installation instructions

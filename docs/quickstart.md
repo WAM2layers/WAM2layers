@@ -1,6 +1,4 @@
-# How to use
-
-## Quickstart
+# Quickstart
 We recommend to create an editable installation in a dedicated conda environment (assuming you have an installation of Anaconda/Miniconda already):
 
 ```
