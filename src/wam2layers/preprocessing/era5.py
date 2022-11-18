@@ -52,42 +52,64 @@ def preprocess_precip_and_evap(date, config):
 
     precip = accumulation_to_flux(precip)
     evap = accumulation_to_flux(evap)
-
     return precip, evap
+
+
+def load_era5_ab():
+    """Load a and b coefficients."""
+    table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
+    df = pd.read_csv(table)
+    a = df['a [Pa]'].values
+    b = df.b.values
+    return a, b
+
+
+def midpoints(x):
+    """Linearly interpolate between the values of an array."""
+    return (x[1:] + x[:-1]) / 2
 
 
 def get_edges(era5_modellevels):
     """Get the values of a and b at the edges of a subset of ERA5 modellevels."""
-    # Load a and b coefficients
-    table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
-    df = pd.read_csv(table)
-    a = df["a [Pa]"].to_xarray().rename(index="level")
-    b = df["b"].to_xarray().rename(index="level")
+    a, b = load_era5_ab()
 
-    # Calculate a and b at mid levels (model levels)
-    a_full = ((a[1:] + a[:-1].values) / 2.0).sel(level=era5_modellevels)
-    b_full = ((b[1:] + b[:-1].values) / 2.0).sel(level=era5_modellevels)
+    if era5_modellevels == "all":
+        return a, b
 
-    # Interpolate to get parameters at edges between selected levels
-    a_edge = xr.concat([a[0], (a_full[1:].values + a_full[:-1]) / 2, a[-1]], dim="level")
-    b_edge = xr.concat([b[0], (b_full[1:].values + b_full[:-1]) / 2, b[-1]], dim="level")
+    # With python indexing starting at 0 and 137 full levels,
+    # count from 0-136 instead of 1-137.
+    era5_modellevels = [i-1 for i in era5_modellevels]
+
+    # Calculate the values of a and be at midpoints and extract levels
+    a_full = midpoints(a)[era5_modellevels]
+    b_full = midpoints(b)[era5_modellevels]
+
+    # Calculate the values of a and b at the edges *between* these levels
+    a_edge = midpoints(a_full)
+    b_edge = midpoints(b_full)
+
+    # Reinsert the original outer edges
+    a_edge = np.block([a[0], a_edge, a[-1]])
+    b_edge = np.block([b[0], b_edge, b[-1]])
 
     return a_edge, b_edge
 
 
-def get_dp_modellevels(sp, modellevels):
+def get_dp_modellevels(sp, levels):
     """Calculate pressure jump over subset of era5 modellevels."""
-    if modellevels == "all":
-        modellevels = list(range(138))
+    a, b = get_edges(levels)
 
-    sp_broadcast = sp.expand_dims({"level": modellevels}, axis=1)
-    a_edge, b_edge = get_edges(modellevels)
-    p_edges = a_edge + b_edge * sp_broadcast  # in Pa
+    # Use dummy level -1 to avoid collision with existing levels
+    # first coord will be discarded anyway on taking the diff below.
+    a = xr.DataArray(a, coords={'level': np.insert(levels, 0, -1)})
+    b = xr.DataArray(b, coords={'level': np.insert(levels, 0, -1)})
 
-    # calculate the difference between the pressure levels
-    dp_modellevels = p_edges.diff(dim="level")  # in Pa
+    p_edge = a + b * sp
 
-    return dp_modellevels
+    # Calculate the difference between the pressure levels
+    dp = p_edge.diff('level')  # in Pa
+
+    return dp
 
 
 def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
