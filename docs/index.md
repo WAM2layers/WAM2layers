@@ -3,8 +3,9 @@
 Welcome to the documentation of the WAM2layers moisture tracking code.
 WAM2layers can be used to determine where precipitation originally evaporated
 (backtracking), or where evaporated moisture eventually ends up (forward
-tracking).
+tracking). WAM2layers is written in Python an is most easy to use as a command line tool with configuration script that can be edited in your favorite editor. 
 
+* Before using WAM2layers for your own case it is highly recommended to read the [Theory](./theory.md) of tracking in WAM2layers 
 * To access source code, see our [GitHub repository](https://github.com/WAM2layers/WAM2layers)
 * For a reference publication, see [this paper](https://doi.org/10.5194/esd-5-471-2014)
 * To cite the code, use the software citation information [for the appropriate
@@ -19,8 +20,10 @@ more stable version of the code in the course of 2022.
 ```{toctree}
 :hidden:
 self
-quickstart
 theory
+quickstart
+howtouse
+example
 config
 preprocessing
 develop
