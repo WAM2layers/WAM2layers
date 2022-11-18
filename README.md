@@ -23,8 +23,8 @@ See the [documentation](http://wam2layers.rtfd.io/) for a more detailed descript
 This is the official codebase for the WAM-2layers moisture tracking model as of
 18/03/2022, but there are still several other older versions around:
 
-- [Original Python code by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython)
-- [Adapted version by Imme Benedict](https://github.com/Imme1992/moisture_tracking_mississippi)
+- [Original Python code for ERA-Interim by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython)
+- [Adapted version for EC-Earth by Imme Benedict](https://github.com/Imme1992/moisture_tracking_mississippi)
 - [Adapted version for MERRA2 by Pat Keys](https://github.com/pkeys/WAM2layersPythonMerra2)
 - [Adapted version for ERA5 pressure levels by Mingzhong Xiao](https://zenodo.org/record/4796962#.Y25d1-TMIVA)
 

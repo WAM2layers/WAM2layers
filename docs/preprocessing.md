@@ -30,7 +30,7 @@ This dataset adheres to the following requirements:
 
 - Data should be stored in netcdf files, one file per day.
 - Importantly, the midnight of the next day should also be included (except
-  perhaps for the last day)
+  perhaps for the last day) #TODO: @Peter, this is not correct anymore, is it?
 - Precipitation and evaporation should both be positive
 - The states (`s_upper` and `s_lower`) should be positive as well
 - States are given in units of "kg m-2", fluxes in "kg m-1 s-1"

@@ -97,18 +97,19 @@ wam2layers visualize output 'config_filename'.yaml
 
 TODO: explain the visualize both and snapshots options
 
-## Download example data
+## Download example data and configuration file
 
 Before you can start tracking, you need some data. Input data for a simple example
-case in which the preprocessing is already done is currently available through 
+case in which the pre-processing is already done is currently available through 
 https://rebrand.ly/wam2layers-example-data. Once
 stabilized, we will move it to a more persistent place, such as Zenodo.
 
-You will see that the example data comes with a configuration file. You will
-need to update the paths in that file such that they point to your the location
-where you stored the downloaded example data.
+The example data comes with a configuration file (.yaml file). It is best practice to save your configuration file outside of the WAM2layers repository.
 
-For more information, see the documentation on configuration and pre-processing.
+You will need to update the paths in that file such that they point to your the location
+where you stored the downloaded example data. TODO: 
+
+For more information, see the documentation on [Case configuration](./config.md) and [Pre-processing](./preprocessing.md).
 
 ## Start an experiment
 
@@ -134,5 +135,22 @@ config_file = "path_to/example_data/floodcase_2021.yaml"
 wam2layers.tracking.backtrack.run_experiment(config_file)
 ```
 
-## Start developing
-Use the pages "config", "preprocessing" and "theory" (containing the theory of the tracking) to learn more and start developing your own case with WAM2layers!
+## Running WAM2layers for your own case and data
+
+### theory
+Before using WAM2layers for your own case it is highly recommended to the [Theory](./theory.md) of tracking in WAM2layers 
+
+### own case
+Use the page [Case configuration](./config.md) to learn more about case configuration settings
+
+### pre-processing
+The default pre-processing works for ERA5 data for which example download scripts are provided in TODO:link to files. In case you just want to know more about what is happening during the pre-processing please refer to [Pre-processing](./prepocessing.md). 
+
+### code adaptation and contribution
+Possibly you want to adapt WAM2layers to track other climate data (e.g., output of RCMs and GCMs). In principle you can do so by only changing the Pre-processing and Case configuration without touching the core tracking module. You are encouraged to contribute your download scripts as well as prepocessing files to the WAM2layers Github repository.
+
+## Code development
+In case you are part of the development team (or want to become part of it), the [Developer's guide][./develop.md] is meant to help maintaining the code on Github, Zenodo and this documentation.
+
+
+
