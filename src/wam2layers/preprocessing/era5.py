@@ -29,21 +29,9 @@ def load_data(variable, date, config):
     else:
         prefix = ""
 
-    # Check whether we want to use dask
-    if config['use_dask']:
-        # chunks = {'time': 'auto', 'level': -1, 'longitude': 'auto', 'latitude': 'auto'}
-        # chunks = {'time': 'auto', 'level': -1, 'longitude': -1, 'latitude': -1}
-        # chunks = {'time': 'auto'}  # same as above
-        # chunks = 'auto'
-        # chunks = None
-        chunks = {'time': 1}  # same as above
-        dask_args = dict(chunks=chunks)
-    else:
-        dask_args = dict(chunks=None)
-
     # Load data
     filepath = template.format(year=date.year, month=date.month, day=date.day, levtype=prefix, variable = variable)
-    da = xr.open_dataset(filepath, **dask_args).sel(time=date.strftime("%Y%m%d"))[variable]
+    da = xr.open_dataset(filepath, chunks=config["chunks"]).sel(time=date.strftime("%Y%m%d"))[variable]
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
@@ -236,7 +224,7 @@ def prep_experiment(config_file):
     """
     config = parse_config(config_file)
 
-    if config['use_dask']:
+    if config['chunks'] is not None:
         print("Starting dask cluster")
         from dask.distributed import Client
         client = Client()
@@ -334,10 +322,9 @@ def prep_experiment(config_file):
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config["output_dir"] / filename
         ds.astype("float32").to_netcdf(output_path)
-        print(output_path)
 
     # Close the dask cluster when done
-    if config['use_dask']:
+    if config['chunks'] is not None:
         client.shutdown()
 
 ################################################################################
