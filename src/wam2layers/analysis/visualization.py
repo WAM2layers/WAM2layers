@@ -4,12 +4,25 @@ import click
 import matplotlib.pyplot as plt
 import xarray as xr
 import pandas as pd
-from cartopy import crs
-from cartopy import feature as cfeature
 from cmocean import cm
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import (input_path, load_region,
                                            output_path, parse_config)
+
+
+def try_import_cartopy():
+    """Import cartopy if it is available; else raise."""
+    from importlib import import_module
+
+    global crs
+    global cfeature
+
+    try:
+        crs = import_module('cartopy.crs')
+        cfeature = import_module('cartopy.feature')
+    except ImportError as exec:
+        message = "This function requires cartopy. Cartopy is most easily installed with conda. Please refer to the documentation."
+        raise ImportError(message) from exec
 
 
 def polish(ax, region):
@@ -183,6 +196,7 @@ def cli():
 @click.argument('config_file', type=click.Path(exists=True))
 def input(config_file):
     """Visualize input data for experiment."""
+    try_import_cartopy()
     visualize_input_data(config_file)
 
 
@@ -190,6 +204,7 @@ def input(config_file):
 @click.argument('config_file', type=click.Path(exists=True))
 def output(config_file):
     """Visualize output data for experiment."""
+    try_import_cartopy()
     visualize_output_data(config_file)
 
 
@@ -197,6 +212,7 @@ def output(config_file):
 @click.argument('config_file', type=click.Path(exists=True))
 def both(config_file):
     """Visualize both input and output data for experiment."""
+    try_import_cartopy()
     visualize_both(config_file)
 
 
@@ -204,6 +220,7 @@ def both(config_file):
 @click.argument('config_file', type=click.Path(exists=True))
 def snapshots(config_file):
     """Visualize input and output snapshots for experiment."""
+    try_import_cartopy()
     visualize_snapshots(config_file)
 
 
