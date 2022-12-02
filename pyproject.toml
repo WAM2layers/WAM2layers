@@ -35,9 +35,9 @@ dependencies = [
     "click",
     "dask>=2022.11",
     "distributed>=2022.11",
-    ## Cartopy requires GEOS and PROJ
-    ## recommend installing with conda instead
-    # cartopy,
+    "psutil",
+    "matplotlib",
+    "cmocean",
 ]
 
 [project.optional-dependencies]

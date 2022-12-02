@@ -4,12 +4,25 @@ import click
 import matplotlib.pyplot as plt
 import xarray as xr
 import pandas as pd
-from cartopy import crs
-from cartopy import feature as cfeature
 from cmocean import cm
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import (input_path, load_region,
                                            output_path, parse_config)
+
+
+def try_import_cartopy():
+    """Import cartopy if it is available; else raise."""
+    from importlib import import_module
+
+    global crs
+    global cfeature
+
+    try:
+        crs = import_module('cartopy.crs')
+        cfeature = import_module('cartopy.feature')
+    except ImportError as exec:
+        message = "This function requires cartopy. Cartopy is most easily installed with conda. Please refer to the documentation."
+        raise ImportError(message) from exec
 
 
 def polish(ax, region):
@@ -25,7 +38,17 @@ def _plot_precip(config, ax):
     region = load_region(config)
 
     # Load data
-    input_files = f"{config['preprocessed_data_folder']}/*.nc"
+    dates = pd.date_range(
+        start=config["preprocess_start_date"],
+        end=config["preprocess_end_date"],
+        freq=config["output_frequency"], #Should be output frequency, since this is used to save the data
+        inclusive="left",
+    )
+    
+    input_files = []
+    for date in dates:
+        input_files.append(input_path(date, config))
+        
     ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
     # TODO: make region time-dependent
     start = config["event_start_date"]
@@ -45,7 +68,17 @@ def _plot_evap(config, ax):
     a_gridcell, lx, ly = get_grid_info(region)
 
     # Load data
-    output_files = f"{config['output_folder']}/*.nc"
+    dates = pd.date_range(
+        start=config["track_start_date"],
+        end=config["track_end_date"],
+        freq=config["output_frequency"],
+        inclusive="left",
+    )
+    
+    output_files = []
+    for date in dates:
+        output_files.append(output_path(date, config))
+
     ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
     e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
 
@@ -149,13 +182,13 @@ def visualize_snapshots(config_file):
         polish(ax2, region)
 
         ax3.set_title("S track upper layer")
-        s_track_upper = ds_out.s_track_upper / a_gridcell[:, None] * 1000
+        s_track_upper = ds_out.s_track_upper_restart / a_gridcell[:, None] * 1000
         s_track_upper.plot(ax=ax3, cmap="YlOrRd")
         ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_upper", v="fy_upper", ax=ax3, color="black")
         polish(ax3, region)
 
         ax4.set_title("S track lower layer")
-        s_track_lower = ds_out.s_track_lower / a_gridcell[:, None] * 1000
+        s_track_lower = ds_out.s_track_lower_restart / a_gridcell[:, None] * 1000
         s_track_lower.plot(ax=ax4, cmap="YlOrRd")
         ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_lower", v="fy_lower", ax=ax4, color="black")
         polish(ax4, region)
@@ -183,6 +216,7 @@ def cli():
 @click.argument('config_file', type=click.Path(exists=True))
 def input(config_file):
     """Visualize input data for experiment."""
+    try_import_cartopy()
     visualize_input_data(config_file)
 
 
@@ -190,6 +224,7 @@ def input(config_file):
 @click.argument('config_file', type=click.Path(exists=True))
 def output(config_file):
     """Visualize output data for experiment."""
+    try_import_cartopy()
     visualize_output_data(config_file)
 
 
@@ -197,6 +232,7 @@ def output(config_file):
 @click.argument('config_file', type=click.Path(exists=True))
 def both(config_file):
     """Visualize both input and output data for experiment."""
+    try_import_cartopy()
     visualize_both(config_file)
 
 
@@ -204,6 +240,7 @@ def both(config_file):
 @click.argument('config_file', type=click.Path(exists=True))
 def snapshots(config_file):
     """Visualize input and output snapshots for experiment."""
+    try_import_cartopy()
     visualize_snapshots(config_file)
 
 
