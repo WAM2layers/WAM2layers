@@ -33,11 +33,9 @@ dependencies = [
     "netcdf4",
     "scipy",
     "click",
-    "cmocean",
+    "psutil",
     "matplotlib",
-    ## Cartopy requires GEOS and PROJ
-    ## recommend installing with conda instead
-    # cartopy
+    "cmocean",
 ]
 
 [project.optional-dependencies]
