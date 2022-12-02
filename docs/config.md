@@ -1,10 +1,16 @@
-## Case configuration
+# Case configuration
+
+```{warning}
+This page is under development and may be outdated.
+```
 
 WAM2layers uses case configuration files to store the settings for an
 experiment. That makes it possible to run various experiments without changing
 the model code.
 
-The configuration files are written in [yaml]() format and can/should include the following settings:
+The configuration files are written in
+[yaml](https://yaml.org/spec/1.2.2/#chapter-1-introduction-to-yaml) format and
+can/should include the following settings:
 
 **Settings needed for the data preprocessing (as currently for era5)**
 - `preprocess_start_date`: formatted as 'YYYYMMDD', e.g. '20210701'
