@@ -33,6 +33,7 @@ dependencies = [
     "netcdf4",
     "scipy",
     "click",
+    "pydantic",
     ## Cartopy requires GEOS and PROJ
     ## recommend installing with conda instead
     # cartopy
