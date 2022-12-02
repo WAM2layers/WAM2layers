@@ -1,8 +1,9 @@
 """Command-line interface for the WAM2layers model."""
 import click
-from wam2layers.tracking.backtrack import cli as backtrack_cli
-from wam2layers.preprocessing.cli import cli as preproc_cli
+
 from wam2layers.analysis.visualization import cli as visualize_cli
+from wam2layers.preprocessing.cli import cli as preproc_cli
+from wam2layers.tracking.backtrack import cli as backtrack_cli
 
 
 @click.group()

@@ -5,11 +5,12 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
+
 from wam2layers.analysis.checks import check_input
 from wam2layers.preprocessing.shared import (accumulation_to_flux,
-                                                    calculate_humidity,
-                                                    insert_level, interpolate,
-                                                    sortby_ndarray)
+                                             calculate_humidity, insert_level,
+                                             interpolate, sortby_ndarray)
+
 
 class InvalidConfig(Exception):
     pass
@@ -22,16 +23,24 @@ def load_data(variable, date, config):
     # If it's a 4d variable, we need to set the level type
     if variable in ["u", "v", "q"]:
         if config["level_type"] == "model_levels":
-            prefix = '_ml'
+            prefix = "_ml"
         elif config["level_type"] == "pressure_levels":
-            prefix = '_pl'
+            prefix = "_pl"
     # If it's a 3d variable we do not need to set the level type
     else:
         prefix = ""
 
     # Load data
-    filepath = template.format(year=date.year, month=date.month, day=date.day, levtype=prefix, variable = variable)
-    da = xr.open_dataset(filepath, chunks=config["chunks"]).sel(time=date.strftime("%Y%m%d"))[variable]
+    filepath = template.format(
+        year=date.year,
+        month=date.month,
+        day=date.day,
+        levtype=prefix,
+        variable=variable,
+    )
+    da = xr.open_dataset(filepath, chunks=config["chunks"]).sel(
+        time=date.strftime("%Y%m%d")
+    )[variable]
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
@@ -65,7 +74,7 @@ def load_era5_ab():
     """Load a and b coefficients."""
     table = Path(__file__).parent / "tableERA5model_to_pressure.csv"
     df = pd.read_csv(table)
-    a = df['a [Pa]'].values
+    a = df["a [Pa]"].values
     b = df.b.values
     return a, b
 
@@ -84,7 +93,7 @@ def get_edges(era5_modellevels):
 
     # With python indexing starting at 0 and 137 full levels,
     # count from 0-136 instead of 1-137.
-    era5_modellevels = [i-1 for i in era5_modellevels]
+    era5_modellevels = [i - 1 for i in era5_modellevels]
 
     # Calculate the values of a and be at midpoints and extract levels
     a_full = midpoints(a)[era5_modellevels]
@@ -107,13 +116,13 @@ def get_dp_modellevels(sp, levels):
 
     # Use dummy level -1 to avoid collision with existing levels
     # first coord will be discarded anyway on taking the diff below.
-    a = xr.DataArray(a, coords={'level': np.insert(levels, 0, -1)})
-    b = xr.DataArray(b, coords={'level': np.insert(levels, 0, -1)})
+    a = xr.DataArray(a, coords={"level": np.insert(levels, 0, -1)})
+    b = xr.DataArray(b, coords={"level": np.insert(levels, 0, -1)})
 
     p_edge = a + b * sp
 
     # Calculate the difference between the pressure levels
-    dp = p_edge.diff('level')  # in Pa
+    dp = p_edge.diff("level")  # in Pa
 
     return dp
 
@@ -224,9 +233,10 @@ def prep_experiment(config_file):
     """
     config = parse_config(config_file)
 
-    if config['chunks'] is not None:
+    if config["chunks"] is not None:
         print("Starting dask cluster")
         from dask.distributed import Client
+
         client = Client()
         print(f"To see the dask dashboard, go to {client.dashboard_link}")
 
@@ -271,7 +281,7 @@ def prep_experiment(config_file):
         if config["level_type"] == "model_levels":
             # TODO: Check if this is a reasonable choice for boundary
             boundary = 111
-            idx = dp.level.searchsorted(boundary, side='right')
+            idx = dp.level.searchsorted(boundary, side="right")
             upper = np.s_[:, :idx, :, :]
             lower = np.s_[:, idx:, :, :]
             s_lower = cw[lower].sum(dim="level")
@@ -324,8 +334,9 @@ def prep_experiment(config_file):
         ds.astype("float32").to_netcdf(output_path)
 
     # Close the dask cluster when done
-    if config['chunks'] is not None:
+    if config["chunks"] is not None:
         client.shutdown()
+
 
 ################################################################################
 # To run this script interactively in e.g. Spyder, uncomment the following line:
@@ -341,7 +352,7 @@ def prep_experiment(config_file):
 
 
 @click.command()
-@click.argument('config_file', type=click.Path(exists=True))
+@click.argument("config_file", type=click.Path(exists=True))
 def cli(config_file):
     """Preprocess ERA5 data for WAM2layers tracking experiments.
 
