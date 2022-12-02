@@ -25,7 +25,17 @@ def _plot_precip(config, ax):
     region = load_region(config)
 
     # Load data
-    input_files = f"{config['preprocessed_data_folder']}/*.nc"
+    dates = pd.date_range(
+        start=config["preprocess_start_date"],
+        end=config["preprocess_end_date"],
+        freq=config["output_frequency"], #Should be output frequency, since this is used to save the data
+        inclusive="left",
+    )
+    
+    input_files = []
+    for date in dates:
+        input_files.append(input_path(date, config))
+        
     ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
     # TODO: make region time-dependent
     start = config["event_start_date"]
@@ -45,7 +55,17 @@ def _plot_evap(config, ax):
     a_gridcell, lx, ly = get_grid_info(region)
 
     # Load data
-    output_files = f"{config['output_folder']}/*.nc"
+    dates = pd.date_range(
+        start=config["track_start_date"],
+        end=config["track_end_date"],
+        freq=config["output_frequency"],
+        inclusive="left",
+    )
+    
+    output_files = []
+    for date in dates:
+        output_files.append(output_path(date, config))
+
     ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
     e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
 
@@ -149,13 +169,13 @@ def visualize_snapshots(config_file):
         polish(ax2, region)
 
         ax3.set_title("S track upper layer")
-        s_track_upper = ds_out.s_track_upper / a_gridcell[:, None] * 1000
+        s_track_upper = ds_out.s_track_upper_restart / a_gridcell[:, None] * 1000
         s_track_upper.plot(ax=ax3, cmap="YlOrRd")
         ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_upper", v="fy_upper", ax=ax3, color="black")
         polish(ax3, region)
 
         ax4.set_title("S track lower layer")
-        s_track_lower = ds_out.s_track_lower / a_gridcell[:, None] * 1000
+        s_track_lower = ds_out.s_track_lower_restart / a_gridcell[:, None] * 1000
         s_track_lower.plot(ax=ax4, cmap="YlOrRd")
         ds_in.mean('time').plot.streamplot(x="longitude", y="latitude", u="fx_lower", v="fy_lower", ax=ax4, color="black")
         polish(ax4, region)
