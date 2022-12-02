@@ -1,4 +1,5 @@
 import time
+
 import psutil
 
 
@@ -37,15 +38,27 @@ class ProgressTracker:
         totals = output.sum()
         self.tracked += totals["e_track"]
         self.total_tagged_moisture += totals["tagged_precip"]
-        self.boundary += (totals["north_loss"] + totals["south_loss"] + totals["east_loss"] + totals["west_loss"])
+        self.boundary += (
+            totals["north_loss"]
+            + totals["south_loss"]
+            + totals["east_loss"]
+            + totals["west_loss"]
+        )
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
         totals = output.sum()
         tracked = self.tracked + totals["e_track"]
         total_tagged_moisture = self.total_tagged_moisture + totals["tagged_precip"]
-        boundary = self.boundary + (totals["north_loss"] + totals["south_loss"] + totals["east_loss"] + totals["west_loss"])
-        still_in_atmosphere = (totals["s_track_upper_restart"] + totals["s_track_lower_restart"])
+        boundary = self.boundary + (
+            totals["north_loss"]
+            + totals["south_loss"]
+            + totals["east_loss"]
+            + totals["west_loss"]
+        )
+        still_in_atmosphere = (
+            totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
+        )
 
         total_tracked_moisture = tracked + still_in_atmosphere + boundary
         tracked_percentage = (tracked + boundary) / total_tagged_moisture * 100

@@ -1,9 +1,9 @@
 """Generic functions useful for preprocessing various input datasets."""
 
 import numpy as np
-from scipy.interpolate import interp1d
-import xarray as xr
 import pandas as pd
+import xarray as xr
+from scipy.interpolate import interp1d
 
 
 # old, keep only for reference and ecearth starting case
@@ -50,8 +50,12 @@ def get_grid_info(ds):
     lat_n = np.minimum(90.0, latitude + 0.5 * grid_spacing)
     lat_s = np.maximum(-90.0, latitude - 0.5 * grid_spacing)
 
-    a = np.pi / 180.0 * erad ** 2 * grid_spacing * abs(
-        np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0)
+    a = (
+        np.pi
+        / 180.0
+        * erad**2
+        * grid_spacing
+        * abs(np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0))
     )
 
     # Calculate faces
@@ -169,9 +173,13 @@ def interpolate(x, xp, fp, axis=1, descending=False):
     if descending:
         xp = np.flip(xp, axis=0)
         fp = np.flip(fp, axis=0)
-        assert np.diff(xp, axis=0).min() >= 0, "with descending=False, xp must be monotonically decreasing"
+        assert (
+            np.diff(xp, axis=0).min() >= 0
+        ), "with descending=False, xp must be monotonically decreasing"
     else:
-        assert np.diff(xp, axis=0).min() >= 0, "with desciending=True, xp must be monotonically increasing"
+        assert (
+            np.diff(xp, axis=0).min() >= 0
+        ), "with desciending=True, xp must be monotonically increasing"
 
     # Check for out of bounds values
     if np.any(x[None, ...] < xp[0, ...]):
@@ -262,7 +270,7 @@ def accumulation_to_flux(data):
     that the times should be shifted. A good fix for this is welcome.
     """
     density = 1000  # [kg/m3]
-    timestep = pd.Timedelta(data.time.diff('time')[0].values)
+    timestep = pd.Timedelta(data.time.diff("time")[0].values)
     nseconds = timestep.total_seconds()
 
     fluxdata = (density * data / nseconds).assign_attrs(units="kg m-2 s-1")
