@@ -1,8 +1,14 @@
 # outline for a myst_nb project with sphinx
 # build with: sphinx-build -nW --keep-going -b html . ./_build/html
 
+# Make sure autodoc can find code
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../src/wam2layers'))
+
 # load extensions
 extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+
 
 autodoc_class_signature = "separated"
 autodoc_member_order = "bysource"
