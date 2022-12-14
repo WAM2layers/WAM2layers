@@ -4,7 +4,7 @@
 # Make sure autodoc can find code
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../src/wam2layers'))
+sys.path.insert(0, os.path.abspath('../'))
 
 # load extensions
 extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon"]
