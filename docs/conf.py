@@ -7,11 +7,6 @@ extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.n
 # Options for autodoc
 autodoc_class_signature = "separated"
 autodoc_member_order = "bysource"
-import os, sys
-current_dir = os.path.dirname(__file__)
-target_dir = os.path.abspath(os.path.join(current_dir, "../src"))
-sys.path.insert(0, target_dir)
-print(target_dir)
 
 myst_enable_extensions = ["dollarmath"]
 
