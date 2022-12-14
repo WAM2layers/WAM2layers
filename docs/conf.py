@@ -9,7 +9,7 @@ autodoc_class_signature = "separated"
 autodoc_member_order = "bysource"
 import os, sys
 current_dir = os.path.dirname(__file__)
-target_dir = os.path.abspath(os.path.join(current_dir, "../src/wam2layers/"))
+target_dir = os.path.abspath(os.path.join(current_dir, "../src/"))
 sys.path.insert(0, target_dir)
 
 print(target_dir)
