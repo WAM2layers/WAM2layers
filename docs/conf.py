@@ -8,7 +8,12 @@ extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.n
 autodoc_class_signature = "separated"
 autodoc_member_order = "bysource"
 import os, sys
-sys.path.insert(0, os.path.abspath('../src/wam2layers/'))
+current_dir = os.path.dirname(__file__)
+target_dir = os.path.abspath(os.path.join(current_dir, "../src/wam2layers/"))
+sys.path.insert(0, target_dir)
+
+print(target_dir)
+# sys.path.insert(0, os.path.abspath('../src/wam2layers/'))
 
 # # Use autoapi instead
 # autoapi_dirs = ['../src']
