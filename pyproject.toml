@@ -49,7 +49,7 @@ develop = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
-    "myst-nb==0.16.0"
+    "myst-nb==0.16.0",
     "pytest",
 ]
 
