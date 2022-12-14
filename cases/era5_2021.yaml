@@ -1,7 +1,7 @@
 # Settings needed for preprocessing
 filename_template: '/data/volume_2/ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc'
-preprocess_start_date: '20210701'
-preprocess_end_date: '20210716'
+preprocess_start_date: '2021-07-01'
+preprocess_end_date: '2021-07-16'
 level_type: model_levels
 levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
@@ -10,8 +10,8 @@ preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
 
 # Settings needed to define the tracking region
 region: /data/volume_2/era5_2021/source_region_global.nc  # Note: not valid anymore! Must be named source_region
-track_start_date: '20210701'
-track_end_date: '20210716'
+track_start_date: '2021-07-01'
+track_end_date: '2021-07-16'
 
 # Settings needed for the tracking run
 input_frequency: '1h'
@@ -23,7 +23,8 @@ restart: false
 kvf: 3
 timetracking: false
 distancetracking: false
-log_level: low
+log_level: info
+chunks: null
 
-event_start_date: '20210713'
-event_end_date: '20210715'
+event_start_date: '2021-07-13'
+event_end_date: '2021-07-15'
