@@ -14,31 +14,51 @@ class Config(BaseModel):
     interpreted during execution of the model to find the input data for each
     date and variable. For example, the following pattern:
 
-    `/ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc`
+    .. code-block:: yaml
+
+        filename_template: "/ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc"
 
     will be converted to
 
-    `/ERA5data/2021/07/ERA5_2021-07-15_ml_u.nc`
+    .. code-block:: python
 
-    for date `2022-07-15`, variable `u` and levtype `_ml` (note the underscore).
+        /ERA5data/2021/07/ERA5_2021-07-15_ml_u.nc
+
+    for date 2022-07-15, variable u, and levtype "_ml" (note the underscore).
     """
 
     preprocess_start_date: date
     """Start date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
+    Example:
+
+    .. code-block:: yaml
+
+        preprocess_start_date: "2021-07-01"
+
     """
 
     preprocess_end_date: date
     """End date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
+    Example:
+
+    .. code-block:: yaml
+
+        preprocess_end_date: "2021-07-15"
     """
 
     level_type: Literal["model_levels", "pressure_levels"]
     """Type of vertical levels in the raw input data.
 
-    Can be either `model_levels` or `pressure_levels`.
+    Can be either `model_levels` or `pressure_levels`. For example:
+
+    .. code-block:: yaml
+
+        level_type: model_levels
+
     """
 
     levels: Union[list[int], Literal["All"]]
@@ -46,73 +66,121 @@ class Config(BaseModel):
 
     A list of integers corresponding to the levels in the input data, or a
     subset thereof. Shorthand `"all"` will attempt to use all 137 ERA5 levels.
+    For example:
+
+    .. code-block:: yaml
+
+        levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
+
     """
 
     # Settings shared by preprocessing and backtracking
     preprocessed_data_folder: Path
     """Location where the pre-processed data should be stored.
 
-    For example: `~/floodcase_202107/preprocessed_data`
-
     If it does not exist, it will be created during pre-processing.
+
+    For example:
+
+    .. code-block:: yaml
+
+        preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
+
     """
 
     # Settings needed to define the tracking region
     region: FilePath
     """Location where the region mask is stored.
 
-    For example: `/data/volume_2/era5_2021/source_region_global.nc`
     The file should exist.
+
+    For example:
+
+    .. code-block:: yaml
+
+        region: /data/volume_2/era5_2021/source_region_global.nc
+
     """
 
     track_start_date: date
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking.
+    backtracking. For example:
+
+    .. code-block:: yaml
+
+        track_start_date: "2021-07-01"
+
     """
 
     track_end_date: date
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking.
+    backtracking. For example:
+
+    .. code-block:: yaml
+
+        track_end_date: "2021-07-15"
     """
 
     # Settings needed for the tracking run
     input_frequency: str
     """Frequency of the raw input data.
 
-    Used to calculated water volumes. For example: `'1h'`
+    Used to calculated water volumes. For example:
+
+    .. code-block:: yaml
+
+        input_frequency: '1h'
+
     """
 
     target_frequency: str
     """Frequence at which to perform the tracking.
 
-    For example: `'15m'`.
-
     The data will be interpolated during model execution. Too low frequency will
     violate CFL criterion, too high frequency will lead to excessive numerical
     diffusion and slow progress. For best performance, the input frequency
-    should be divisible by the target frequency.
+    should be divisible by the target frequency. For example:
+
+    .. code-block:: yaml
+
+        target_frequency: '15min'
+
     """
 
     output_frequency: str
     """Frequency at which to write output to file.
 
-    For example: `'1d'` for daily output files.
+    For example, for daily output files:
+
+    .. code-block:: yaml
+
+        output_frequency: '1d'
+
     """
 
     periodic_boundary: bool
     """Whether to use period boundaries in the zonal direction.
 
-    For example: `true`
+    For example:
+
+    .. code-block:: yaml
+
+        periodic_boundary: true
     """
 
     output_folder: Path
     """Location where output of tracking and analysis should be written.
 
-    For example:  `~/floodcase_202107/output_data`
+    For example:
+
+    .. code-block:: yaml
+
+        output_folder: ~/floodcase_202107/output_data
+
     """
 
     restart: bool
@@ -121,30 +189,59 @@ class Config(BaseModel):
     If set to `true`, this will attempt to read the output from a previous model
     run and continue from there. The output from the previous timestep must be
     available for this to work.
+
+    For example:
+
+    .. code-block:: yaml
+
+        restart: False
+
     """
 
     kvf: int
     """Stability correction parameter.
 
-    For example: `3`
+    For example:
+
+    .. code-block:: yaml
+
+        kvf: 3
+
     """
 
     timetracking: bool
     """Whether to also track residence time of parcels.
 
     Currently not implemented.
+
+    For example:
+
+    .. code-block:: yaml
+
+        timetracking: false
+
     """
 
     distancetracking: bool
     """Whether to also track distance traveled by parcels.
 
     Currently not implemented.
-    """
 
+    For example:
+
+    .. code-block:: yaml
+
+        distancetracking: false
+
+    """
     log_level: Literal["debug", "info", "warning", "error", "critical"]
     """Verbosity of the output messages.
 
-    Set to `debug` to get the most information printed during model executing.
+    For example:
+
+    .. code-block:: yaml
+
+        verbosity: info
     """
 
     chunks: Union[None, dict[str, int]]
@@ -153,7 +250,8 @@ class Config(BaseModel):
     Using dask can help process large datasets without memory issues, but its
     performance is quite sensitive to the chunk configuration.
 
-    .. highlight:: yaml
+    Some examples:
+
     .. code-block:: yaml
 
         # don't use dask:
@@ -179,7 +277,12 @@ class Config(BaseModel):
     tracking start and end date.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking.
+    backtracking. For example:
+
+    .. code-block:: yaml
+
+        event_start_date: '2021-07-13'
+
     """
 
     event_end_date: date
@@ -190,7 +293,12 @@ class Config(BaseModel):
     tracking start and end date.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking.
+    backtracking. For example:
+
+    .. code-block:: yaml
+
+        event_end_date: '2021-07-15'
+
     """
 
     @classmethod
