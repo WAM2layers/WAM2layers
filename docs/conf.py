@@ -5,22 +5,13 @@
 extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon", "autoapi.extension"]
 
 # Options for autodoc
-# autodoc_class_signature = "separated"
-# autodoc_member_order = "bysource"
-# import os, sys
-# current_dir = os.path.dirname(__file__)
-# target_dir = os.path.abspath(os.path.join(current_dir, "../src"))
-# sys.path.insert(0, target_dir)
-# print(target_dir)
-
-# Use autoapi instead
-autoapi_dirs = ['../src']
-autoapi_generate_api_docs = False
-autoapi_add_toctree_entry = False
-autoapi_add_objects_to_toctree = False
-autoapi_python_class_content = "class"
-autoapi_member_order = "bysource"
-
+autodoc_class_signature = "separated"
+autodoc_member_order = "bysource"
+import os, sys
+current_dir = os.path.dirname(__file__)
+target_dir = os.path.abspath(os.path.join(current_dir, "../src"))
+sys.path.insert(0, target_dir)
+print(target_dir)
 
 myst_enable_extensions = ["dollarmath"]
 
