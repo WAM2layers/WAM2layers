@@ -1,2 +1,2 @@
 myst-nb==0.16.0
-autoapi
+sphinx-autoapi
