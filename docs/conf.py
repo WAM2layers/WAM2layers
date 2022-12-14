@@ -2,7 +2,7 @@
 # build with: sphinx-build -nW --keep-going -b html . ./_build/html
 
 # load extensions
-extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon", "autoapi.extension"]
+extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon"]
 
 # Options for autodoc
 autodoc_class_signature = "separated"
