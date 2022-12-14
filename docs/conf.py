@@ -2,23 +2,24 @@
 # build with: sphinx-build -nW --keep-going -b html . ./_build/html
 
 # load extensions
-extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon", "autoapi.extension"]
 
 # Options for autodoc
-autodoc_class_signature = "separated"
-autodoc_member_order = "bysource"
-import os, sys
-current_dir = os.path.dirname(__file__)
-target_dir = os.path.abspath(os.path.join(current_dir, "../src"))
-sys.path.insert(0, target_dir)
+# autodoc_class_signature = "separated"
+# autodoc_member_order = "bysource"
+# import os, sys
+# current_dir = os.path.dirname(__file__)
+# target_dir = os.path.abspath(os.path.join(current_dir, "../src"))
+# sys.path.insert(0, target_dir)
+# print(target_dir)
 
-print(target_dir)
-# sys.path.insert(0, os.path.abspath('../src/wam2layers/'))
-
-# # Use autoapi instead
-# autoapi_dirs = ['../src']
-# autoapi_generate_api_docs = False
-# autoapi_member_order = "bysource"
+# Use autoapi instead
+autoapi_dirs = ['../src']
+autoapi_generate_api_docs = False
+autoapi_add_toctree_entry = False
+autoapi_add_objects_to_toctree = False
+autoapi_python_class_content = "class"
+autoapi_member_order = "bysource"
 
 
 myst_enable_extensions = ["dollarmath"]
