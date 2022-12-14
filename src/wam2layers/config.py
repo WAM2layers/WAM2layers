@@ -12,7 +12,9 @@ class Config(BaseModel):
 
     Used to find the input files during preprocessing. The pattern will be
     interpreted during execution of the model to find the input data for each
-    date and variable. For example, the following pattern:
+    date and variable.
+
+    For example, the following pattern:
 
     .. code-block:: yaml
 
@@ -31,7 +33,8 @@ class Config(BaseModel):
     """Start date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
-    Example:
+
+    For example:
 
     .. code-block:: yaml
 
@@ -43,7 +46,8 @@ class Config(BaseModel):
     """End date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
-    Example:
+
+    For example:
 
     .. code-block:: yaml
 
@@ -53,7 +57,9 @@ class Config(BaseModel):
     level_type: Literal["model_levels", "pressure_levels"]
     """Type of vertical levels in the raw input data.
 
-    Can be either `model_levels` or `pressure_levels`. For example:
+    Can be either `model_levels` or `pressure_levels`.
+
+    For example:
 
     .. code-block:: yaml
 
@@ -66,6 +72,7 @@ class Config(BaseModel):
 
     A list of integers corresponding to the levels in the input data, or a
     subset thereof. Shorthand `"all"` will attempt to use all 137 ERA5 levels.
+
     For example:
 
     .. code-block:: yaml
@@ -106,7 +113,9 @@ class Config(BaseModel):
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking. For example:
+    backtracking.
+
+    For example:
 
     .. code-block:: yaml
 
@@ -118,7 +127,9 @@ class Config(BaseModel):
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking. For example:
+    backtracking.
+
+    For example:
 
     .. code-block:: yaml
 
@@ -129,7 +140,9 @@ class Config(BaseModel):
     input_frequency: str
     """Frequency of the raw input data.
 
-    Used to calculated water volumes. For example:
+    Used to calculated water volumes.
+
+    For example:
 
     .. code-block:: yaml
 
@@ -143,7 +156,9 @@ class Config(BaseModel):
     The data will be interpolated during model execution. Too low frequency will
     violate CFL criterion, too high frequency will lead to excessive numerical
     diffusion and slow progress. For best performance, the input frequency
-    should be divisible by the target frequency. For example:
+    should be divisible by the target frequency.
+
+    For example:
 
     .. code-block:: yaml
 
@@ -277,7 +292,9 @@ class Config(BaseModel):
     tracking start and end date.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking. For example:
+    backtracking.
+
+    For example:
 
     .. code-block:: yaml
 
@@ -293,7 +310,9 @@ class Config(BaseModel):
     tracking start and end date.
 
     Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking. For example:
+    backtracking.
+
+    For example:
 
     .. code-block:: yaml
 
