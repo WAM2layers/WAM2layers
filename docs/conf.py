@@ -1,17 +1,20 @@
 # outline for a myst_nb project with sphinx
 # build with: sphinx-build -nW --keep-going -b html . ./_build/html
 
-# Make sure autodoc can find code
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
-
 # load extensions
 extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon"]
 
-
+# Options for autodoc
 autodoc_class_signature = "separated"
 autodoc_member_order = "bysource"
+import os, sys
+sys.path.insert(0, os.path.abspath('../src/wam2layers/'))
+
+# # Use autoapi instead
+# autoapi_dirs = ['../src']
+# autoapi_generate_api_docs = False
+# autoapi_member_order = "bysource"
+
 
 myst_enable_extensions = ["dollarmath"]
 
