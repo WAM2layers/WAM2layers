@@ -6,17 +6,9 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from .shared import (
-    resample,
-    get_stable_fluxes,
-    get_vertical_transport,
-    get_grid_info,
-    join_levels,
-    repeat_upper_level,
-    get_new_target_levels,
-    interpolate,
-)
-
+from .shared import (get_grid_info, get_new_target_levels, get_stable_fluxes,
+                     get_vertical_transport, interpolate, join_levels,
+                     repeat_upper_level, resample)
 
 # Set constants
 g = 9.80665  # [m/s2]

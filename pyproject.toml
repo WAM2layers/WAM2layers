@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wam2layers"
 description = "Atmospheric moisture tracking model"
-version = "3.0.0-beta.2"
+version = "3.0.0-beta.3"
 readme = "README.md"
 license = { text = "Apache 2.0" }
 classifiers = [
@@ -34,9 +34,11 @@ dependencies = [
     "scipy",
     "click",
     "pydantic",
-    ## Cartopy requires GEOS and PROJ
-    ## recommend installing with conda instead
-    # cartopy
+    "dask>=2022.11",
+    "distributed>=2022.11",
+    "psutil",
+    "matplotlib",
+    "cmocean",
 ]
 
 [project.optional-dependencies]

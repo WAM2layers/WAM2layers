@@ -11,7 +11,7 @@ def _warning_on_one_line(message, category, filename, lineno, file=None, line=No
     https://stackoverflow.com/a/26433913
     """
     short_path = Path(filename).relative_to(Path(filename).parents[2])
-    return f'{short_path}:{lineno}: {category.__name__}: {message}\n'
+    return f"{short_path}:{lineno}: {category.__name__}: {message}\n"
 
 
 # Override the format with which warnings are printed
@@ -21,13 +21,17 @@ warnings.formatwarning = _warning_on_one_line
 def check_monotonic_increase(data, dim="level"):
     """Check if data is monotonically increasing in the given dimension."""
     if not data.diff(dim).min() >= 0:
-        warnings.warn(f"Data is not monotonically increasing in the dimension {dim} for {data.name}.")
+        warnings.warn(
+            f"Data is not monotonically increasing in the dimension {dim} for {data.name}."
+        )
 
 
 def check_monotonic_decrease(data, dim="level"):
     """Check if data is monotonically decreasing in the given dimension."""
     if not data.diff(dim).max() <= 0:
-        warnings.warn(f"Data is not monotonically decreasing in the dimension {dim} for {data.name}.")
+        warnings.warn(
+            f"Data is not monotonically decreasing in the dimension {dim} for {data.name}."
+        )
 
 
 def check_units(data, valid_units):
@@ -35,7 +39,9 @@ def check_units(data, valid_units):
     if "units" not in data.attrs:
         warnings.warn(f"{data.name} has no units")
     elif data.units not in valid_units:
-        warnings.warn(f"{data.name} has units '{data.units}'; expected (one of) {valid_units}.")
+        warnings.warn(
+            f"{data.name} has units '{data.units}'; expected (one of) {valid_units}."
+        )
 
 
 def check_positive(data):
@@ -58,14 +64,18 @@ def check_nonnegative(data):
 
 def check_order_of_magnitude(data, order):
     """Check if data is within the given order of magnitude."""
-    if not data.min() >= 10 ** order and data.max() <= 10 ** order:
-        warnings.warn(f"Data  for {data.name}is not within the order of magnitude {order}.")
+    if not data.min() >= 10 ** order and data.max() <= 10**order:
+        warnings.warn(
+            f"Data  for {data.name}is not within the order of magnitude {order}."
+        )
 
 
 def check_frequency(data, frequency):
     """Check if data has the given frequency."""
     if not data.time.dt.frequency == frequency:
-        warnings.warn(f"Data  for {data.name} has frequency {data.time.dt.frequency} instead of {frequency}.")
+        warnings.warn(
+            f"Data  for {data.name} has frequency {data.time.dt.frequency} instead of {frequency}."
+        )
 
 
 def check_shape(data, ndim):
@@ -81,7 +91,9 @@ def check_range(data, range):
 def check_uniform(coord):
     spacing = np.diff(coord)
     if not spacing.min() == spacing.max():
-        warnings.warn(f"Coordinate spacing is not uniform for coord {coord} of {data.name}")
+        warnings.warn(
+            f"Coordinate spacing is not uniform for coord {coord} of {data.name}"
+        )
 
 
 def check_coords(data, coords):
@@ -106,7 +118,8 @@ def check_input(data):
             check_positive(data[variable])
 
 
-VARIABLES = yaml.safe_load("""
+VARIABLES = yaml.safe_load(
+    """
     evap:
         valid_units: ["kg m-2 s-1", "kg/m2/s"]
         range: [0, 0.001]
@@ -147,4 +160,5 @@ VARIABLES = yaml.safe_load("""
         range: [-1000, 1000]
         all_positive: False
         coordinates: [time, latitude, longitude]
-""")
+"""
+)

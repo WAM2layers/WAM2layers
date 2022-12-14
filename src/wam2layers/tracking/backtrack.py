@@ -31,7 +31,9 @@ def parse_config(config_file):
     )
 
     # Parse directories with pathlib
-    config["preprocessed_data_folder"] = Path(config["preprocessed_data_folder"]).expanduser()
+    config["preprocessed_data_folder"] = Path(
+        config["preprocessed_data_folder"]
+    ).expanduser()
     config["output_folder"] = Path(config["output_folder"]).expanduser() / "backtrack"
 
     # Check if input dir exists
@@ -72,7 +74,7 @@ def read_data_at_time(t):
     return ds.sel(time=t, drop=True)
 
 
-def load_data(t, subset='fluxes'):
+def load_data(t, subset="fluxes"):
     """Load variable at t, interpolate if needed."""
     variables = {
         "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
@@ -94,15 +96,15 @@ def load_data(t, subset='fluxes'):
 
 
 def load_fluxes(t):
-    t_current = t - pd.Timedelta(config['target_frequency']) / 2
-    return load_data(t_current, 'fluxes')
+    t_current = t - pd.Timedelta(config["target_frequency"]) / 2
+    return load_data(t_current, "fluxes")
 
 
 def load_states(t):
     t_prev = t
-    t_next = t - pd.Timedelta(config['target_frequency'])
-    states_prev = load_data(t_prev, 'states')
-    states_next = load_data(t_next, 'states')
+    t_next = t - pd.Timedelta(config["target_frequency"])
+    states_prev = load_data(t_prev, "states")
+    states_next = load_data(t_next, "states")
     return states_prev, states_next
 
 
@@ -209,18 +211,17 @@ def change_units(data, target_freq):
     total_seconds = pd.Timedelta(target_freq).total_seconds()
 
     for variable in data.data_vars:
-        if variable in ['fx_upper', 'fx_lower']:
+        if variable in ["fx_upper", "fx_lower"]:
             data[variable] *= total_seconds / density * ly
-        elif variable in ['fy_upper', 'fy_lower']:
+        elif variable in ["fy_upper", "fy_lower"]:
             data[variable] *= total_seconds / density * lx[:, None]
-        elif variable in ['evap', 'precip']:
+        elif variable in ["evap", "precip"]:
             data[variable] *= total_seconds / density * a[:, None]
-        elif variable in ['s_upper', 's_lower']:
+        elif variable in ["s_upper", "s_lower"]:
             data[variable] *= a[:, None] / density
         else:
             raise ValueError(f"Unrecognized variable {variable}")
         data[variable] = data[variable].assign_attrs(units="m**3")
-
 
 
 def stabilize_fluxes(current, previous):
@@ -237,10 +238,10 @@ def stabilize_fluxes(current, previous):
         fy_abs = np.abs(fy)
         ft_abs = fx_abs + fy_abs
 
-        fx_corrected = 1/2 * fx_abs / ft_abs * s.values
+        fx_corrected = 1 / 2 * fx_abs / ft_abs * s.values
         fx_stable = np.minimum(fx_abs, fx_corrected)
 
-        fy_corrected = 1/2 * fy_abs / ft_abs * s.values
+        fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
 
         # Get rid of any nan values
@@ -248,8 +249,8 @@ def stabilize_fluxes(current, previous):
         fy_stable.fillna(0)
 
         # Re-instate the sign
-        current["fx_"+ level] = np.sign(fx) * fx_stable
-        current["fy_"+ level] = np.sign(fy) * fy_stable
+        current["fx_" + level] = np.sign(fx) * fx_stable
+        current["fy_" + level] = np.sign(fy) * fy_stable
 
 
 def convergence(fx, fy):
@@ -267,8 +268,15 @@ def calculate_fv(fluxes, states_prev, states_next):
     s_total = s_mean.s_upper + s_mean.s_lower
     s_rel = s_mean / s_total
 
-    tendency_upper = convergence(fluxes.fx_upper, fluxes.fy_upper) - fluxes.precip.values * s_rel.s_upper
-    tendency_lower = convergence(fluxes.fx_lower, fluxes.fy_lower) - fluxes.precip.values * s_rel.s_lower + fluxes.evap
+    tendency_upper = (
+        convergence(fluxes.fx_upper, fluxes.fy_upper)
+        - fluxes.precip.values * s_rel.s_upper
+    )
+    tendency_lower = (
+        convergence(fluxes.fx_lower, fluxes.fy_lower)
+        - fluxes.precip.values * s_rel.s_lower
+        + fluxes.evap
+    )
 
     residual_upper = s_diff.s_upper - tendency_upper
     residual_lower = s_diff.s_lower - tendency_lower
@@ -279,7 +287,7 @@ def calculate_fv(fluxes, states_prev, states_next):
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
-    stab = 1.0 / (config['kvf'] + 1.0)
+    stab = 1.0 / (config["kvf"] + 1.0)
     flux_limit = np.minimum(s_mean.s_upper, s_mean.s_lower)
     fv_stable = np.minimum(np.abs(fv), stab * flux_limit)
 
@@ -346,7 +354,7 @@ def backtrack(
 
     # Actual tracking (note: backtracking, all terms have been negated)
     s_track_lower[inner] += (
-        + f_e_lower_we * look_east(s_track_relative_lower)
+        +f_e_lower_we * look_east(s_track_relative_lower)
         + f_w_lower_ew * look_west(s_track_relative_lower)
         + fy_n_lower_sn * look_north(s_track_relative_lower)
         + fy_s_lower_ns * look_south(s_track_relative_lower)
@@ -361,7 +369,7 @@ def backtrack(
     )[inner]
 
     s_track_upper[inner] += (
-        + f_e_upper_we * look_east(s_track_relative_upper)
+        +f_e_upper_we * look_east(s_track_relative_upper)
         + f_w_upper_ew * look_west(s_track_relative_upper)
         + fy_n_upper_sn * look_north(s_track_relative_upper)
         + fy_s_upper_ns * look_south(s_track_relative_upper)
@@ -383,12 +391,10 @@ def backtrack(
     # Update output fields
     output["e_track"] += evap * (s_track_lower / s_lower)
     output["north_loss"] += (
-        fy_n_upper_ns * s_track_relative_upper
-        + fy_n_lower_ns * s_track_relative_lower
+        fy_n_upper_ns * s_track_relative_upper + fy_n_lower_ns * s_track_relative_lower
     )[1, :]
     output["south_loss"] += (
-        fy_s_upper_sn * s_track_relative_upper
-        + fy_s_lower_sn * s_track_relative_lower
+        fy_s_upper_sn * s_track_relative_upper + fy_s_lower_sn * s_track_relative_lower
     )[-2, :]
 
     if config["periodic_boundary"] == False:
@@ -454,13 +460,23 @@ def write_output(output, t):
     output.astype("float32").to_netcdf(path)
 
     # Flush previous outputs
-    output[["e_track", "tagged_precip", "north_loss", "south_loss", "east_loss", "west_loss"]] *= 0
+    output[
+        [
+            "e_track",
+            "tagged_precip",
+            "north_loss",
+            "south_loss",
+            "east_loss",
+            "west_loss",
+        ]
+    ] *= 0
 
 
 #############################################################################
 # With the correct import statements, the code in the function below could
 # alternatively be be used as a script in a separate python file or notebook.
 #############################################################################
+
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
@@ -505,7 +521,7 @@ def run_experiment(config_file):
         )
 
         # Daily output
-        if t == t.floor(config['output_frequency']):
+        if t == t.floor(config["output_frequency"]):
             progress_tracker.print_progress(t, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t)
@@ -520,7 +536,7 @@ def run_experiment(config_file):
 
 
 @click.command()
-@click.argument('config_file', type=click.Path(exists=True))
+@click.argument("config_file", type=click.Path(exists=True))
 def cli(config_file):
     """Run WAM2layers backtrack experiment from the command line.
 
