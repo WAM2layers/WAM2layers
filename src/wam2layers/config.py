@@ -1,4 +1,4 @@
-from pydantic import BaseModel, FilePath
+from pydantic import BaseModel, FilePath, validator
 import yaml
 from datetime import date
 from typing import Literal, Union
@@ -6,7 +6,6 @@ from pathlib import Path
 
 
 class Config(BaseModel):
-    # Settings needed for the data preprocessing
     filename_template: str
     """The filename pattern of the raw input data.
 
@@ -67,7 +66,7 @@ class Config(BaseModel):
 
     """
 
-    levels: Union[list[int], Literal["All"]]
+    levels: "Union[list[int], Literal['All']]"
     """Which levels to use from the raw input data.
 
     A list of integers corresponding to the levels in the input data, or a
@@ -81,7 +80,6 @@ class Config(BaseModel):
 
     """
 
-    # Settings shared by preprocessing and backtracking
     preprocessed_data_folder: Path
     """Location where the pre-processed data should be stored.
 
@@ -95,7 +93,6 @@ class Config(BaseModel):
 
     """
 
-    # Settings needed to define the tracking region
     region: FilePath
     """Location where the region mask is stored.
 
@@ -136,7 +133,6 @@ class Config(BaseModel):
         track_end_date: "2021-07-15"
     """
 
-    # Settings needed for the tracking run
     input_frequency: str
     """Frequency of the raw input data.
 
@@ -259,7 +255,7 @@ class Config(BaseModel):
         verbosity: info
     """
 
-    chunks: Union[None, dict[str, int]]
+    chunks: "Union[None, dict[str, int]]"
     """Whether to use dask.
 
     Using dask can help process large datasets without memory issues, but its
@@ -337,3 +333,16 @@ class Config(BaseModel):
             settings = yaml.safe_load(f)
 
         return cls(**settings)
+
+    @validator('preprocessed_data_folder', 'region', 'output_folder')
+    def _expanduser(cls, path):
+        """Resolve ~ in input paths."""
+        return path.expanduser()
+
+    @validator('preprocessed_data_folder', 'output_folder')
+    def _make_dir(cls, path):
+        """Create output dirs if they don't exist yet."""
+        if not path.exists():
+            print(f"Creating output folder {path}")
+            path.mkdir(parents=True)
+        return path
