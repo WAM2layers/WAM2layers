@@ -49,6 +49,9 @@ develop = [
     "sphinx_rtd_theme",
     "sphinx",
     "pytest",
+    "flake8",
+    "build",
+    "twine",
 ]
 
 [project.urls]

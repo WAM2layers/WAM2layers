@@ -1,18 +1,251 @@
 # Developer's guide
 
-This section of the documentation is currently being developed.
+This section explains how you can modify WAM2layers. For example, to use input
+data from other sources. We encourage you to consider contributing your changes
+so others can also benefit from your work. Therefore, the explanation of the
+inner workings of WAM2layers are intertwined with instructions on how to
+collaborate on GitHub. At the end of the page, we also describe the steps needed
+to make a new release of the software. These instructions are intended for core
+developers.
 
-### code adaptation and contribution
-Possibly you want to adapt WAM2layers to track other climate data (e.g., output of RCMs and GCMs). In principle you can do so by only changing the Pre-processing and Case configuration without touching the core tracking module. You are encouraged to contribute your download scripts as well as prepocessing files to the WAM2layers Github repository.
+```{admonition} Code of conduct
+We as members, contributors, and leaders pledge to make participation in our
+community a harassment-free experience for everyone. We pledge to act and
+interact in ways that contribute to an open, welcoming, diverse, inclusive, and
+healthy community.
 
-## Code development
-In case you are part of the development team (or want to become part of it), the [Developer's guide](./develop.md) is meant to help maintaining the code on Github, Zenodo and this documentation.
+For more information, see the
+[contributor-covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+```
 
-## docs:
-See https://jupyterbook.org/en/stable/reference/cheatsheet.html#links
+## Collaborative workflow
 
-## Making a new release checklist
-- Zenodo
-- Pypi
-- Black and ...
-- Documentation page
+Collaborative development of WAM2layers takes place on GitHub. You will need a
+[GitHub account](https://github.com/join).
+
+The process is roughly as follows:
+
+1. You encounter a problem or question, or want to suggest an improvement or new feature.
+1. You [Open(s) an
+   issue](https://github.com/WAM2layers/WAM2layers/issues/new/choose) to discuss
+   your idea.
+1. Other developers comment on the issue and help decide on the best way forward.
+1. If the discussion results in a plan to change the code, you (or someone else)
+   go ahead and make the necessary changes on a local copy of the code.
+1. While you're working, you can create a draft pull requests (PR).
+1. When you are happy with the changes, you mark your PR as "ready for review".
+1. Every pull requests is reviewed by at least one core developer.
+1. When all review comments are addressed and checks pass, the PR is merged.
+1. At this point, the new code is part of the repository, but it is still "unreleased".
+1. The core developers decide when to make a new release.
+1. When the code is released, a new version incorporing the latests updates
+   appears on Zenodo and PyPI.
+
+## Forking the repository
+
+Depending on your situation, you may have to fork the repository first. Forking
+means you make a duplicate of the repository under your own GitHub account. The
+advantage is that you will be able make changes to your fork without special
+permissions. The disadvantage is that you have to keep your fork in sync with
+the "upstream" repository, i.e. the original WAM2layers repo. Whenever the code
+is updated there, your fork does not automatically get those updates too.
+
+An alternative to forking a repository is to add you to the contributor team of
+WAM2layers. This will give you the rights to push to the original repo. If you
+feel this would make sense for your situation, talk to us.
+
+You can make a fork by navigating to the [original
+repo](https://github.com/WAM2layers/WAM2layers) and pressing the "Fork" button
+(near the right top of the page).
+
+## Cloning the repo (with good authentication)
+
+Cloning a repo means obtaining a local copy. The version on GitHub is referred
+to as the "remote" copy. Navigate to (your fork of) the WAM2layers repo and find
+the big green button that says "code". Now, there are a few options.
+
+Cloning with HTTPS works out of the box. However, whenever you want to "push"
+changes back to the remote, you'll need to authenticate. This can be annoying.
+
+Cloning with SSH is very convenient, but you have to [set up an SSH key
+first](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+If you work on different machines, you can set multiple SSH keys. Despite the
+initial efforts, in our experience this is the preferred way to authenticate with GitHub.
+
+There is also the option to use the GitHub command line interface. This is a
+[separate software](https://cli.github.com/) provided by GitHub. We have little
+experience with it.
+
+Once you've decided how to authenticate, copy the corresponding url. Then open a
+terminal and paste the url preceded with `git clone`. In case of using SSH:
+
+```
+# With fork
+git clone git@github.com:Peter9192/WAM2layers.git
+
+# Without fork
+git clone git@github.com:WAM2layers/WAM2layers.git
+```
+
+## Development installation - additional tooling
+
+You can install your local copy of the code by following the same steps as the
+[regular installation](./installation.md). However, by adding `[develop]`, some
+additional dependencies are installed that are convenient for developing.
+
+```
+pip install --editable .[develop]
+```
+
+The `--editable` flag means that any changes you make to the code will be
+"effective immediately". When you run the model again, the updated code is used.
+
+The `[develop]` option tells pip to install not just the code, but some
+additional packages that are listed under the "develop" header in the file
+`pyproject.toml`. These packages help with linting (checking your code against
+syntax/style guides), automatic formatting, building documentation, running
+tests, and publising the package on PyPI.
+
+## Modifying the code
+
+### Create a new branch
+
+It is good practice to create a new "branch" for each feature you are adding.
+For example, this will create (and switch to) a new branch called
+"developer-documentation":
+
+```
+git checkout -b developer-documentation
+```
+
+You can use `git branch` to see all your branches, and
+`git checkout <branchname>` (without the `-b`) to switch to another (existing)
+branch. In case of the example, I would use this branch while working on this
+documentation page. But if I was interrupting my work to fix a bug on another
+part of the code, I would switch to another branch. This keeps all changes that
+belong together, well, together.
+
+Now you are ready to make the changes you need and test whether they work. Keep
+in mind that your changes should not break the code for other people. If you're
+adding new code, please also add relevant documentation, and add an update to
+the changelog.
+
+### Follow the style guide
+
+Try to follow the Python style guide
+([pep8](https://peps.python.org/pep-0008/)). This is where the developer tools
+come in handy:
+
+```
+# flake8 can check your code against PEP8
+flake8 .
+
+# isort can automatically format import statements
+isort .
+
+# we use black for automatic formatting
+black .
+```
+
+### Commit and push your changes
+
+Next, you can commit them and push your branch to the remote:
+
+```
+# see changed files or detailed diff
+git status
+git diff
+
+# stage all updated files (-u) or individual files
+git add -u
+git add docs/develop.md
+
+# commit the staged changes with a short description
+git commit -m "updated develop documentation"
+
+# push your branch to the remote the first time
+git push -u origin developer-docs
+
+# later commits can be pushed directly
+git push
+```
+
+Frequently committing and pushing your code helps to keep a clear project
+history and can save you from losing work. Also, others will be able to see what
+you're working on, which can prevent double work and can be useful to ask for
+confirmation or advise in an early stage, before you put in a lot of effort.
+
+### Open a (draft) pull request
+
+When you first push your changes to the remote and navigate to the repository on
+GitHub, you will see a popup that suggests to open a new pull request. If you
+click this, you will see a comparison between your branch and the 'target'. If
+you're working on a fork, you can set the target to the "upstream" repo, i.e.
+the original WAM2layers repository. Usually the `main` branch will be the
+target.
+
+Add a clear title and description (these are often edited later), pointing to
+the relevant issue(s) that the PR addresses. On the green button you can select
+"Open draft PR".
+
+When you open a pull request, some automatic checks are triggered. For example,
+a preview of the documentation is build based on the code in the pull request.
+You can look at the details of the checks to preview the documentation, or, if
+they fail, what causes the issue(s).
+
+### The review process
+
+When you are happy with your changes, you can mark the PR "ready for review".
+GitHub will automatically suggest some reviewers, or you can pick your own
+choice. Anyway, every PR must be reviewed and approved by a core developer
+before it is merged.
+
+Reviewing others' PRs can be a good way to contribute to the community. GitHub
+provides great functionality for commenting on individual lines of code, making
+suggestions, et cetera. Please be welcoming and constructive in your feedback. A
+good review involves verifying that the new code is clear, well documented, and
+does what it's supposed to do, testing that the code (still) works, checking
+that it conforms to the guidelines.
+
+When the reviewer is happy we the code, they can approve the changes. At that
+point, the code can be merged and becomes part of the "main" codebase. However,
+a new version is required for it to become part of the PyPI and Zenodo releases.
+
+## Making a release
+
+You need an [account on PyPI](https://pypi.org/account/register/) with owner
+rights on WAM2layers.
+
+- Create a new branch, e.g. `prep_release_vXXX`
+- Update "version" in pyproject.toml and in citation.cff (use [semantic
+  versioning](https://semver.org/))
+- Make sure the code is neatly formatted (see above)
+- Make sure the changelog is up to date; update the "Unreleased" header with the
+  new version, and add a new "Unreleased" header above
+- Review and merge the release branch
+- [Make a release on GitHub](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
+- Publish to PyPI:
+    ```
+    python -m build
+    twine upload dist/*
+    ```
+- Check that the new release on Zenodo and PyPI.
+- Verify that you can install the new version with pip.
+
+## Some key insights for working with the code
+
+### Structure of the repository
+
+- docs
+- tests
+- source code
+- zenodo integration, citation, license, etc.
+
+### Some key ingredients
+
+- click CLI
+- Pydantic config
+- sphinx + extensions for documentation
+- GH actions + RTD
+- tests (mostly absent)
+- See https://jupyterbook.org/en/stable/reference/cheatsheet.html#links
