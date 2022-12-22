@@ -158,7 +158,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        target_frequency: '15min'
+        target_frequency: '10min'
 
     """
 
@@ -175,6 +175,8 @@ class Config(BaseModel):
 
     periodic_boundary: bool
     """Whether to use period boundaries in the zonal direction.
+
+    This should be used when working with global datasets.
 
     For example:
 
