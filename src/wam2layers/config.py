@@ -258,7 +258,7 @@ class Config(BaseModel):
     """
 
     kvf: int
-    """Stability correction parameter.
+    """net to gross vertical flux multiplication parameter
 
     For example:
 
