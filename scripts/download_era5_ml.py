@@ -16,12 +16,12 @@ import cdsapi
 import pandas as pd
 from pathlib import Path
 
-target_dir = "/projects/0/prjs0202/ERA5data"
+target_dir = "."
 skip_exist = True
 
-datelist = pd.date_range("20180101", "20180831")
+datelist = pd.date_range("20200101", "20200103")
 
-area = [80, -180,-80,180] # None for global, or [N, W, S, E]
+area = None  # None for global, or [N, W, S, E]
 grid = [0.25, 0.25]
 
 times = [
