@@ -20,15 +20,14 @@ def get_tracking_dates(config):
         start = config.track_start_date,
         end = config.track_end_date,
         freq = config.input_frequency,
-        inclusive = "left",
     )
+    
     return pd.date_range(
         start = input_dates[0],
         end = input_dates[-1],
         freq = config.target_frequency,
         inclusive = "right",
     )
-
 
 
 def input_path(date, config):
@@ -466,8 +465,9 @@ def run_experiment(config_file):
     global config
 
     config, region, output = initialize(config_file)
-    tracking_dates = get_tracking_dates(config)
 
+    tracking_dates = get_tracking_dates(config)
+    
     progress_tracker = ProgressTracker(output)
     for t in reversed(tracking_dates):
 
@@ -485,12 +485,12 @@ def run_experiment(config_file):
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
 
-        # Only track the precipitation at certain dates
+        # Only track the precipitation at certain timesteps
         if (
             time_in_range(
                 config.event_start_date,
                 config.event_end_date,
-                t.date(),
+                t,
             )
             == False
         ):

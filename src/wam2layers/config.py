@@ -1,6 +1,6 @@
 from pydantic import BaseModel, FilePath, validator
 import yaml
-from datetime import date
+from datetime import datetime
 from typing import Literal, Union
 from pathlib import Path
 
@@ -65,91 +65,97 @@ class Config(BaseModel):
 
     """
 
-    preprocess_start_date: date
+    preprocess_start_date: datetime
     """Start date for preprocessing.
 
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
+    Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
+    The preprocess_start_date is included in the preprocessing.
 
     For example:
 
     .. code-block:: yaml
 
-        preprocess_start_date: "2021-07-01"
+        preprocess_start_date: "2021-07-01T00:00"
 
     """
 
-    preprocess_end_date: date
+    preprocess_end_date: datetime
     """End date for preprocessing.
 
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
+    Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
+    The preprocess_end_date is included in the preprocessing. 
 
     For example:
 
     .. code-block:: yaml
 
-        preprocess_end_date: "2021-07-15"
+        preprocess_end_date: "2021-07-15T23:00"
     """
 
-    track_start_date: date
+    track_start_date: datetime
     """Start date for tracking.
 
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
+    Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
+    When backward tracking the track_start_date is not given as output date.
 
     For example:
 
     .. code-block:: yaml
 
-        track_start_date: "2021-07-01"
+        track_start_date: "2021-07-01T00:00"
 
     """
 
-    track_end_date: date
+    track_end_date: datetime
     """Start date for tracking.
 
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
+    Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
+    When forward tracking the track_end_date is not written out as output date. 
 
     For example:
 
     .. code-block:: yaml
 
-        track_end_date: "2021-07-15"
+        track_end_date: "2021-07-15T23:00"
     """
 
-    event_start_date: date
+    event_start_date: datetime
     """Start date for event.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
     start and end date of the event to something different than the total
-    tracking start and end date.
+    tracking start and end date, you can also indicate the hours that you want to track.
+    The event_start_date is included in the event tracking.
 
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
+    Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
 
     For example:
 
     .. code-block:: yaml
 
-        event_start_date: "2021-07-13"
+        event_start_date: "2021-07-13T00:00"
 
     """
 
-    event_end_date: date
+    event_end_date: datetime
     """Start date for event.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
     start and end date of the event to something different than the total
-    tracking start and end date.
+    tracking start and end date, you can also indicate the hours that you want to track.
+    The event_end_date is included in the event tracking. 
 
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
+    Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
 
     For example:
 
     .. code-block:: yaml
 
-        event_end_date: "2021-07-15"
+        event_end_date: "2021-07-14T23:00"
 
     """
 
