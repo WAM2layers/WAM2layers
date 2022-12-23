@@ -28,58 +28,6 @@ class Config(BaseModel):
     for date 2022-07-15, variable u, and levtype "_ml" (note the underscore).
     """
 
-    preprocess_start_date: date
-    """Start date for preprocessing.
-
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
-
-    For example:
-
-    .. code-block:: yaml
-
-        preprocess_start_date: "2021-07-01"
-
-    """
-
-    preprocess_end_date: date
-    """End date for preprocessing.
-
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
-
-    For example:
-
-    .. code-block:: yaml
-
-        preprocess_end_date: "2021-07-15"
-    """
-
-    level_type: Literal["model_levels", "pressure_levels"]
-    """Type of vertical levels in the raw input data.
-
-    Can be either `model_levels` or `pressure_levels`.
-
-    For example:
-
-    .. code-block:: yaml
-
-        level_type: model_levels
-
-    """
-
-    levels: "Union[list[int], Literal['All']]"
-    """Which levels to use from the raw input data.
-
-    A list of integers corresponding to the levels in the input data, or a
-    subset thereof. Shorthand `"all"` will attempt to use all 137 ERA5 levels.
-
-    For example:
-
-    .. code-block:: yaml
-
-        levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
-
-    """
-
     preprocessed_data_folder: Path
     """Location where the pre-processed data should be stored.
 
@@ -104,6 +52,42 @@ class Config(BaseModel):
 
         region: /data/volume_2/era5_2021/source_region_global.nc
 
+    """
+
+    output_folder: Path
+    """Location where output of tracking and analysis should be written.
+
+    For example:
+
+    .. code-block:: yaml
+
+        output_folder: ~/floodcase_202107/output_data
+
+    """
+
+    preprocess_start_date: date
+    """Start date for preprocessing.
+
+    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
+
+    For example:
+
+    .. code-block:: yaml
+
+        preprocess_start_date: "2021-07-01"
+
+    """
+
+    preprocess_end_date: date
+    """End date for preprocessing.
+
+    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date.
+
+    For example:
+
+    .. code-block:: yaml
+
+        preprocess_end_date: "2021-07-15"
     """
 
     track_start_date: date
@@ -131,6 +115,42 @@ class Config(BaseModel):
     .. code-block:: yaml
 
         track_end_date: "2021-07-15"
+    """
+
+    event_start_date: date
+    """Start date for event.
+
+    For tracking individual (e.g. heavy precipitation) events, you can set the
+    start and end date of the event to something different than the total
+    tracking start and end date.
+
+    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
+    backtracking.
+
+    For example:
+
+    .. code-block:: yaml
+
+        event_start_date: "2021-07-13"
+
+    """
+
+    event_end_date: date
+    """Start date for event.
+
+    For tracking individual (e.g. heavy precipitation) events, you can set the
+    start and end date of the event to something different than the total
+    tracking start and end date.
+
+    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
+    backtracking.
+
+    For example:
+
+    .. code-block:: yaml
+
+        event_end_date: "2021-07-15"
+
     """
 
     input_frequency: str
@@ -173,27 +193,41 @@ class Config(BaseModel):
 
     """
 
-    periodic_boundary: bool
-    """Whether to use period boundaries in the zonal direction.
+    level_type: Literal["model_levels", "pressure_levels"]
+    """Type of vertical levels in the raw input data.
 
-    This should be used when working with global datasets.
+    Can be either `model_levels` or `pressure_levels`.
 
     For example:
 
     .. code-block:: yaml
 
-        periodic_boundary: true
+        level_type: model_levels
+
     """
 
-    output_folder: Path
-    """Location where output of tracking and analysis should be written.
+    levels: "Union[list[int], Literal['All']]"
+    """Which levels to use from the raw input data.
+
+    A list of integers corresponding to the levels in the input data, or a
+    subset thereof. Shorthand `"all"` will attempt to use all 137 ERA5 levels.
 
     For example:
 
     .. code-block:: yaml
 
-        output_folder: ~/floodcase_202107/output_data
+        levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
+    """
+
+    log_level: Literal["debug", "info", "warning", "error", "critical"]
+    """Verbosity of the output messages.
+
+    For example:
+
+    .. code-block:: yaml
+
+        log_level: info
     """
 
     restart: bool
@@ -211,6 +245,18 @@ class Config(BaseModel):
 
     """
 
+    periodic_boundary: bool
+    """Whether to use period boundaries in the zonal direction.
+
+    This should be used when working with global datasets.
+
+    For example:
+
+    .. code-block:: yaml
+
+        periodic_boundary: true
+    """
+
     kvf: int
     """Stability correction parameter.
 
@@ -220,16 +266,6 @@ class Config(BaseModel):
 
         kvf: 3
 
-    """
-
-    log_level: Literal["debug", "info", "warning", "error", "critical"]
-    """Verbosity of the output messages.
-
-    For example:
-
-    .. code-block:: yaml
-
-        log_level: info
     """
 
     chunks: "Union[None, dict[str, int]]"
@@ -254,42 +290,6 @@ class Config(BaseModel):
             time: 1  # don't set time to auto, as it will be different for surface and 3d vars
             latitude: auto
             longitude: auto
-
-    """
-
-    event_start_date: date
-    """Start date for event.
-
-    For tracking individual (e.g. heavy precipitation) events, you can set the
-    start and end date of the event to something different than the total
-    tracking start and end date.
-
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking.
-
-    For example:
-
-    .. code-block:: yaml
-
-        event_start_date: "2021-07-13"
-
-    """
-
-    event_end_date: date
-    """Start date for event.
-
-    For tracking individual (e.g. heavy precipitation) events, you can set the
-    start and end date of the event to something different than the total
-    tracking start and end date.
-
-    Should be formatted as: `"YYYY-MM-DD"`. Start date < end date, even if
-    backtracking.
-
-    For example:
-
-    .. code-block:: yaml
-
-        event_end_date: "2021-07-15"
 
     """
 
