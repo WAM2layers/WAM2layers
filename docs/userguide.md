@@ -143,9 +143,9 @@ wam2layers preprocess era5 config_file.yaml
 where `config_file.yaml` is the path to your configuration file. This file
 should have settings on the date range for which you want to run the
 preprocessing, and also about the location where the raw data are stored and
-what filename pattern they follow. [Documentation on this](./config) is
-underway, but for now you can have a look at the example config file
-[here](https://github.com/WAM2layers/WAM2layers/blob/main/cases/era5_2021.yaml).
+what filename pattern they follow. For more information, see [](./config) or
+have a look at the example config file
+[here](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
 
 ```{note}
 For now WAM2layers only contains preprocessing code for era5. We think it would
@@ -237,9 +237,9 @@ wam2layers backtrack config-file.yaml
 where `config-file.yaml` is the path to your configuration file. Among others,
 this file should have settings on the date range for which you want to run
 track, and also about the location where the preprocessed data are stored and
-where the output will be stored. [Documentation on this](./config) is underway,
-but for now you can have a look at the example config file
-[here](https://github.com/WAM2layers/WAM2layers/blob/main/cases/era5_2021.yaml).
+where the output will be stored. For more information, see [](./config) or have
+a look at the example config file
+[here](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
 
 ```{tip}
 The actual code that is executed can be found in
