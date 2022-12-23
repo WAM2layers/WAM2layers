@@ -195,9 +195,7 @@ def get_input_dates(config):
         start = config.preprocess_start_date,
         end = config.preprocess_end_date,
         freq = '1d',
-        inclusive = "left",
     )
-
 
 
 def prep_experiment(config_file):
