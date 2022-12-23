@@ -488,9 +488,9 @@ def run_experiment(config_file):
         # Only track the precipitation at certain timesteps
         if (
             time_in_range(
-                config.event_start_date.strftime("%Y%m%d%H%M"),
-                config.event_end_date.strftime("%Y%m%d%H%M"),
-                t.strftime("%Y%m%d%H%M"),
+                config.event_start_date,
+                config.event_end_date,
+                t,
             )
             == False
         ):
