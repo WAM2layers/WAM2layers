@@ -29,7 +29,8 @@ The process is roughly as follows:
 1. You [Open(s) an
    issue](https://github.com/WAM2layers/WAM2layers/issues/new/choose) to discuss
    your idea.
-1. Other developers comment on the issue and help decide on the best way forward.
+1. Other developers comment on the issue and together you decide on the best way
+   forward.
 1. If the discussion results in a plan to change the code, you (or someone else)
    go ahead and make the necessary changes on a local copy of the code.
 1. While you're working, you can create a draft pull requests (PR).
@@ -38,8 +39,8 @@ The process is roughly as follows:
 1. When all review comments are addressed and checks pass, the PR is merged.
 1. At this point, the new code is part of the repository, but it is still "unreleased".
 1. The core developers decide when to make a new release.
-1. When the code is released, a new version incorporing the latests updates
-   appears on Zenodo and PyPI.
+1. When the code is released, a new version incorporing your updates appears on
+   Zenodo and PyPI.
 
 ## Forking the repository
 
@@ -70,7 +71,8 @@ changes back to the remote, you'll need to authenticate. This can be annoying.
 Cloning with SSH is very convenient, but you have to [set up an SSH key
 first](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 If you work on different machines, you can set multiple SSH keys. Despite the
-initial efforts, in our experience this is the preferred way to authenticate with GitHub.
+initial efforts, in our experience this is the preferred way to authenticate
+with GitHub.
 
 There is also the option to use the GitHub command line interface. This is a
 [separate software](https://cli.github.com/) provided by GitHub. We have little
@@ -106,9 +108,7 @@ additional packages that are listed under the "develop" header in the file
 syntax/style guides), automatic formatting, building documentation, running
 tests, and publising the package on PyPI.
 
-## Modifying the code
-
-### Create a new branch
+## Create a new branch
 
 It is good practice to create a new "branch" for each feature you are adding.
 For example, this will create (and switch to) a new branch called
@@ -125,12 +125,15 @@ documentation page. But if I was interrupting my work to fix a bug on another
 part of the code, I would switch to another branch. This keeps all changes that
 belong together, well, together.
 
+## Make changes
+
 Now you are ready to make the changes you need and test whether they work. Keep
 in mind that your changes should not break the code for other people. If you're
 adding new code, please also add relevant documentation, and add an update to
-the changelog.
+the changelog. For more information on the inner workings of WAM2layers, see
+below.
 
-### Follow the style guide
+## Follow the style guide
 
 Try to follow the Python style guide
 ([pep8](https://peps.python.org/pep-0008/)). This is where the developer tools
@@ -147,7 +150,7 @@ isort .
 black .
 ```
 
-### Commit and push your changes
+## Commit and push your changes
 
 Next, you can commit them and push your branch to the remote:
 
@@ -175,7 +178,7 @@ history and can save you from losing work. Also, others will be able to see what
 you're working on, which can prevent double work and can be useful to ask for
 confirmation or advise in an early stage, before you put in a lot of effort.
 
-### Open a (draft) pull request
+## Open a (draft) pull request
 
 When you first push your changes to the remote and navigate to the repository on
 GitHub, you will see a popup that suggests to open a new pull request. If you
@@ -193,7 +196,7 @@ a preview of the documentation is build based on the code in the pull request.
 You can look at the details of the checks to preview the documentation, or, if
 they fail, what causes the issue(s).
 
-### The review process
+## The review process
 
 When you are happy with your changes, you can mark the PR "ready for review".
 GitHub will automatically suggest some reviewers, or you can pick your own
@@ -207,11 +210,14 @@ good review involves verifying that the new code is clear, well documented, and
 does what it's supposed to do, testing that the code (still) works, checking
 that it conforms to the guidelines.
 
-When the reviewer is happy we the code, they can approve the changes. At that
+When the reviewer is happy with the code, they can approve the changes. At that
 point, the code can be merged and becomes part of the "main" codebase. However,
-a new version is required for it to become part of the PyPI and Zenodo releases.
+a new release is required for it to become part of the PyPI and Zenodo
+publications.
 
 ## Making a release
+
+These instructions are intended for core developers.
 
 You need an [account on PyPI](https://pypi.org/account/register/) with owner
 rights on WAM2layers.
@@ -232,7 +238,7 @@ rights on WAM2layers.
 - Check that the new release on Zenodo and PyPI.
 - Verify that you can install the new version with pip.
 
-## Some key insights for working with the code
+## The inner workings of WAM2layers
 
 ### Structure of the repository
 
