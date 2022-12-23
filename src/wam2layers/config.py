@@ -17,7 +17,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        filename_template: "/ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc"
+        filename_template: /ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
 
     will be converted to
 
@@ -222,31 +222,6 @@ class Config(BaseModel):
 
     """
 
-    timetracking: bool
-    """Whether to also track residence time of parcels.
-
-    Currently not implemented.
-
-    For example:
-
-    .. code-block:: yaml
-
-        timetracking: false
-
-    """
-
-    distancetracking: bool
-    """Whether to also track distance traveled by parcels.
-
-    Currently not implemented.
-
-    For example:
-
-    .. code-block:: yaml
-
-        distancetracking: false
-
-    """
     log_level: Literal["debug", "info", "warning", "error", "critical"]
     """Verbosity of the output messages.
 
@@ -254,7 +229,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        verbosity: info
+        log_level: info
     """
 
     chunks: "Union[None, dict[str, int]]"
@@ -296,7 +271,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_start_date: '2021-07-13'
+        event_start_date: "2021-07-13"
 
     """
 
@@ -314,7 +289,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_end_date: '2021-07-15'
+        event_end_date: "2021-07-15"
 
     """
 
