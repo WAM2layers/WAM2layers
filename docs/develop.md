@@ -3,10 +3,8 @@
 This section explains how you can modify WAM2layers. For example, to use input
 data from other sources. We encourage you to consider contributing your changes
 so others can also benefit from your work. Therefore, the explanation of the
-inner workings of WAM2layers are intertwined with instructions on how to
-collaborate on GitHub. At the end of the page, we also describe the steps needed
-to make a new release of the software. These instructions are intended for core
-developers.
+inner workings of WAM2layers are prefaced with instructions on how to
+collaborate on GitHub.
 
 ```{admonition} Code of conduct
 We as members, contributors, and leaders pledge to make participation in our
@@ -42,7 +40,7 @@ The process is roughly as follows:
 1. When the code is released, a new version incorporing your updates appears on
    Zenodo and PyPI.
 
-## Forking the repository
+### Forking the repository
 
 Depending on your situation, you may have to fork the repository first. Forking
 means you make a duplicate of the repository under your own GitHub account. The
@@ -59,7 +57,7 @@ You can make a fork by navigating to the [original
 repo](https://github.com/WAM2layers/WAM2layers) and pressing the "Fork" button
 (near the right top of the page).
 
-## Cloning the repo (with good authentication)
+### Cloning the repo (with good authentication)
 
 Cloning a repo means obtaining a local copy. The version on GitHub is referred
 to as the "remote" copy. Navigate to (your fork of) the WAM2layers repo and find
@@ -89,7 +87,7 @@ git clone git@github.com:Peter9192/WAM2layers.git
 git clone git@github.com:WAM2layers/WAM2layers.git
 ```
 
-## Development installation - additional tooling
+### Development installation - additional tooling
 
 You can install your local copy of the code by following the same steps as the
 [regular installation](./installation.md). However, by adding `[develop]`, some
@@ -108,7 +106,7 @@ additional packages that are listed under the "develop" header in the file
 syntax/style guides), automatic formatting, building documentation, running
 tests, and publising the package on PyPI.
 
-## Create a new branch
+### Create a new branch
 
 It is good practice to create a new "branch" for each feature you are adding.
 For example, this will create (and switch to) a new branch called
@@ -125,15 +123,16 @@ documentation page. But if I was interrupting my work to fix a bug on another
 part of the code, I would switch to another branch. This keeps all changes that
 belong together, well, together.
 
-## Make changes
+### Make changes
 
 Now you are ready to make the changes you need and test whether they work. Keep
 in mind that your changes should not break the code for other people. If you're
 adding new code, please also add relevant documentation, and add an update to
-the changelog. For more information on the inner workings of WAM2layers, see
+the changelog. If your introducing new dependencies, add them to
+`pyproject.toml`. For more information on the inner workings of WAM2layers, see
 below.
 
-## Follow the style guide
+### Follow the style guide
 
 Try to follow the Python style guide
 ([pep8](https://peps.python.org/pep-0008/)). This is where the developer tools
@@ -150,7 +149,7 @@ isort .
 black .
 ```
 
-## Commit and push your changes
+### Commit and push your changes
 
 Next, you can commit them and push your branch to the remote:
 
@@ -178,7 +177,7 @@ history and can save you from losing work. Also, others will be able to see what
 you're working on, which can prevent double work and can be useful to ask for
 confirmation or advise in an early stage, before you put in a lot of effort.
 
-## Open a (draft) pull request
+### Open a (draft) pull request
 
 When you first push your changes to the remote and navigate to the repository on
 GitHub, you will see a popup that suggests to open a new pull request. If you
@@ -196,7 +195,7 @@ a preview of the documentation is build based on the code in the pull request.
 You can look at the details of the checks to preview the documentation, or, if
 they fail, what causes the issue(s).
 
-## The review process
+### The review process
 
 When you are happy with your changes, you can mark the PR "ready for review".
 GitHub will automatically suggest some reviewers, or you can pick your own
@@ -215,7 +214,7 @@ point, the code can be merged and becomes part of the "main" codebase. However,
 a new release is required for it to become part of the PyPI and Zenodo
 publications.
 
-## Making a release
+### Making a release
 
 These instructions are intended for core developers.
 
@@ -240,12 +239,141 @@ rights on WAM2layers.
 
 ## The inner workings of WAM2layers
 
+In this section we'll briefly go over some of the key insights required to
+effectively modify and contribute code to WAM2layers.
+
 ### Structure of the repository
 
-- docs
-- tests
-- source code
-- zenodo integration, citation, license, etc.
+The structure of the repository follows that of a [standard Python
+package](https://packaging.python.org/en/latest/tutorials/packaging-projects/).
+
+Here is a very high-level overview of the role of the most important
+files/folders:
+
+```
+.
+├── pyproject.toml     --> Package metadata and dependencies. Used to `pip install` the package.
+├── src/wam2layers/    --> This folder contains the source code of the model
+│   ├── __init__.py    --> Needed for standard package structure
+│   ├── analysis/      --> Code related to analyzing the input/output files
+│   ├── cli.py         --> Code for the command line interface - entry point of WAM2layers
+│   ├── preprocessing/ --> Code for preprocessing of raw input data
+│   ├── tracking/      --> Actual moisture tracking code
+│   └── utils/         --> Utilities that can be used in other parts of the code
+├── docs               --> Sphinx project to create beautiful documentation
+│   ├── _static        --> Place for e.g. images used in documentation
+│   ├── conf.py        --> Configuration of the Sphinx project
+│   └── index.md, etc. --> Actual documentation pages written in markdown
+├── .readthedocs.yaml  --> Configuration for automatically publishing the documentation
+├── scripts/           --> Example (download) scripts, not strictly part of the model.
+├── tests/             --> Code to test the functions in src/wam2layers
+├── misc/              --> Placeholder for random files such as logo
+└── README.md          --> Shown on the GitHub landing page of WAM2layers
+├── LICENSE            --> Enables others to re-use the code
+├── CITATION.cff       --> Citation info; used by GitHub and Zenodo
+├── CHANGELOG.md       --> Used to keep track of updates to the code
+├── .gitignore         --> Tell git to ignore certain files - useful for keeping a clean repo
+```
+
+### GitHub integrations
+
+The repository is set up to synchronize with Zenodo ([more
+info](https://docs.github.com/en/repositories/archiving-a-github-repository/referencing-and-citing-content))
+and ReadTheDocs ([more
+info](https://docs.readthedocs.io/en/stable/connected-accounts.html)). Zenodo is
+used to get a DOI to make the software citable. Every release will get its own
+DOI, and there is also a "concept DOI" that applies to all versions. ReadTheDocs
+automatically builds and hosts this documentation site.
+
+### Click command line interface
+
+The command line interface of WAM2layers is build with
+[click](https://click.palletsprojects.com/en/8.1.x/).
+
+In `pyproject.toml` the following configuration:
+
+```toml
+[project.scripts]
+wam2layers = "wam2layers.cli:cli"
+```
+
+tells your computer that the command `wam2layers` should look for a function
+called `cli` in the folder `wa2layers`, find the file `cli.py`. This function,
+copied below, does nothing, but you will see that the docstring corresponds to
+what is shown on the command line when you call `wam2layers`. The `@click.group`
+decorator tells click that this function has subcommands, which are defined
+below it. For example, the subcommand `backtrack` points to `backtrack_cli`,
+which is an alias for the function called `cli` in
+`wam2layers/tracking/backtrack.py` imported at the top of the file:
+
+```py
+import click
+from wam2layers.tracking.backtrack import cli as backtrack_cli
+
+@click.group()
+def cli():
+    """Command line interface to WAM2layers."""
+    pass
+
+cli.add_command(backtrack_cli, name="backtrack")
+```
+
+If you look at that function, you will see that it prints a welcome message and
+then calls the function `run_experiment`. Note that it takes `config_file` an
+input argument.
+
+```{note}
+It might be easier if all the methods related to the CLI are grouped together in
+a single `cli.py` file. The reason why this is not done, is that by keeping a
+`cli` function in each file, we can also run them as standalone scripts, e.g.
+`python backtrack.py example-config.yaml`.
+```
+
+### Config file
+
+The configuration file is written in [YAML](https://yaml.org/). YAML is a
+human-friedly file format, very suitable for writting configuration files. A
+YAML file follows the same structure as a (nested) dictorary in Python:
+key-value pairs.
+
+To parse the config, we read in the yaml file, but on top of that we use a
+package called [Pydantic](https://docs.pydantic.dev/). Using Pydantic is very
+similar to using Python dataclasses, for example:
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Config:
+    a: str
+    b: int = 10
+
+config = Config(a='test')
+print(config)
+# Config(a='test', b=10)
+
+print(config.a)
+# test
+```
+
+In this small example, we first define an object called `Config`. It has two
+attributes: `a` and `b`. `a` should be a string, `b` an integer. `b` has a
+default value of 10. When we call `config = Config(a='test')`, we are create an
+instance of the class `Config` and assign it to a new variable called `config`.
+Note that `b` will get the default value of `10`, as we didn't supply it.
+
+So far, this is a standard Python dataclass. What Pydantic adds to this, is
+validation. If you try to instantiate the config object above with
+`Config(a=10)`, it will just work. With Pydantic, it will tell you that `a`
+should be a string. The code changes to use Pydantic are minimal:
+
+```
+from pydantic import BaseModel
+
+class Config(BaseModel):
+    a: str
+    b: int = 10
+```
 
 ### Some key ingredients
 
