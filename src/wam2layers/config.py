@@ -75,7 +75,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        preprocess_start_date: "2021-07-01"
+        preprocess_start_date: "2021-07-01T00:00"
 
     """
 
@@ -89,7 +89,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        preprocess_end_date: "2021-07-15"
+        preprocess_end_date: "2021-07-15T23:00"
     """
 
     track_start_date: datetime
@@ -103,7 +103,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        track_start_date: "2021-07-01"
+        track_start_date: "2021-07-01T00:00"
 
     """
 
@@ -118,7 +118,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        track_end_date: "2021-07-15"
+        track_end_date: "2021-07-15T23:00"
     """
 
     event_start_date: datetime
@@ -136,7 +136,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_start_date: "2021-07-13"
+        event_start_date: "2021-07-13T00:00"
 
     """
 
@@ -155,7 +155,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_end_date: "2021-07-15"
+        event_end_date: "2021-07-14T23:00"
 
     """
 

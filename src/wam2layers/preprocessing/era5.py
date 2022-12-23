@@ -269,29 +269,12 @@ def prep_experiment(config_file):
         if config.level_type == "model_levels":
             # TODO: Check if this is a reasonable choice for boundary
             boundary = 111
-            #idx = dp.level.searchsorted(boundary, side="right")
-            #upper = np.s_[:, :idx, :, :]
-            #lower = np.s_[:, idx:, :, :]
-            #s_lower = cw[lower].sum(dim="level")
-            #s_upper = cw[upper].sum(dim="level")
-            #fx_lower = fx[lower].sum(dim="level")  # kg m-1 s-1
-            #fy_lower = fy[lower].sum(dim="level")  # kg m-1 s-1
-            #fx_upper = fx[upper].sum(dim="level")  # kg m-1 s-1
-            #fy_upper = fy[upper].sum(dim="level")  # kg m-1 s-1
             lower_layer = dp.level > boundary
             upper_layer = ~lower_layer
             
         if config.level_type == "pressure_levels":
             upper_layer = p < pb[:, None, :, :]
             lower_layer = pb[:, None, :, :] < p
-
-            # Vertically integrate state over two layers
-            #s_lower = cw.where(lower_layer).sum(dim="level")
-            #s_upper = cw.where(upper_layer).sum(dim="level")
-            #fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
-            #fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
-            #fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
-            #fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
         # Vertically integrate state over two layers
         s_lower = cw.where(lower_layer).sum(dim="level")
