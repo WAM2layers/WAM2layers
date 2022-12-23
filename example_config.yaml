@@ -1,0 +1,29 @@
+# Paths
+filename_template: /ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
+output_folder: ~/floodcase_202107/output_data
+region: /data/volume_2/era5_2021/source_region_global.nc
+
+# Dates
+preprocess_start_date: "2021-07-01"
+preprocess_end_date: "2021-07-15"
+track_start_date: "2021-07-01"
+track_end_date: "2021-07-15"
+event_start_date: "2021-07-13"
+event_end_date: "2021-07-15"
+
+# Time
+input_frequency: "1h"
+target_frequency: "10min"
+output_frequency: "1d"
+
+# Levels
+level_type: model_levels
+levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
+
+# Model settings
+log_level: info
+restart: False
+periodic_boundary: false
+kvf: 3
+chunks: null

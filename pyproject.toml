@@ -33,6 +33,7 @@ dependencies = [
     "netcdf4",
     "scipy",
     "click",
+    "pydantic",
     "dask>=2022.11",
     "distributed>=2022.11",
     "psutil",
@@ -48,6 +49,7 @@ develop = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
+    "myst-nb==0.16.0",
     "pytest",
 ]
 

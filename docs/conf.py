@@ -2,7 +2,11 @@
 # build with: sphinx-build -nW --keep-going -b html . ./_build/html
 
 # load extensions
-extensions = ["myst_nb", "sphinx_rtd_theme"]
+extensions = ["myst_nb", "sphinx_rtd_theme", "sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+
+# Options for autodoc
+autodoc_class_signature = "separated"
+autodoc_member_order = "bysource"
 
 myst_enable_extensions = ["dollarmath"]
 

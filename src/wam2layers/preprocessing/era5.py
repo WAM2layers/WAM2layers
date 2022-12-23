@@ -10,21 +10,18 @@ from wam2layers.analysis.checks import check_input
 from wam2layers.preprocessing.shared import (accumulation_to_flux,
                                              calculate_humidity, insert_level,
                                              interpolate, sortby_ndarray)
-
-
-class InvalidConfig(Exception):
-    pass
+from wam2layers.config import Config
 
 
 def load_data(variable, date, config):
     """Load data for given variable and date."""
-    template = config["filename_template"]
+    template = config.filename_template
 
     # If it's a 4d variable, we need to set the level type
     if variable in ["u", "v", "q"]:
-        if config["level_type"] == "model_levels":
+        if config.level_type == "model_levels":
             prefix = "_ml"
-        elif config["level_type"] == "pressure_levels":
+        elif config.level_type == "pressure_levels":
             prefix = "_pl"
     # If it's a 3d variable we do not need to set the level type
     else:
@@ -38,7 +35,7 @@ def load_data(variable, date, config):
         levtype=prefix,
         variable=variable,
     )
-    da = xr.open_dataset(filepath, chunks=config["chunks"]).sel(
+    da = xr.open_dataset(filepath, chunks=config.chunks).sel(
         time=date.strftime("%Y%m%d")
     )[variable]
 
@@ -46,8 +43,8 @@ def load_data(variable, date, config):
         da = da.rename(lev="level")
 
     # If it's 4d data we want to select a subset of the levels
-    if variable in ["u", "v", "q"] and isinstance(config["levels"], list):
-        return da.sel(level=config["levels"])
+    if variable in ["u", "v", "q"] and isinstance(config.levels, list):
+        return da.sel(level=config.levels)
 
     return da
 
@@ -192,22 +189,15 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
     return dp, p, q, u, v, p_boundary
 
 
-def parse_config(config_file):
-    """Read and parse case configuration file."""
-    with open(config_file) as f:
-        config = yaml.safe_load(f)
-
-    # Create the preprocessed data folder if it does not exist yet
-    config["output_dir"] = Path(config["preprocessed_data_folder"]).expanduser()
-    config["output_dir"].mkdir(exist_ok=True, parents=True)
-
-    config["datelist"] = pd.date_range(
-        start=config["preprocess_start_date"],
-        end=config["preprocess_end_date"],
-        freq="d",
-        inclusive="left",
+def get_input_dates(config):
+    """Dates for pre-processing."""
+    return pd.date_range(
+        start = config.preprocess_start_date,
+        end = config.preprocess_end_date,
+        freq = '1d',
+        inclusive = "left",
     )
-    return config
+
 
 
 def prep_experiment(config_file):
@@ -231,29 +221,29 @@ def prep_experiment(config_file):
       FloodCase_202107_ml_u.nc or FloodCase_202107_u.nc and
       FloodCase_202107_sp.nc
     """
-    config = parse_config(config_file)
+    config = Config.from_yaml(config_file)
 
-    if config["chunks"] is not None:
+    if config.chunks is not None:
         print("Starting dask cluster")
         from dask.distributed import Client
 
         client = Client()
         print(f"To see the dask dashboard, go to {client.dashboard_link}")
 
-    for date in config["datelist"]:
+    for date in get_input_dates(config):
         print(date)
 
         # 4d fields
-        levels = config["levels"]
+        levels = config.levels
         q = load_data("q", date, config)  # in kg kg-1
         u = load_data("u", date, config)  # in m/s
         v = load_data("v", date, config)  # in m/s
         sp = load_data("sp", date, config)  # in Pa
 
-        if config["level_type"] == "model_levels":
+        if config.level_type == "model_levels":
             dp = get_dp_modellevels(sp, levels)
 
-        if config["level_type"] == "pressure_levels":
+        if config.level_type == "pressure_levels":
             d2m = load_data("d2m", date, config)  # Dew point in K
             q2m = calculate_humidity(d2m, sp)  # kg kg-1
             u10 = load_data("u10", date, config)  # in m/s
@@ -278,7 +268,7 @@ def prep_experiment(config_file):
         fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
 
         # Integrate fluxes and states to upper and lower layer
-        if config["level_type"] == "model_levels":
+        if config.level_type == "model_levels":
             # TODO: Check if this is a reasonable choice for boundary
             boundary = 111
             idx = dp.level.searchsorted(boundary, side="right")
@@ -291,7 +281,7 @@ def prep_experiment(config_file):
             fx_upper = fx[upper].sum(dim="level")  # kg m-1 s-1
             fy_upper = fy[upper].sum(dim="level")  # kg m-1 s-1
 
-        elif config["level_type"] == "pressure_levels":
+        if config.level_type == "pressure_levels":
             upper_layer = p < pb[:, None, :, :]
             lower_layer = pb[:, None, :, :] < p
 
@@ -302,12 +292,6 @@ def prep_experiment(config_file):
             fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
             fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
             fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
-
-        else:
-            raise InvalidConfig(
-                "Expected config level_type to be one of ['model_level', "
-                f"'pressure_level'], but got {config['level_type']}."
-            )
 
         precip, evap = preprocess_precip_and_evap(date, config)
 
@@ -330,11 +314,11 @@ def prep_experiment(config_file):
 
         # Save preprocessed data
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-        output_path = config["output_dir"] / filename
+        output_path = config.preprocessed_data_folder / filename
         ds.astype("float32").to_netcdf(output_path)
 
     # Close the dask cluster when done
-    if config["chunks"] is not None:
+    if config.chunks is not None:
         client.shutdown()
 
 
