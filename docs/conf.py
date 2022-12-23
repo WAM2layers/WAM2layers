@@ -6,7 +6,7 @@ extensions = ["myst_nb", "sphinx_rtd_theme"]
 
 myst_enable_extensions = ["dollarmath"]
 
-html_logo = "_static/logo.png"
+html_logo = "_static/WAM_logo_v3.png"
 
 # specify project details
 master_doc = "index"
