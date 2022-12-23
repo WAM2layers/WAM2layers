@@ -375,11 +375,52 @@ class Config(BaseModel):
     b: int = 10
 ```
 
-### Some key ingredients
+In `config.py`, all settings are documented with Python docstrings. They follow
+the guidelines in [PEP 257](https://peps.python.org/pep-0257/). This
+documentation is automatically imported in the Sphinx project (see below).
 
-- click CLI
-- Pydantic config
-- sphinx + extensions for documentation
-- GH actions + RTD
-- tests (mostly absent)
-- See https://jupyterbook.org/en/stable/reference/cheatsheet.html#links
+### Documentation
+
+The documentation for WAM2layers uses
+[Sphinx](https://www.sphinx-doc.org/en/master/), the de-facto standard for
+documenting Python projects. By default, Sphinx documentation is written in
+RestructuredText file format (.rst). However, WAM2layers uses
+[MyST-NB](https://myst-nb.readthedocs.io/en/latest/), a Sphinx extension that
+allows you to write documentation in the easier "markdown" format (.md). It can
+also render Jupyter notebooks straight into the documentation. See
+[here](https://jupyterbook.org/en/stable/reference/cheatsheet.html#links) for a
+nice cheatsheet.
+
+In addition, we use several plugins, configured in `docs/conf.py`. Importantly,
+[autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html) is
+used to import docstrings from the main source code into the documentation.
+[Napoleon](https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#module-sphinx.ext.napoleon)
+is used to have a more convenient format for the docstrings. [Sphinx ReadTheDocs
+theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/) is used for styling
+of the documentation pages.
+
+The documentation is hosted on [ReadTheDocs](https://readthedocs.org/). The
+repository is setup to integrate with readthedocs, such that the documentation
+automatically builds for all versions of the model, and also for pull requests.
+So you can always preview the documentation on GitHub.
+
+To build the documentation locally, use
+
+```
+sphinx-build -nW --keep-going -b html docs docs/_build/html
+```
+
+### Tests
+
+The folder tests is intended for test code. Currently the content is very
+minimal, but it would be good to add more tests in the future. Tests allow you
+to check whether your code still works after you make some (perhaps seemingly
+unrelated) changes. They can be set up to be run automatically when you make a pull request.
+
+[Pytest](https://docs.pytest.org/en/7.2.x/) is used to run the tests. For example
+
+```
+pytest tests/
+```
+
+For more information, please have a look at the documentation of pytest.
