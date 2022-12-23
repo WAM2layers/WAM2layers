@@ -500,6 +500,13 @@ def run_experiment(config_file):
 
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
+        
+        density = 1000  # [kg/m3]
+        g = 9.80665 
+        a, ly, lx = get_grid_info(states_prev)
+
+        total_seconds = pd.Timedelta(config["target_frequency"]).total_seconds()
+        print(fluxes["f_vert"]/(total_seconds*a[:, None])*density*g)
 
         # Only track the precipitation at certain dates
         if (
