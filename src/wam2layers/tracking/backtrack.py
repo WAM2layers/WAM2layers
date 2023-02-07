@@ -410,7 +410,7 @@ def backtrack(
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
     output["tagged_precip"] += tagged_precip
-
+    output["vflux"].values = f_vert
 
 def initialize(config_file):
     """Read config, region, and initial states."""
@@ -444,6 +444,7 @@ def initialize_outputs(region):
             "s_track_lower_restart": xr.zeros_like(proto),
             "e_track": xr.zeros_like(proto),
             "tagged_precip": xr.zeros_like(proto),
+            "vflux": xr.zeros_like(proto),
             "north_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
             "south_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
             "east_loss": xr.zeros_like(proto.isel(longitude=0, drop=True)),
@@ -464,6 +465,7 @@ def write_output(output, t):
         [
             "e_track",
             "tagged_precip",
+            "vflux",
             "north_loss",
             "south_loss",
             "east_loss",

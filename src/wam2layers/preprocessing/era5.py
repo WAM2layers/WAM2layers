@@ -21,7 +21,7 @@ def load_data(variable, date, config):
     template = config["filename_template"]
 
     # If it's a 4d variable, we need to set the level type
-    if variable in ["u", "v", "q"]:
+    if variable in ["u", "v","w", "q"]:
         if config["level_type"] == "model_levels":
             prefix = "_ml"
         elif config["level_type"] == "pressure_levels":
@@ -248,6 +248,7 @@ def prep_experiment(config_file):
         q = load_data("q", date, config)  # in kg kg-1
         u = load_data("u", date, config)  # in m/s
         v = load_data("v", date, config)  # in m/s
+        w = load_data("w", date, config)  # in Pa/s
         sp = load_data("sp", date, config)  # in Pa
 
         if config["level_type"] == "model_levels":
@@ -276,7 +277,12 @@ def prep_experiment(config_file):
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
         fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
+        fz = w * cw  # vertical atmospheric moisture flux (kg Pa-1 s-1)
 
+        boundary = 111
+        idx = dp.level.searchsorted(boundary, side="right")
+
+        fz_boundary = fz[:,idx,::]
         # Integrate fluxes and states to upper and lower layer
         if config["level_type"] == "model_levels":
             # TODO: Check if this is a reasonable choice for boundary
@@ -318,6 +324,7 @@ def prep_experiment(config_file):
                 "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
                 "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
                 "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+                "fz_boundary": fz_boundary.assign_attrs(units="Pa m-1 s-1"),
                 "s_upper": s_upper.assign_attrs(units="kg m-2"),
                 "s_lower": s_lower.assign_attrs(units="kg m-2"),
                 "evap": evap,
