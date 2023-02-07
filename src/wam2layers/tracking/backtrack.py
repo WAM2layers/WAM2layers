@@ -9,53 +9,34 @@ import yaml
 
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import Profiler, ProgressTracker
+from wam2layers.config import Config
 
 
-def parse_config(config_file):
-    """Load and parse config file into dictionary."""
-    with open(config_file) as f:
-        config = yaml.safe_load(f)
-
-    # Add datelist
+def get_tracking_dates(config):
+    """Dates for tracking."""
+    # E.g. if data from 00:00 to 23:00
+    # Using target freq directly would end at 23:45 or so
     input_dates = pd.date_range(
-        start=config["track_start_date"],
-        end=config["track_end_date"],
-        freq=config["input_frequency"],
-        inclusive="left",
+        start = config.track_start_date,
+        end = config.track_end_date,
+        freq = config.input_frequency,
     )
-    config["datelist"] = pd.date_range(
-        start=input_dates[0],
-        end=input_dates[-1],
-        freq=config["target_frequency"],
-        inclusive="right",
+    
+    return pd.date_range(
+        start = input_dates[0],
+        end = input_dates[-1],
+        freq = config.target_frequency,
+        inclusive = "right",
     )
-
-    # Parse directories with pathlib
-    config["preprocessed_data_folder"] = Path(
-        config["preprocessed_data_folder"]
-    ).expanduser()
-    config["output_folder"] = Path(config["output_folder"]).expanduser() / "backtrack"
-
-    # Check if input dir exists
-    if not config["preprocessed_data_folder"].exists():
-        raise ValueError(
-            "Please create the preprocessed_data_folder before running the script"
-        )
-
-    # Create output dir if it doesn't exist yet
-    if not config["output_folder"].exists():
-        config["output_folder"].mkdir(parents=True)
-
-    return config
 
 
 def input_path(date, config):
-    input_dir = config["preprocessed_data_folder"]
+    input_dir = config.preprocessed_data_folder
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
 def output_path(date, config):
-    output_dir = config["output_folder"]
+    output_dir = config.output_folder
     return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
 
 
@@ -81,13 +62,13 @@ def load_data(t, subset="fluxes"):
         "states": ["s_upper", "s_lower"],
     }
 
-    t1 = t.ceil(config["input_frequency"])
+    t1 = t.ceil(config.input_frequency)
     da1 = read_data_at_time(t1)[variables[subset]]
     if t == t1:
         # this saves a lot of work if times are aligned with input
         return da1
 
-    t0 = t.floor(config["input_frequency"])
+    t0 = t.floor(config.input_frequency)
     da0 = read_data_at_time(t0)[variables[subset]]
     if t == t0:
         return da0
@@ -96,13 +77,13 @@ def load_data(t, subset="fluxes"):
 
 
 def load_fluxes(t):
-    t_current = t - pd.Timedelta(config["target_frequency"]) / 2
+    t_current = t - pd.Timedelta(config.target_frequency) / 2
     return load_data(t_current, "fluxes")
 
 
 def load_states(t):
     t_prev = t
-    t_next = t - pd.Timedelta(config["target_frequency"])
+    t_next = t - pd.Timedelta(config.target_frequency)
     states_prev = load_data(t_prev, "states")
     states_next = load_data(t_next, "states")
     return states_prev, states_next
@@ -115,7 +96,7 @@ def time_in_range(start, end, current):
 
 def load_region(config):
     # TODO: make variable name more generic
-    return xr.open_dataset(config["region"]).source_region
+    return xr.open_dataset(config.region).source_region
 
 
 def to_edges_zonal(fx, periodic_boundary=False):
@@ -287,7 +268,7 @@ def calculate_fv(fluxes, states_prev, states_next):
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
-    stab = 1.0 / (config["kvf"] + 1.0)
+    stab = 1.0 / (config.kvf + 1.0)
     flux_limit = np.minimum(s_mean.s_upper, s_mean.s_lower)
     fv_stable = np.minimum(np.abs(fv), stab * flux_limit)
 
@@ -321,14 +302,14 @@ def backtrack(
     s_total = s_upper + s_lower
 
     # separate the direction of the vertical flux and make it absolute
-    f_downward, f_upward = split_vertical_flux(config["kvf"], f_vert)
+    f_downward, f_upward = split_vertical_flux(config.kvf, f_vert)
 
     # Determine horizontal fluxes over the grid-cell boundaries
     f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
-        fx_lower, config["periodic_boundary"]
+        fx_lower, config.periodic_boundary
     )
     f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(
-        fx_upper, config["periodic_boundary"]
+        fx_upper, config.periodic_boundary
     )
 
     (
@@ -347,7 +328,7 @@ def backtrack(
     # Short name for often used expressions
     s_track_relative_lower = s_track_lower / s_lower
     s_track_relative_upper = s_track_upper / s_upper
-    if config["periodic_boundary"]:
+    if config.periodic_boundary:
         inner = np.s_[1:-1, :]
     else:
         inner = np.s_[1:-1, 1:-1]
@@ -397,7 +378,7 @@ def backtrack(
         fy_s_upper_sn * s_track_relative_upper + fy_s_lower_sn * s_track_relative_lower
     )[-2, :]
 
-    if config["periodic_boundary"] == False:
+    if config.periodic_boundary == False:
         output["east_loss"] += (
             f_e_upper_ew * s_track_relative_upper
             + f_e_lower_ew * s_track_relative_lower
@@ -416,20 +397,21 @@ def initialize(config_file):
     """Read config, region, and initial states."""
     print(f"Initializing experiment with config file {config_file}")
 
-    config = parse_config(config_file)
+    config = Config.from_yaml(config_file)
     region = load_region(config)
 
     output = initialize_outputs(region)
     region = region.values
 
-    if config["restart"]:
+    if config.restart:
         # Reload last state from existing output
-        date = config["datelist"][-1] + pd.Timedelta(days=1)
+        tracking_dates = get_tracking_dates(config)
+        date = tracking_dates[-1] + pd.Timedelta(days=1)
         ds = xr.open_dataset(output_path(date, config))
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
-    print(f"Output will be written to {config['output_folder']}.")
+    print(f"Output will be written to {config.output_folder}.")
     return config, region, output
 
 
@@ -486,16 +468,18 @@ def run_experiment(config_file):
 
     config, region, output = initialize(config_file)
 
+    tracking_dates = get_tracking_dates(config)
+    
     progress_tracker = ProgressTracker(output)
-    for t in reversed(config["datelist"]):
+    for t in reversed(tracking_dates):
 
         fluxes = load_fluxes(t)
         states_prev, states_next = load_states(t)
 
         # Convert data to volumes
-        change_units(states_prev, config["target_frequency"])
-        change_units(states_next, config["target_frequency"])
-        change_units(fluxes, config["target_frequency"])
+        change_units(states_prev, config.target_frequency)
+        change_units(states_next, config.target_frequency)
+        change_units(fluxes, config.target_frequency)
 
         # Apply a stability correction if needed
         stabilize_fluxes(fluxes, states_next)
@@ -510,12 +494,12 @@ def run_experiment(config_file):
         total_seconds = pd.Timedelta(config["target_frequency"]).total_seconds()
         print(fluxes["f_vert"]/(total_seconds*a[:, None])*density*g)
 
-        # Only track the precipitation at certain dates
+        # Only track the precipitation at certain timesteps
         if (
             time_in_range(
-                config["event_start_date"],
-                config["event_end_date"],
-                t.strftime("%Y%m%d"),
+                config.event_start_date,
+                config.event_end_date,
+                t,
             )
             == False
         ):
@@ -530,7 +514,7 @@ def run_experiment(config_file):
         )
 
         # Daily output
-        if t == t.floor(config["output_frequency"]):
+        if t == t.floor(config.output_frequency):
             progress_tracker.print_progress(t, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t)

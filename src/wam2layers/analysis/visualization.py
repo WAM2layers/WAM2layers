@@ -8,7 +8,8 @@ from cmocean import cm
 
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import (input_path, load_region,
-                                           output_path, parse_config)
+                                           output_path)
+from wam2layers.config import Config
 
 
 def try_import_cartopy():
@@ -40,8 +41,8 @@ def _plot_precip(config, ax):
 
     # Load data
     dates = pd.date_range(
-        start=config["preprocess_start_date"],
-        end=config["preprocess_end_date"],
+        start=config.preprocess_start_date,
+        end=config.preprocess_end_date,
         freq=config[
             "output_frequency"
         ],  # Should be output frequency, since this is used to save the data
@@ -54,8 +55,8 @@ def _plot_precip(config, ax):
 
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
     # TODO: make region time-dependent
-    start = config["event_start_date"]
-    end = config["event_end_date"]
+    start = config.event_start_date
+    end = config.event_end_date
     subset = ds.precip.sel(time=slice(start, end))
     precip = (subset * region * 3600).sum("time").compute()
 
@@ -72,9 +73,9 @@ def _plot_evap(config, ax):
 
     # Load data
     dates = pd.date_range(
-        start=config["track_start_date"],
-        end=config["track_end_date"],
-        freq=config["output_frequency"],
+        start=config.track_start_date,
+        end=config.track_end_date,
+        freq=config.output_frequency,
         inclusive="left",
     )
 
@@ -102,7 +103,7 @@ def visualize_input_data(config_file):
 
     TODO: make figure creation independent of case.
     """
-    config = parse_config(config_file)
+    config = Config.from_yaml(config_file)
 
     # Make figure
     fig = plt.figure(figsize=(16, 10))
@@ -111,7 +112,7 @@ def visualize_input_data(config_file):
     _plot_precip(config, ax)
 
     # Save
-    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "input_event.png", dpi=200)
 
@@ -122,7 +123,7 @@ def visualize_output_data(config_file):
     TODO: make figure creation independent of case.
     """
     # Load config and some usful stuf.
-    config = parse_config(config_file)
+    config = Config.from_yaml(config_file)
 
     # Make figure
     fig = plt.figure(figsize=(16, 10))
@@ -131,7 +132,7 @@ def visualize_output_data(config_file):
     _plot_evap(config, ax)
 
     # Save
-    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
 
@@ -139,7 +140,7 @@ def visualize_output_data(config_file):
 def visualize_both(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
     # Load config and some usful stuf.
-    config = parse_config(config_file)
+    config = Config.from_yaml(config_file)
 
     # Make figure
     fig, [ax1, ax2] = plt.subplots(
@@ -150,24 +151,24 @@ def visualize_both(config_file):
     _plot_evap(config, ax2)
 
     # Save
-    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "summary_subplots.png", dpi=200)
 
 
 def visualize_snapshots(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
-    config = parse_config(config_file)
+    config = Config.from_yaml(config_file)
     dates = pd.date_range(
-        start=config["track_start_date"],
-        end=config["track_end_date"],
-        freq=config["output_frequency"],
+        start=config.track_start_date,
+        end=config.track_end_date,
+        freq=config.output_frequency,
         inclusive="left",
     )
     region = load_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
 
-    out_dir = Path(config["output_folder"]) / "figures"
+    out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
 
     for date in dates:
