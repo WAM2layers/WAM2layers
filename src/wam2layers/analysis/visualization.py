@@ -97,6 +97,37 @@ def _plot_evap(config, ax):
     region.plot.contour(ax=ax, levels=[1], colors="k")
     polish(ax, region)
 
+def _plot_vertflux(config, ax):
+    """Return subplot with tracked evaporation."""
+    region = load_region(config)
+    a_gridcell, lx, ly = get_grid_info(region)
+
+    # Load data
+    dates = pd.date_range(
+        start=config.track_start_date,
+        end=config.track_end_date,
+        freq=config.output_frequency,
+        inclusive="left",
+    )
+
+    output_files = []
+    for date in dates:
+        output_files.append(output_path(date, config))
+
+    ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
+    vflux = ds.vflux.mean("time").compute() 
+
+    # Make figure
+    vflux.plot(
+        ax=ax, vmin=0, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5)
+    )
+    e_track.plot.contour(ax=ax, levels=[-0.05,-0.005,0.005, 0.05], colors=["grey","lightgrey","lightgrey", "grey"])
+    ax.set_title("Vertical moisture flux [Pa/s kg/kg]", loc="left")
+
+    # Add source region outline
+    region.plot.contour(ax=ax, levels=[1], colors="k")
+    polish(ax, region)
+
 
 def visualize_input_data(config_file):
     """An figure showing the cumulative moisture inputs.

@@ -265,7 +265,7 @@ def prep_experiment(config_file):
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
         fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
-        fz = w * cw  # vertical atmospheric moisture flux (kg Pa-1 s-1)
+        fz = w * q  # vertical atmospheric moisture flux (kg Pa-1 s-1)
 
         boundary = 111
         idx = dp.level.searchsorted(boundary, side="right")

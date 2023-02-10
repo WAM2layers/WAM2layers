@@ -304,6 +304,13 @@ def backtrack(
     # separate the direction of the vertical flux and make it absolute
     f_downward, f_upward = split_vertical_flux(config.kvf, f_vert)
 
+    # Convert fluxes to normal units
+    density = 1000  # [kg/m3]
+    g = 9.80665
+    a, ly, lx = get_grid_info(states_prev)
+    total_seconds = pd.Timedelta(config.target_frequency).total_seconds()
+    f_vert = f_vert/(total_seconds*a[:, None])*density*g
+
     # Determine horizontal fluxes over the grid-cell boundaries
     f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
         fx_lower, config.periodic_boundary
@@ -491,7 +498,7 @@ def run_experiment(config_file):
         g = 9.80665 
         a, ly, lx = get_grid_info(states_prev)
 
-        total_seconds = pd.Timedelta(config["target_frequency"]).total_seconds()
+        total_seconds = pd.Timedelta(config.target_frequency).total_seconds()
         print(fluxes["f_vert"]/(total_seconds*a[:, None])*density*g)
 
         # Only track the precipitation at certain timesteps
