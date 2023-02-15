@@ -121,7 +121,7 @@ def _plot_vertflux(config, ax):
     vflux.plot(
         ax=ax, vmin=0, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5)
     )
-    e_track.plot.contour(ax=ax, levels=[-0.05,-0.005,0.005, 0.05], colors=["grey","lightgrey","lightgrey", "grey"])
+    vflux.plot.contour(ax=ax, levels=[-0.05,-0.005,0.005, 0.05], colors=["grey","lightgrey","lightgrey", "grey"])
     ax.set_title("Vertical moisture flux [Pa/s kg/kg]", loc="left")
 
     # Add source region outline
@@ -167,6 +167,21 @@ def visualize_output_data(config_file):
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
 
+def visualize_vertflux(config_file):
+    # Make figure for vertical flux
+    # Load config and some usful stuf.
+    config = Config.from_yaml(config_file)
+
+    # Make figure
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+
+    _plot_vertflux(config, ax)
+
+    # Save
+    out_dir = Path(config.output_folder) / "figures"
+    out_dir.mkdir(exist_ok=True, parents=True)
+    fig.savefig(out_dir / "vertflux.png", dpi=200)
 
 def visualize_both(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
@@ -298,6 +313,14 @@ def snapshots(config_file):
     """Visualize input and output snapshots for experiment."""
     try_import_cartopy()
     visualize_snapshots(config_file)
+
+@cli.command()
+@click.argument("config_file", type=click.Path(exists=True))
+def vertflux(config_file):
+    """Visualize input and output snapshots for experiment."""
+    try_import_cartopy()
+    visualize_vertflux(config_file)
+
 
 
 if __name__ == "__main__":
