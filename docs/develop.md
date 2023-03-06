@@ -177,6 +177,13 @@ history and can save you from losing work. Also, others will be able to see what
 you're working on, which can prevent double work and can be useful to ask for
 confirmation or advise in an early stage, before you put in a lot of effort.
 
+```{tip}
+If you're using VScode, you can also use the [git
+extension](https://code.visualstudio.com/docs/sourcecontrol/overview). It
+provides a more visual experience. Similarly, you could also use [Github
+desktop](https://desktop.github.com/).
+```
+
 ### Open a (draft) pull request
 
 When you first push your changes to the remote and navigate to the repository on
