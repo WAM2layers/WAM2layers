@@ -414,9 +414,9 @@ repository is setup to integrate with readthedocs, such that the documentation
 automatically builds for all versions of the model, and also for pull requests.
 So you can always preview the documentation on GitHub.
 
-To build the documentation locally, use
+To build the documentation locally, from the base of the repository, type
 
-```
+```bash
 sphinx-build -nW --keep-going -b html docs docs/_build/html
 ```
 
