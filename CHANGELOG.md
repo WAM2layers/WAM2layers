@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Added documentation for developers ([#172](https://github.com/WAM2layers/WAM2layers/pull/172))
+
 ## Release v3.0.0-beta.3 (2022-12-02)
 
 ### Fixed (patch version, bugs)
