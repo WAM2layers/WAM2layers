@@ -51,6 +51,9 @@ develop = [
     "sphinx",
     "myst-nb==0.16.0",
     "pytest",
+    "flake8",
+    "build",
+    "twine",
 ]
 
 [project.urls]
