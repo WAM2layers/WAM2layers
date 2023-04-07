@@ -21,7 +21,6 @@ def get_tracking_dates(config):
         end = config.track_end_date,
         freq = config.input_frequency,
     )
-    
     return pd.date_range(
         start = input_dates[0],
         end = input_dates[-1],
@@ -467,7 +466,7 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     tracking_dates = get_tracking_dates(config)
-    
+
     progress_tracker = ProgressTracker(output)
     for t in reversed(tracking_dates):
 
@@ -535,6 +534,7 @@ def cli(config_file):
     print("Welcome to WAM2layers.")
     print("Starting backtrack experiment.")
     run_experiment(config_file)
+    print("Experiment complete!")
 
 
 if __name__ == "__main__":

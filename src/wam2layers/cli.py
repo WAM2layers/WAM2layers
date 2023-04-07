@@ -1,4 +1,5 @@
 """Command-line interface for the WAM2layers model."""
+from pathlib import Path
 import click
 
 from wam2layers.analysis.visualization import cli as visualize_cli
