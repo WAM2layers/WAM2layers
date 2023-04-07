@@ -5,12 +5,12 @@ output_folder: ~/floodcase_202107/output_data
 region: /data/volume_2/era5_2021/source_region_global.nc
 
 # Dates
-preprocess_start_date: "2021-07-01"
-preprocess_end_date: "2021-07-15"
-track_start_date: "2021-07-01"
-track_end_date: "2021-07-15"
-event_start_date: "2021-07-13"
-event_end_date: "2021-07-15"
+preprocess_start_date: "2021-07-01T00:00"
+preprocess_end_date: "2021-07-15T00:00"
+track_start_date: "2021-07-01T00:00"
+track_end_date: "2021-07-15T00:00"
+event_start_date: "2021-07-13T00:00"
+event_end_date: "2021-07-15T00:00"
 
 # Time
 input_frequency: "1h"
