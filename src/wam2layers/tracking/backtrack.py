@@ -36,7 +36,7 @@ def input_path(date, config):
 
 def output_path(date, config):
     output_dir = config.output_folder
-    return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
+    return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H:%M')}.nc"
 
 
 # LRU Cache keeps the file open so we save a bit on I/O
