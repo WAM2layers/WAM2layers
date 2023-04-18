@@ -190,7 +190,11 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
 
 
 def get_input_dates(config):
-    """Dates for pre-processing."""
+    """Dates for pre-processing.
+
+    Expects daily input files.
+    """
+    # TODO: input files daily but config hourly
     return pd.date_range(
         start = config.preprocess_start_date,
         end = config.preprocess_end_date,
@@ -199,26 +203,7 @@ def get_input_dates(config):
 
 
 def prep_experiment(config_file):
-    """Pre-process all data for a given config file.
-
-    This function expects the following configuration settings:
-
-    - preprocess_start_date: formatted as YYYYMMDD, e.g. '20210701'
-    - preprocess_end_date: formatted as YYYYMMDD, e.g. '20210716'
-    - level_type: either "pressure_levels" or "model_levels"
-    - levels: "all" or a list of integers with the desired (model or pressure)
-      levels.
-    - input_folder: path where raw era5 input data can be found, e.g.
-      /home/peter/WAM2layers/era5_2021
-    - preprocessed_data_folder: path where preprocessed data should be stored.
-      This directory will be created if it does not exist. E.g.
-      /home/peter/WAM2layers/preprocessed_data_2021
-    - filename_prefix: Fixed part of filename. This function will infer the
-      variable name and add _ml for model level data. E.g. with prefix =
-      "FloodCase_202107" this function will be able to find
-      FloodCase_202107_ml_u.nc or FloodCase_202107_u.nc and
-      FloodCase_202107_sp.nc
-    """
+    """Pre-process all data for a given config file."""
     config = Config.from_yaml(config_file)
 
     if config.chunks is not None:
@@ -271,7 +256,7 @@ def prep_experiment(config_file):
             boundary = 111
             lower_layer = dp.level > boundary
             upper_layer = ~lower_layer
-            
+
         if config.level_type == "pressure_levels":
             upper_layer = p < pb[:, None, :, :]
             lower_layer = pb[:, None, :, :] < p

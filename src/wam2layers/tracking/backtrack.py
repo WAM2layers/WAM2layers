@@ -21,7 +21,6 @@ def get_tracking_dates(config):
         end = config.track_end_date,
         freq = config.input_frequency,
     )
-    
     return pd.date_range(
         start = input_dates[0],
         end = input_dates[-1],
@@ -37,7 +36,7 @@ def input_path(date, config):
 
 def output_path(date, config):
     output_dir = config.output_folder
-    return f"{output_dir}/{date.strftime('%Y-%m-%d')}_s_track.nc"
+    return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H:%M')}.nc"
 
 
 # LRU Cache keeps the file open so we save a bit on I/O
@@ -467,7 +466,7 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     tracking_dates = get_tracking_dates(config)
-    
+
     progress_tracker = ProgressTracker(output)
     for t in reversed(tracking_dates):
 
@@ -535,6 +534,7 @@ def cli(config_file):
     print("Welcome to WAM2layers.")
     print("Starting backtrack experiment.")
     run_experiment(config_file)
+    print("Experiment complete!")
 
 
 if __name__ == "__main__":
