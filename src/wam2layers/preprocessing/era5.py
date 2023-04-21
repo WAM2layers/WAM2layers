@@ -7,10 +7,14 @@ import xarray as xr
 import yaml
 
 from wam2layers.analysis.checks import check_input
-from wam2layers.preprocessing.shared import (accumulation_to_flux,
-                                             calculate_humidity, insert_level,
-                                             interpolate, sortby_ndarray)
 from wam2layers.config import Config
+from wam2layers.preprocessing.shared import (
+    accumulation_to_flux,
+    calculate_humidity,
+    insert_level,
+    interpolate,
+    sortby_ndarray,
+)
 
 
 def load_data(variable, date, config):
@@ -192,9 +196,9 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
 def get_input_dates(config):
     """Dates for pre-processing."""
     return pd.date_range(
-        start = config.preprocess_start_date,
-        end = config.preprocess_end_date,
-        freq = '1d',
+        start=config.preprocess_start_date,
+        end=config.preprocess_end_date,
+        freq="1d",
     )
 
 
@@ -271,7 +275,7 @@ def prep_experiment(config_file):
             boundary = 111
             lower_layer = dp.level > boundary
             upper_layer = ~lower_layer
-            
+
         if config.level_type == "pressure_levels":
             upper_layer = p < pb[:, None, :, :]
             lower_layer = pb[:, None, :, :] < p

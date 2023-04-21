@@ -1,8 +1,11 @@
-from pydantic import BaseModel, FilePath, validator
+from pydantic import BaseModel, FilePath, validator, root_validator
 import yaml
 from datetime import datetime
-from typing import Literal, Union
 from pathlib import Path
+from typing import Literal, Union
+
+import yaml
+from pydantic import BaseModel, FilePath, validator
 
 
 class Config(BaseModel):
@@ -83,7 +86,7 @@ class Config(BaseModel):
     """End date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
-    The preprocess_end_date is included in the preprocessing. 
+    The preprocess_end_date is included in the preprocessing.
 
     For example:
 
@@ -112,7 +115,6 @@ class Config(BaseModel):
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
-    When forward tracking the track_end_date is not written out as output date. 
 
     For example:
 
@@ -146,7 +148,7 @@ class Config(BaseModel):
     For tracking individual (e.g. heavy precipitation) events, you can set the
     start and end date of the event to something different than the total
     tracking start and end date, you can also indicate the hours that you want to track.
-    The event_end_date is included in the event tracking. 
+    The event_end_date is included in the event tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
@@ -317,15 +319,36 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @validator('preprocessed_data_folder', 'region', 'output_folder')
+    @validator("preprocessed_data_folder", "region", "output_folder")
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
 
-    @validator('preprocessed_data_folder', 'output_folder')
+    @validator("preprocessed_data_folder", "output_folder")
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
             print(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
+
+    @root_validator
+    def check_date_order(cls, values):
+        for date_field in ['track', 'event', 'preprocess']:
+            start = values.get(f'{date_field}_start_date')
+            end = values.get(f'{date_field}_end_date')
+
+            if not start < end:
+                raise ValueError("End date should be later than start date.")
+
+        return values
+
+    class Config:
+        """This is the config of the **Pydantic** class, not the wam2layers config.
+
+        Note: this will change in v2
+        https://docs.pydantic.dev/blog/pydantic-v2-alpha/#changes-to-config
+        """
+        # Also force validation when new value is set on existing config
+        validate_assignment = True
+
