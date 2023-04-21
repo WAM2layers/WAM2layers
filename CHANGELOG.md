@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Documentation for developers ([#172](https://github.com/WAM2layers/WAM2layers/pull/172))
+- Check that dates are in correct order ([#204](https://github.com/WAM2layers/WAM2layers/pull/204))
 
 ### Removed
 
