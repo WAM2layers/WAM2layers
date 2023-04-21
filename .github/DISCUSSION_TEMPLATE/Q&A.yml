@@ -1,0 +1,6 @@
+body:
+  - type: markdown
+    attributes:
+      description: "Before posting any questions: Please check the flow chart in the readme"
+    validations:
+      required: true
