@@ -1,7 +1,9 @@
-from wam2layers.preprocessing.era5 import midpoints, get_edges, load_era5_ab
-from numpy.testing import assert_array_equal, assert_almost_equal
 import numpy as np
 import pytest
+from numpy.testing import assert_almost_equal, assert_array_equal
+
+from wam2layers.preprocessing.era5 import get_edges, load_era5_ab, midpoints
+
 
 def test_midponits():
     a = np.array([1, 2, 3])

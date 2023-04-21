@@ -1,8 +1,9 @@
-from pydantic import BaseModel, FilePath, validator
-import yaml
 from datetime import datetime
-from typing import Literal, Union
 from pathlib import Path
+from typing import Literal, Union
+
+import yaml
+from pydantic import BaseModel, FilePath, validator
 
 
 class Config(BaseModel):
@@ -317,12 +318,12 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @validator('preprocessed_data_folder', 'region', 'output_folder')
+    @validator("preprocessed_data_folder", "region", "output_folder")
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
 
-    @validator('preprocessed_data_folder', 'output_folder')
+    @validator("preprocessed_data_folder", "output_folder")
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
