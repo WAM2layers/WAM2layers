@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Documentation for developers ([#172](https://github.com/WAM2layers/WAM2layers/pull/172))
+
+### Removed
+
+- EC-Earth preprocessing script ([#195](https://github.com/WAM2layers/WAM2layers/pull/195))
+
+### Fixed
+
+- Datetime fields in example config file ([#194](https://github.com/WAM2layers/WAM2layers/pull/194))
+
+
 ## Release v3.0.0-beta.3 (2022-12-02)
 
 ### Fixed (patch version, bugs)
