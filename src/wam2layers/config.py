@@ -112,7 +112,6 @@ class Config(BaseModel):
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
-    When forward tracking the track_end_date is not written out as output date.
 
     For example:
 
