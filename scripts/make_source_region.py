@@ -45,18 +45,19 @@ The methods are:
     is drawn around this center point. Take care that no emphasis is set on borders between sea/land.
 """
 
-import numpy as np                                      #used for array calculations
-import matplotlib.pyplot as plt                         #used for plotting purposes
-import xarray as xr                                     #used to read .nc files
-import cartopy.crs as ccrs                              #used for plotting on a map
+import numpy as np  # used for array calculations
+import matplotlib.pyplot as plt  # used for plotting purposes
+import xarray as xr  # used to read .nc files
+import cartopy.crs as ccrs  # used for plotting on a map
 from cartopy import feature as cfeature
-import regionmask                                       #used for region mapping
-import matplotlib.patheffects as pe                     #additional plotting functionalities
-import geopandas as gpd                                 #reading shapefiles
+import regionmask  # used for region mapping
+import matplotlib.patheffects as pe  # additional plotting functionalities
+import geopandas as gpd  # reading shapefiles
 
 
-def mask_with_regionmask(region_source,region_names,preprocessfile, output_directory, plotting):
-
+def mask_with_regionmask(
+    region_source, region_names, preprocessfile, output_directory, plotting
+):
     """
     Source region by using a named region from regionmask.
 
@@ -93,39 +94,43 @@ def mask_with_regionmask(region_source,region_names,preprocessfile, output_direc
 
     """
 
-
-    #Retrieve file dimensions
+    # Retrieve file dimensions
     file = xr.open_dataset(preprocessfile)
 
     longitude = np.array(file.longitude)
     latitude = np.array(file.latitude)
 
-    #Set available regions
+    # Set available regions
     try:
-        available_regions = getattr(regionmask.defined_regions,region_source)
+        available_regions = getattr(regionmask.defined_regions, region_source)
     except:
-        raise KeyError('region_source not specified correctly, please check the "regionmask.defined_regions" options in the Region Mask documentation for more details')
+        raise KeyError(
+            'region_source not specified correctly, please check the "regionmask.defined_regions" options in the Region Mask documentation for more details'
+        )
 
-    #create (a) mask(s) of the required region(s):
-    mask = getattr(available_regions,'mask_3D')(longitude, latitude)
+    # create (a) mask(s) of the required region(s):
+    mask = getattr(available_regions, "mask_3D")(longitude, latitude)
 
-    #Specify region ID - what to store
-    region_ids = np.array(region_names)-1
-    region_ids=region_ids.tolist()
+    # Specify region ID - what to store
+    region_ids = np.array(region_names) - 1
+    region_ids = region_ids.tolist()
 
-    if type(region_ids)==int:
-        raise KeyError('region_names not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!')
+    if type(region_ids) == int:
+        raise KeyError(
+            "region_names not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
+        )
 
     new_masks = mask.isel(region=region_ids).values
 
-    #Make WAM2Layers fitting
-    new_masks = np.where(new_masks == False, 0, 1)                          #Replace True and False by 1 and 0's
-    new_masks = np.nanmean(new_masks,axis=0)                                #Multiple masks into 1D array
+    # Make WAM2Layers fitting
+    new_masks = np.where(
+        new_masks == False, 0, 1
+    )  # Replace True and False by 1 and 0's
+    new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
-    #Plot as a check
+    # Plot as a check
     if plotting == True:
-
-        #Visualise all regions available
+        # Visualise all regions available
 
         fontsizes = 10
         pads = 20
@@ -143,38 +148,44 @@ def mask_with_regionmask(region_source,region_names,preprocessfile, output_direc
 
         mask_plot = new_masks
 
-
-        ax.contourf(longitude,latitude,mask_plot,levels=[0.1,1])
-        ax.set_ylim(latitude[0],latitude[-1])
-        ax.set_xlim(longitude[0],longitude[-1])
+        ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1])
+        ax.set_ylim(latitude[0], latitude[-1])
+        ax.set_xlim(longitude[0], longitude[-1])
         ax.invert_yaxis()
 
-        #Grid
-        gl = ax.gridlines(draw_labels=True,alpha=0.5, linestyle=':', color='k')
+        # Grid
+        gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
         gl.top_labels = False
         gl.right_labels = False
-        gl.xlabel_style = {'size': fontsizes}
-        gl.ylabel_style = {'size': fontsizes}
+        gl.xlabel_style = {"size": fontsizes}
+        gl.ylabel_style = {"size": fontsizes}
 
-        plt.savefig(output_directory+'mask_with_regionmask_selected_region(s).png',dpi=200,bbox_inches='tight')
+        plt.savefig(
+            output_directory + "mask_with_regionmask_selected_region(s).png",
+            dpi=200,
+            bbox_inches="tight",
+        )
 
-    #Export as source region for WAM2Layers
+    # Export as source region for WAM2Layers
 
     # create xarray dataset
     data = new_masks
 
-    export = xr.Dataset({'source_region': (['latitude', 'longitude'], data.astype(float))})
+    export = xr.Dataset(
+        {"source_region": (["latitude", "longitude"], data.astype(float))}
+    )
 
     # set coordinates
-    export['longitude'] = ('longitude', longitude)
-    export['latitude'] = ('latitude', latitude)
+    export["longitude"] = ("longitude", longitude)
+    export["latitude"] = ("latitude", latitude)
 
-    #save to NetCDF file
-    export.to_netcdf(output_directory+'source_region.nc')
+    # save to NetCDF file
+    export.to_netcdf(output_directory + "source_region.nc")
 
 
-def mask_with_shapefile(shapefile,region_names,preprocessfile, output_directory, plotting):
-
+def mask_with_shapefile(
+    shapefile, region_names, preprocessfile, output_directory, plotting
+):
     """
     Mask source region using a shapefile.
 
@@ -205,42 +216,47 @@ def mask_with_shapefile(shapefile,region_names,preprocessfile, output_directory,
     This option can be turned 'True' or 'False' depending on whether you want to plot your source region to see the end result. This can be used as a visual inspection to verify that the correct soruce region is generated.
 
     """
-    #Retrieve file dimensions
+    # Retrieve file dimensions
     file = xr.open_dataset(preprocessfile)
 
     longitude = np.array(file.longitude)
     latitude = np.array(file.latitude)
 
-    #Read shapefile
-    ds = gpd.read_file(shapefile)                    #load shape file
+    # Read shapefile
+    ds = gpd.read_file(shapefile)  # load shape file
 
-    #Generate mask
+    # Generate mask
     mask = regionmask.mask_3D_geopandas(ds, longitude, latitude)
 
-    #Specify region ID - what to store
+    # Specify region ID - what to store
     if region_names != False:
         region_ids = np.array(region_names)
-        region_ids=region_ids.tolist()
+        region_ids = region_ids.tolist()
 
-        if type(region_ids)==int:
-            raise KeyError('region_names not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!')
+        if type(region_ids) == int:
+            raise KeyError(
+                "region_names not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
+            )
 
         new_masks = mask.isel(region=region_ids).values
 
-        #Make WAM2Layers fitting
-        new_masks = np.where(new_masks == False, 0, 1)                          #Replace True and False by 1 and 0's
-        new_masks = np.nanmean(new_masks,axis=0)                                #Multiple masks into 1D array
+        # Make WAM2Layers fitting
+        new_masks = np.where(
+            new_masks == False, 0, 1
+        )  # Replace True and False by 1 and 0's
+        new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
     else:
         new_masks = mask.isel(region=[0]).values
 
-        #Make WAM2Layers fitting
-        new_masks = np.where(new_masks == False, 0, 1)                          #Replace True and False by 1 and 0's
-        new_masks = np.nanmean(new_masks,axis=0)                                #Multiple masks into 1D array
+        # Make WAM2Layers fitting
+        new_masks = np.where(
+            new_masks == False, 0, 1
+        )  # Replace True and False by 1 and 0's
+        new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
-    #Plot as a check
+    # Plot as a check
     if plotting == True:
-
-        #Visualise all regions available
+        # Visualise all regions available
 
         fontsizes = 10
         pads = 20
@@ -249,47 +265,58 @@ def mask_with_shapefile(shapefile,region_names,preprocessfile, output_directory,
         ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
         # Make figure
-        ax.add_feature(cfeature.LAND, zorder=1, edgecolor='k',facecolor='w')
+        ax.add_feature(cfeature.LAND, zorder=1, edgecolor="k", facecolor="w")
 
-        ax.add_feature(cfeature.COASTLINE,zorder=2,linewidth=0.8)
-        ax.add_feature(cfeature.BORDERS,zorder=2,linewidth=0.2,alpha=0.5)
-        ax.add_feature(cfeature.RIVERS,zorder=2,linewidth=3,alpha=0.5)
-        ax.add_feature(cfeature.STATES,zorder=2,facecolor='w')
-        ax.add_feature(cfeature.LAKES,zorder=2,linewidth=0.8,edgecolor='k',alpha=0.5,facecolor='w')
+        ax.add_feature(cfeature.COASTLINE, zorder=2, linewidth=0.8)
+        ax.add_feature(cfeature.BORDERS, zorder=2, linewidth=0.2, alpha=0.5)
+        ax.add_feature(cfeature.RIVERS, zorder=2, linewidth=3, alpha=0.5)
+        ax.add_feature(cfeature.STATES, zorder=2, facecolor="w")
+        ax.add_feature(
+            cfeature.LAKES,
+            zorder=2,
+            linewidth=0.8,
+            edgecolor="k",
+            alpha=0.5,
+            facecolor="w",
+        )
         mask_plot = new_masks
 
-
-        ax.contourf(longitude,latitude,mask_plot,levels=[0.1,1])
-        ax.set_ylim(latitude[0],latitude[-1])
-        ax.set_xlim(longitude[0],longitude[-1])
+        ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1])
+        ax.set_ylim(latitude[0], latitude[-1])
+        ax.set_xlim(longitude[0], longitude[-1])
         ax.invert_yaxis()
 
-        #Grid
-        gl = ax.gridlines(draw_labels=True,alpha=0.5, linestyle=':', color='k')
+        # Grid
+        gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
         gl.top_labels = False
         gl.right_labels = False
-        gl.xlabel_style = {'size': fontsizes}
-        gl.ylabel_style = {'size': fontsizes}
+        gl.xlabel_style = {"size": fontsizes}
+        gl.ylabel_style = {"size": fontsizes}
 
-        plt.savefig(output_directory+'mask_with_shapefile_selected_region(s).png',dpi=200,bbox_inches='tight')
+        plt.savefig(
+            output_directory + "mask_with_shapefile_selected_region(s).png",
+            dpi=200,
+            bbox_inches="tight",
+        )
 
-    #Export as source region for WAM2Layers
+    # Export as source region for WAM2Layers
 
     # create xarray dataset
     data = new_masks
 
-    export = xr.Dataset({'source_region': (['latitude', 'longitude'], data.astype(float))})
+    export = xr.Dataset(
+        {"source_region": (["latitude", "longitude"], data.astype(float))}
+    )
 
     # set coordinates
-    export['longitude'] = ('longitude', longitude)
-    export['latitude'] = ('latitude', latitude)
+    export["longitude"] = ("longitude", longitude)
+    export["latitude"] = ("latitude", latitude)
 
     # save to NetCDF file
-    export.to_netcdf(output_directory+'source_region.nc')
+    export.to_netcdf(output_directory + "source_region.nc")
 
 
 def mask_around_point(centerpoint, radius, preprocessfile, output_directory, plotting):
-
     """
     Mask source region using a center point with a given radius.
 
@@ -320,27 +347,28 @@ def mask_around_point(centerpoint, radius, preprocessfile, output_directory, plo
 
     """
 
-    #Retrieve file dimensions
+    # Retrieve file dimensions
     file = xr.open_dataset(preprocessfile)
 
     longitude_r = np.array(file.longitude)
     latitude_r = np.array(file.latitude)
 
     # Create a grid of latitudes and longitudes
-    longitude, latitude = np.meshgrid(longitude_r,latitude_r)
+    longitude, latitude = np.meshgrid(longitude_r, latitude_r)
 
     # retrieve latitude and longitude from ceterpoint
-    center_lat,center_lon = centerpoint
+    center_lat, center_lon = centerpoint
 
     # Set the square region of value 1 in the mask
-    mask = (np.abs(latitude - center_lat) <= radius) & (np.abs(longitude - center_lon) <= radius)
+    mask = (np.abs(latitude - center_lat) <= radius) & (
+        np.abs(longitude - center_lon) <= radius
+    )
 
-    new_masks = np.where(mask == False, 0, 1)                      #Replace True and False by 1 and 0's
+    new_masks = np.where(mask == False, 0, 1)  # Replace True and False by 1 and 0's
 
-    #Plot as a check
+    # Plot as a check
     if plotting == True:
-
-        #Visualise all regions available
+        # Visualise all regions available
 
         fontsizes = 10
         pads = 20
@@ -349,50 +377,71 @@ def mask_around_point(centerpoint, radius, preprocessfile, output_directory, plo
         ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
         # Make figure
-        ax.add_feature(cfeature.LAND, zorder=1, edgecolor='k',facecolor='w')
+        ax.add_feature(cfeature.LAND, zorder=1, edgecolor="k", facecolor="w")
 
-        ax.add_feature(cfeature.COASTLINE,zorder=2,linewidth=0.8)
-        ax.add_feature(cfeature.BORDERS,zorder=2,linewidth=0.2,alpha=0.5)
-        ax.add_feature(cfeature.RIVERS,zorder=2,linewidth=3,alpha=0.5)
-        ax.add_feature(cfeature.STATES,zorder=2,facecolor='w')
-        ax.add_feature(cfeature.LAKES,zorder=2,linewidth=0.8,edgecolor='k',alpha=0.5,facecolor='w')
+        ax.add_feature(cfeature.COASTLINE, zorder=2, linewidth=0.8)
+        ax.add_feature(cfeature.BORDERS, zorder=2, linewidth=0.2, alpha=0.5)
+        ax.add_feature(cfeature.RIVERS, zorder=2, linewidth=3, alpha=0.5)
+        ax.add_feature(cfeature.STATES, zorder=2, facecolor="w")
+        ax.add_feature(
+            cfeature.LAKES,
+            zorder=2,
+            linewidth=0.8,
+            edgecolor="k",
+            alpha=0.5,
+            facecolor="w",
+        )
         mask_plot = new_masks
 
-        ax.contourf(longitude_r,latitude_r,mask_plot,levels=[0.1,1])
-        ax.set_ylim(latitude_r[0],latitude_r[-1])
-        ax.set_xlim(longitude_r[0],longitude_r[-1])
+        ax.contourf(longitude_r, latitude_r, mask_plot, levels=[0.1, 1])
+        ax.set_ylim(latitude_r[0], latitude_r[-1])
+        ax.set_xlim(longitude_r[0], longitude_r[-1])
         ax.invert_yaxis()
 
-        ax.plot(center_lon,center_lat, marker='o', markerfacecolor="r", markeredgecolor="k",linestyle="None",markersize=radius*0.5)
+        ax.plot(
+            center_lon,
+            center_lat,
+            marker="o",
+            markerfacecolor="r",
+            markeredgecolor="k",
+            linestyle="None",
+            markersize=radius * 0.5,
+        )
 
-        #Grid
-        gl = ax.gridlines(draw_labels=True,alpha=0.5, linestyle=':', color='k')
+        # Grid
+        gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
         gl.top_labels = False
         gl.right_labels = False
-        gl.xlabel_style = {'size': fontsizes}
-        gl.ylabel_style = {'size': fontsizes}
+        gl.xlabel_style = {"size": fontsizes}
+        gl.ylabel_style = {"size": fontsizes}
 
-        plt.savefig(output_directory+'mask_around_point_selected_region(s).png',dpi=200,bbox_inches='tight')
+        plt.savefig(
+            output_directory + "mask_around_point_selected_region(s).png",
+            dpi=200,
+            bbox_inches="tight",
+        )
 
-    #Export as source region for WAM2Layers
+    # Export as source region for WAM2Layers
 
     # create xarray dataset
     data = new_masks
 
-    export = xr.Dataset({'source_region': (['latitude', 'longitude'], data.astype(float))})
+    export = xr.Dataset(
+        {"source_region": (["latitude", "longitude"], data.astype(float))}
+    )
 
     # set coordinates
-    export['longitude'] = ('longitude', longitude_r)
-    export['latitude'] = ('latitude', latitude_r)
+    export["longitude"] = ("longitude", longitude_r)
+    export["latitude"] = ("latitude", latitude_r)
 
     # save to NetCDF file
-    export.to_netcdf(output_directory+'source_region.nc')
+    export.to_netcdf(output_directory + "source_region.nc")
 
 
-input_file = '/home/peter/wam2layers/floodcase_202107/preprocessed_data/2021-07-01_fluxes_storages.nc'
-output_directory = '/home/peter/wam2layers/test_regionmask/'
-shapefile = 'hybas_af_lev01_v1c.shp'
+input_file = "/home/peter/wam2layers/floodcase_202107/preprocessed_data/2021-07-01_fluxes_storages.nc"
+output_directory = "/home/peter/wam2layers/test_regionmask/"
+shapefile = "hybas_af_lev01_v1c.shp"
 
 # mask_with_regionmask('giorgi',[1],input_file, output_directory, plotting=True)
 # mask_with_shapefile(shapefile,False,input_file', output_directory,plotting=True)
-mask_around_point((51,5), 5, input_file,output_directory, plotting=True)
+mask_around_point((51, 5), 5, input_file, output_directory, plotting=True)
