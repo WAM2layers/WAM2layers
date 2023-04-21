@@ -39,6 +39,7 @@ dependencies = [
     "psutil",
     "matplotlib",
     "cmocean",
+    "regionmask",
 ]
 
 [project.optional-dependencies]
