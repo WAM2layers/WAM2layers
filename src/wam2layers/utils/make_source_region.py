@@ -45,14 +45,14 @@ The methods are:
     is drawn around this center point. Take care that no emphasis is set on borders between sea/land.
 """
 
-import numpy as np  # used for array calculations
-import matplotlib.pyplot as plt  # used for plotting purposes
-import xarray as xr  # used to read .nc files
 import cartopy.crs as ccrs  # used for plotting on a map
-from cartopy import feature as cfeature
-import regionmask  # used for region mapping
-import matplotlib.patheffects as pe  # additional plotting functionalities
 import geopandas as gpd  # reading shapefiles
+import matplotlib.patheffects as pe  # additional plotting functionalities
+import matplotlib.pyplot as plt  # used for plotting purposes
+import numpy as np  # used for array calculations
+import regionmask  # used for region mapping
+import xarray as xr  # used to read .nc files
+from cartopy import feature as cfeature
 
 
 def mask_with_regionmask(
@@ -129,7 +129,7 @@ def mask_with_regionmask(
     new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
     # Plot as a check
-    if plotting == True:
+    if plotting:
         # Visualise all regions available
 
         fontsizes = 10
@@ -181,6 +181,7 @@ def mask_with_regionmask(
 
     # save to NetCDF file
     export.to_netcdf(output_directory + "source_region.nc")
+    return ax
 
 
 def mask_with_shapefile(
@@ -315,40 +316,35 @@ def mask_with_shapefile(
     # save to NetCDF file
     export.to_netcdf(output_directory + "source_region.nc")
 
-
-def mask_around_point(centerpoint, radius, preprocessfile, output_directory, plotting):
-    """
-    Mask source region using a center point with a given radius.
-
-    This function builds a source region based a given coordinates and radius --> squared shape.
-
-    The properties in this function indicate the following:
-
-    centerpoint: (latitude,longitude)
-
-    Please provide here a centerpoint (in a tuple, (latitude,longitude)) from where the squared source region should be drawn.
-
-    ###########################################################################
-
-    radius:
-    Please provide here the radius (how many degrees) the squared region should be drawn around the centerpoint, e.g., 20 degrees. (Note, this will be done in both latitude and longitude!)
+    return ax
 
 
-    ###########################################################################
+def mask_around_point(
+    centerpoint,
+    radius,
+    reference_file,
+    output_file="source_region.nc",
+    return_plot=False,
+):
+    """Mask source region using a center point with a given radius.
 
-    preprocessfile:
+    This function builds a square source region based on given coordinates and
+    radius and stores it the output file.
 
-    Please provide here a reference file of the preprocessing which is used to extract the dimensions of the data used. This step is required to put the source region back into the data dimensions.
+    Args:
+        centerpoint: Coordinates of the central point (latitude, longitude).
+        radius (int): distance from center to edges of square box in degrees.
+        reference_file: a reference file of the preprocessing which is used to
+            extract the dimensions of the data used.
+        output_file: path where to store the regionmask file.
+        return plot: if true, return a plot that shows the source region on a map.
 
-    ###########################################################################
-
-    plotting:
-    This option can be turned 'True' or 'False' depending on whether you want to plot your source region to see the end result. This can be used as a visual inspection to verify that the correct soruce region is generated.
-
+    Returns:
+        axes on which the region is plotted if `plotted` is True
     """
 
     # Retrieve file dimensions
-    file = xr.open_dataset(preprocessfile)
+    file = xr.open_dataset(reference_file)
 
     longitude_r = np.array(file.longitude)
     latitude_r = np.array(file.latitude)
@@ -366,8 +362,25 @@ def mask_around_point(centerpoint, radius, preprocessfile, output_directory, plo
 
     new_masks = np.where(mask == False, 0, 1)  # Replace True and False by 1 and 0's
 
-    # Plot as a check
-    if plotting == True:
+    # Export as source region for WAM2Layers
+
+    # create xarray dataset
+    data = new_masks
+
+    export = xr.Dataset(
+        {"source_region": (["latitude", "longitude"], data.astype(float))}
+    )
+
+    # set coordinates
+    export["longitude"] = ("longitude", longitude_r)
+    export["latitude"] = ("latitude", latitude_r)
+
+    # save to NetCDF file
+    export.to_netcdf(output_file)
+
+    print(f"Stored source region in {output_file}.")
+
+    if return_plot:
         # Visualise all regions available
 
         fontsizes = 10
@@ -414,34 +427,4 @@ def mask_around_point(centerpoint, radius, preprocessfile, output_directory, plo
         gl.right_labels = False
         gl.xlabel_style = {"size": fontsizes}
         gl.ylabel_style = {"size": fontsizes}
-
-        plt.savefig(
-            output_directory + "mask_around_point_selected_region(s).png",
-            dpi=200,
-            bbox_inches="tight",
-        )
-
-    # Export as source region for WAM2Layers
-
-    # create xarray dataset
-    data = new_masks
-
-    export = xr.Dataset(
-        {"source_region": (["latitude", "longitude"], data.astype(float))}
-    )
-
-    # set coordinates
-    export["longitude"] = ("longitude", longitude_r)
-    export["latitude"] = ("latitude", latitude_r)
-
-    # save to NetCDF file
-    export.to_netcdf(output_directory + "source_region.nc")
-
-
-input_file = "/home/peter/wam2layers/floodcase_202107/preprocessed_data/2021-07-01_fluxes_storages.nc"
-output_directory = "/home/peter/wam2layers/test_regionmask/"
-shapefile = "hybas_af_lev01_v1c.shp"
-
-# mask_with_regionmask('giorgi',[1],input_file, output_directory, plotting=True)
-# mask_with_shapefile(shapefile,False,input_file', output_directory,plotting=True)
-mask_around_point((51, 5), 5, input_file, output_directory, plotting=True)
+        return ax
