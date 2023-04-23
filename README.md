@@ -4,16 +4,23 @@
 
 # Atmospheric moisture tracking
 
+https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
+
 This repository contains the source code of the WAM2layers moisture tracking
-code. This code is currently developed by a core team:
+code. It can be used to determine where
+precipitation originally evaporated (backtracking), or where evaporated moisture
+eventually ends up (forward tracking). 
+
+The animation above illustrates the concept of backtracking: you first see the water 
+content and fluxes move forward in time (left panel). Midway through, the animation 
+reverses and the moisture from the "source region" is tracked backward in time (right panel).
+
+
+This code is currently developed by a core team:
 Ruud van der Ent (Delft University of Technology)
 Imme Benedict (Wageningen University)
 Chris Weijenborg (Wageningen University)
 Peter Kalverla (Netherlands eScienceCenter)
-
-It can be used to determine where
-precipitation originally evaporated (backtracking), or where evaporated moisture
-eventually ends up (forward tracking).
 
 # How to use
 See the [documentation](http://wam2layers.rtfd.io/) for a more detailed description.
