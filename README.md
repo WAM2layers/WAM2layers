@@ -4,6 +4,8 @@
 
 # Atmospheric moisture tracking
 
+https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
+
 This repository contains the source code of the WAM2layers moisture tracking
 code. This code is currently developed by a core team:
 Ruud van der Ent (Delft University of Technology)
