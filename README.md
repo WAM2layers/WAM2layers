@@ -12,7 +12,7 @@ precipitation originally evaporated (backtracking), or where evaporated moisture
 eventually ends up (forward tracking). 
 
 The animation above illustrates the concept of backtracking: you first see the water 
-content and fluxed move forward in time (left panel). Midway through, the animation 
+content and fluxes move forward in time (left panel). Midway through, the animation 
 reverses and the moisture from the "source region" is tracked backward in time (right panel).
 
 
