@@ -7,4 +7,11 @@ assignees: ''
 
 ---
 
-If you have a question, idea or want to engage with the community, check 'Discussions' and the flowchart in the readme first. If you want to contribute to the development and know what you are doing, you are welcome to open a new issue. In any case please introduce yourself if you are a new user.
+Welcome to WAM2layers! 
+
+If you're new here, please check our [readme](https://github.com/WAM2layers/WAM2layers), 
+[documentation](https://wam2layers.readthedocs.io/en/latest/) 
+and [discussion forum](https://github.com/WAM2layers/WAM2layers/discussions) first. 
+      
+The discussion forum is a good place to ask questions, discuss ideas, or get to know the community. 
+Please introduce yourself if you are a new user, and we look forward to your contributions!
