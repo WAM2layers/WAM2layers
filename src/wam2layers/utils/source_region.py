@@ -1,30 +1,24 @@
 """
-WAM2-layers Source Region Desinger
+WAM-2layers Source Region Desinger
 
 @author: Vincent de Feiter (vincent.defeiter@wur.nl) | GitHub: vincentdefeiter
 
-Version 2.0 | 26-03-2023
+Version 4.0 | 25-05-2023
 
-Welcome to the WAM2-Layers Source Region Designer. With this designer, a source region for the WAM2-Layers model will be made. A source region,
-is defined as a region with zeros and ones. The regions with the value 1 are recognized by the model to track the precipitation events from this region solely.
+Welcome to the WAM-2Layers Source Region Designer. With this designer, a source region for the WAM-2Layers model can be made. A source region,
+is defined as a region with zeros and ones. The regions with the value 1 are recognised by the model to track the precipitation events from this region solely.
 The regions where from where no precipitation should be tracked, are denoted as 0.
 
-In this designer, a total of 3 methods (functions) can be used. See under FUNCTIONS if you would like to change the contents of the functions.
-Otherwise, you can directly go to the RUN codelines.
-
-Do not forget to provide your OUTPUT directory just below in GENERAL settings!
-
-The methods are:
-
+In this designer, a total of 3 methods can be used, which are:
     > Method 1: Using the available regions from the 'region mask' python package.
 
     Here, available regions from the 'Region Mask' Python Package (https://regionmask.readthedocs.io/en/stable/defined_scientific.html)
-    are used. You are able to specify 1 or multiple source regions.
+    are used. You are able to specify one or multiple source regions.
 
     > Method 2: Using a shapefile combined with 'geopandas' and the 'region mask' python package.
 
     Here, an available source region shapefile (downloaded from an online source) can be implemented.
-    You are avaialble to specify 1 specific region, or connect multiple (or multiple layers) of the
+    You are available to specify 1 specific region, or connect multiple (or multiple layers) of the
     shapefile as source region.
 
     Shapefiles can be retrieved from various sources, a good source is the HydroSHEDS data of the World Wide
@@ -45,6 +39,7 @@ The methods are:
     is drawn around this center point. Take care that no emphasis is set on borders between sea/land.
 """
 
+#Import
 import cartopy.crs as ccrs  # used for plotting on a map
 import geopandas as gpd  # reading shapefiles
 import matplotlib.patheffects as pe  # additional plotting functionalities
@@ -56,68 +51,59 @@ from cartopy import feature as cfeature
 
 
 def mask_with_regionmask(
-    region_source, region_names, preprocessfile, output_directory, plotting
+    region_source, regions, input_file, output_file, return_plot
 ):
+    """Source region by using a named region from regionmask.
+
+    This function builds a source region based on available regions from the Region Mask Python Package.
+    
+    Args:
+        region_source (str): indicate here a region source from the Region Mask Python Package (Giorgi, SREX, AR6, PRUDENCE).
+        regions (list): single or multiple regions as list. 
+        reference_file: a reference file of the preprocessing which is used to
+            extract the dimensions of the data used.
+        output_file: path where to store the regionmask file. 
+        return_plot: if true, return a plot that shows the source region on a map.
+    
+    Returns:
+        axes on which the region is plotted if `return_plot` is True
+    
     """
-    Source region by using a named region from regionmask.
-
-    Here, available regions from the 'Region Mask' Python Package
-    (https://regionmask.readthedocs.io/en/stable/defined_scientific.html)
-    are used. You are able to specify 1 or multiple source regions, indicated with a list [...].
-
-    The properties in this function indicate the following:
-
-    region_source:
-    Please indicate here a region source from the Region Mask Python Package (as a STRING!), which can be:
-            > Giorig Regions: The Giorgi reference regions, rectangular regions proposed in Giorgi and Francisco, 2000 were used in the third and fourth assessment reports of the Intergovernmental Panel on Climate Change (IPCC).
-            > SREX Regions: The Giorgi regions were modified using more flexible polygons in the IPCC Special Report on Managing the Risks of Extreme Events and Disasters to Advance Climate Adaptation (SREX; Seneviratne et al., 2012). A slightly modified and extended version of the SREX regions (not included in regionmask) was used for the fifth IPCC assessment report.
-            > AR6 Regions: The sixth IPCC assessment report (AR6) again updated the SREX regions in Iturbide et al., (2020), which defines 58 regions. The regions cover the land and ocean (ar6.all). In addition the regions are also divided into land (ar6.land) and ocean (ar6.ocean) categories. The numbering is kept consistent between the categories. Note that some regions are in the land and in the ocean categories (e.g. the Mediterranean).
-            > PRUDENCE Regions: The PRUDENCE regions were defined in the PRUDENCE project as European sub-areas for regional climate model output and are often used in European climate studies. They contain 8 regions, Alps (AL), British Isles (BI), Eastern Europe (EA), France (FR), Iberian Peninsula (IP), Mediterranean (MD), Mid-Europe (ME), and Scandinavia (SC).
-
-            For more information on which specific regions, check the documentation of the Region Mask Python Package.
-
-    ###########################################################################
-
-    region_names:
-    Please provide here a list '[...]' with the value(s) of the regions of interest. For example, [50,31,32]. See the package information for more details.
-
-    ###########################################################################
-
-    preprocessfile:
-
-    Please provide here a reference file of the preprocessing which is used to extract the dimensions of the data used. This step is required to put the source region back into the data dimensions.
-
-    ###########################################################################
-
-    plotting:
-    This option can be turned 'True' or 'False' depending on whether you want to plot your source region to see the end result. This can be used as a visual inspection to verify that the correct soruce region is generated.
-
-    """
-
+    
     # Retrieve file dimensions
-    file = xr.open_dataset(preprocessfile)
+    file = xr.open_dataset(input_file)
 
     longitude = np.array(file.longitude)
     latitude = np.array(file.latitude)
 
     # Set available regions
-    try:
-        available_regions = getattr(regionmask.defined_regions, region_source)
-    except:
-        raise KeyError(
-            'region_source not specified correctly, please check the "regionmask.defined_regions" options in the Region Mask documentation for more details'
-        )
+    if 'ar6' in region_source:
+        name,region_source = region_source.split('.')
+        try:
+            available_regions = getattr(regionmask.defined_regions.ar6,region_source)
+            
+        except:
+            raise KeyError(
+                'region_source not specified correctly, please check the "regionmask.defined_regions" options in the Region Mask documentation for more details'
+            )
+    else:
+        try:
+            available_regions = getattr(regionmask.defined_regions, region_source)
+        except:
+            raise KeyError(
+                'region_source not specified correctly, please check the "regionmask.defined_regions" options in the Region Mask documentation for more details'
+            )
 
     # create (a) mask(s) of the required region(s):
     mask = getattr(available_regions, "mask_3D")(longitude, latitude)
 
     # Specify region ID - what to store
-    region_ids = np.array(region_names) - 1
+    region_ids = np.array(regions) - 1
     region_ids = region_ids.tolist()
 
     if type(region_ids) == int:
         raise KeyError(
-            "region_names not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
+            "regions not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
         )
 
     new_masks = mask.isel(region=region_ids).values
@@ -128,8 +114,26 @@ def mask_with_regionmask(
     )  # Replace True and False by 1 and 0's
     new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
+    # Export as source region for WAM2Layers
+
+    # create xarray dataset
+    data = new_masks
+
+    export = xr.Dataset(
+        {"source_region": (["latitude", "longitude"], data.astype(float))}
+    )
+
+    # set coordinates
+    export["longitude"] = ("longitude", longitude)
+    export["latitude"] = ("latitude", latitude)
+
+    # save to NetCDF file
+    export.to_netcdf(output_file)
+    
+    print(f"Stored source region in {output_file}.")
+    
     # Plot as a check
-    if plotting:
+    if return_plot:
         # Visualise all regions available
 
         fontsizes = 10
@@ -160,65 +164,30 @@ def mask_with_regionmask(
         gl.xlabel_style = {"size": fontsizes}
         gl.ylabel_style = {"size": fontsizes}
 
-        plt.savefig(
-            output_directory + "mask_with_regionmask_selected_region(s).png",
-            dpi=200,
-            bbox_inches="tight",
-        )
-
-    # Export as source region for WAM2Layers
-
-    # create xarray dataset
-    data = new_masks
-
-    export = xr.Dataset(
-        {"source_region": (["latitude", "longitude"], data.astype(float))}
-    )
-
-    # set coordinates
-    export["longitude"] = ("longitude", longitude)
-    export["latitude"] = ("latitude", latitude)
-
-    # save to NetCDF file
-    export.to_netcdf(output_directory + "source_region.nc")
     return ax
 
 
 def mask_with_shapefile(
-    shapefile, region_names, preprocessfile, output_directory, plotting
+    shapefile, regions, reference_file, output_file, return_plot
 ):
+    """ Mask source region using a shapefile.
+
+    This function builds a source region based on an existing shapefile and stores the output file. 
+
+    Args:
+        shapefile: name of the shapefile. Include: .dbf, .prj, .sbn, .sbx, .shp, .shp.xml and .shx files in the input directory.
+        regions: if build up of multiple regions, indicate as list (int), otherwise FALSE. 
+        reference_file: a reference file of the preprocessing which is used to
+            extract the dimensions of the data used.
+        output_file: path where to store the regionmask file. 
+        return_plot: if true, return a plot that shows the source region on a map.
+
+    Returns:
+        axes on which the region is plotted if 'return_plot' is True.
     """
-    Mask source region using a shapefile.
-
-    This function builds a source region based on an existing shapefile. It will make use of the 'Region Mask' Python Package
-    (https://regionmask.readthedocs.io/en/stable/defined_scientific.html).
-
-    The properties in this function indicate the following:
-
-    shapefile:
-    Please indicate here the source of your shapefile. Make sure that you also have the .dbf, .prj, .sbn
-    .sbx, .shp, .shp.xml and .shx files stored in the same directory as your shapefile.
-
-    ###########################################################################
-
-    region_names:
-    Some shapefiles are build up of different regions, e.g., provinces or basins. Please provide here a list '[...]' with the value(s) of the regions of interest. For example, [50,31,32]. See the shapefile documentation for more information.
-    If there are no different regions in the shapefile, please specifiy this property as: FALSE.
-
-    ###########################################################################
-
-    preprocessfile:
-
-    Please provide here a reference file of the preprocessing which is used to extract the dimensions of the data used. This step is required to put the source region back into the data dimensions.
-
-    ###########################################################################
-
-    plotting:
-    This option can be turned 'True' or 'False' depending on whether you want to plot your source region to see the end result. This can be used as a visual inspection to verify that the correct soruce region is generated.
-
-    """
+    
     # Retrieve file dimensions
-    file = xr.open_dataset(preprocessfile)
+    file = xr.open_dataset(reference_file)
 
     longitude = np.array(file.longitude)
     latitude = np.array(file.latitude)
@@ -230,13 +199,13 @@ def mask_with_shapefile(
     mask = regionmask.mask_3D_geopandas(ds, longitude, latitude)
 
     # Specify region ID - what to store
-    if region_names != False:
-        region_ids = np.array(region_names)
+    if regions != False:
+        region_ids = np.array(regions)
         region_ids = region_ids.tolist()
 
         if type(region_ids) == int:
             raise KeyError(
-                "region_names not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
+                "regions not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
             )
 
         new_masks = mask.isel(region=region_ids).values
@@ -255,8 +224,25 @@ def mask_with_shapefile(
         )  # Replace True and False by 1 and 0's
         new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
-    # Plot as a check
-    if plotting == True:
+    # Export as source region for WAM2Layers
+
+    # create xarray dataset
+    data = new_masks
+
+    export = xr.Dataset(
+        {"source_region": (["latitude", "longitude"], data.astype(float))}
+    )
+
+    # set coordinates
+    export["longitude"] = ("longitude", longitude)
+    export["latitude"] = ("latitude", latitude)
+
+    # save to NetCDF file
+    export.to_netcdf(output_file + "source_region.nc")
+    
+    print(f"Stored source region in {output_file}.")   
+    
+    if return_plot:
         # Visualise all regions available
 
         fontsizes = 10
@@ -293,31 +279,7 @@ def mask_with_shapefile(
         gl.right_labels = False
         gl.xlabel_style = {"size": fontsizes}
         gl.ylabel_style = {"size": fontsizes}
-
-        plt.savefig(
-            output_directory + "mask_with_shapefile_selected_region(s).png",
-            dpi=200,
-            bbox_inches="tight",
-        )
-
-    # Export as source region for WAM2Layers
-
-    # create xarray dataset
-    data = new_masks
-
-    export = xr.Dataset(
-        {"source_region": (["latitude", "longitude"], data.astype(float))}
-    )
-
-    # set coordinates
-    export["longitude"] = ("longitude", longitude)
-    export["latitude"] = ("latitude", latitude)
-
-    # save to NetCDF file
-    export.to_netcdf(output_directory + "source_region.nc")
-
-    return ax
-
+        return ax
 
 def mask_around_point(
     centerpoint,
@@ -337,10 +299,10 @@ def mask_around_point(
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
         output_file: path where to store the regionmask file.
-        return plot: if true, return a plot that shows the source region on a map.
+        return_plot: if true, return a plot that shows the source region on a map.
 
     Returns:
-        axes on which the region is plotted if `plotted` is True
+        axes on which the region is plotted if `return_plot' is True
     """
 
     # Retrieve file dimensions
