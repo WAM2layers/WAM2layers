@@ -1,11 +1,27 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## Unrelease
+
+### Added
+
+- 
+### Removed
+
+- 
+
+### Fixed
+
+- 
+
+
+
+## Release v3.0.0-beta.4 (2023-04-21)
 
 ### Added
 
 - Documentation for developers ([#172](https://github.com/WAM2layers/WAM2layers/pull/172))
+- Check that dates are in correct order ([#204](https://github.com/WAM2layers/WAM2layers/pull/204))
 
 ### Removed
 
@@ -14,7 +30,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Datetime fields in example config file ([#194](https://github.com/WAM2layers/WAM2layers/pull/194))
-
+- Included test of config file that start time is earlier then end time ([#204](https://github.com/WAM2layers/WAM2layers/pull/204))
 
 ## Release v3.0.0-beta.3 (2022-12-02)
 

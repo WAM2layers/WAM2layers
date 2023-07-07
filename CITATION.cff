@@ -27,6 +27,8 @@ authors:
   - given-names: Liang
     family-names: Guo
     orcid: 'https://orcid.org/0000-0002-6004-3884'
+  - given-names: Vincent
+    family-names: de Feiter
   - given-names: Peter
     family-names: Kalverla
     affiliation: Netherlands eScience Center
@@ -46,7 +48,7 @@ keywords:
   - moisture recycling
   - atmospheric rivers
 license: Apache-2.0
-version: v3.0.0-beta.3
+version: v3.0.0-beta.4
 date-released: '2022-08-19'
 identifiers:
   - description: Latest version of software
