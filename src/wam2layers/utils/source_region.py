@@ -1,42 +1,10 @@
 """
-WAM-2layers Source Region Desinger
+WAM-2layers Source Region Designer functions
 
 @author: Vincent de Feiter (vincent.defeiter@wur.nl) | GitHub: vincentdefeiter
 
 Version 4.0 | 25-05-2023
 
-Welcome to the WAM-2Layers Source Region Designer. With this designer, a source region for the WAM-2Layers model can be made. A source region,
-is defined as a region with zeros and ones. The regions with the value 1 are recognised by the model to track the precipitation events from this region solely.
-The regions where from where no precipitation should be tracked, are denoted as 0.
-
-In this designer, a total of 3 methods can be used, which are:
-    > Method 1: Using the available regions from the 'region mask' python package.
-
-    Here, available regions from the 'Region Mask' Python Package (https://regionmask.readthedocs.io/en/stable/defined_scientific.html)
-    are used. You are able to specify one or multiple source regions.
-
-    > Method 2: Using a shapefile combined with 'geopandas' and the 'region mask' python package.
-
-    Here, an available source region shapefile (downloaded from an online source) can be implemented.
-    You are available to specify 1 specific region, or connect multiple (or multiple layers) of the
-    shapefile as source region.
-
-    Shapefiles can be retrieved from various sources, a good source is the HydroSHEDS data of the World Wide
-    Fund for Nature (WWF). The HydroSHEDS data supplies shapefiles of numerous river basins:
-    Can be obtained via https://www.hydrosheds.org/products/hydrobasins.
-
-    Lehner, B., Grill G. (2013): Global river hydrography and network routing: baseline data and
-    new approaches to study the world’s large river systems. Hydrological Processes, 27(15):
-    2171–2186. Data is available at www.hydrosheds.org.
-
-    NOTE: The data from HydroSHEDS is provided in Pfafstetter coded level. The shapefile becomes more complex,
-    e.g., more smaller regions are drawn, with each increment in level (higher level). See documentation for
-    more information.
-
-    > Method 3: Center point and a squared perimeter around it.
-
-    Here, a set center point (see settings) is set, after which a squared region (depending on the number of degrees)
-    is drawn around this center point. Take care that no emphasis is set on borders between sea/land.
 """
 
 #Import
