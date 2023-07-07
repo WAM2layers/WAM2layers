@@ -1,11 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unrelease
+## Unreleased
 
 ### Added
 
-- 
+- flowchart for users on the readme
+
 ### Removed
 
 - 
