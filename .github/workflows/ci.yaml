@@ -34,5 +34,6 @@ jobs:
         run: |
           gdown -O ~/wam2layers --folder https://rebrand.ly/wam2layers-example-data
       - name: Run test case
-        working-directory: ~/wam2layers
-        run: wam2layers backtrack floodcase_202107.yaml
+        run: |
+          cd ~/wam2layers/
+          wam2layers backtrack floodcase_202107.yaml
