@@ -23,19 +23,19 @@ keywords = [
   "moisture recycling",
   "moisture tracking",
 ]
-requires-python = ">=3.8,<3.10"
+requires-python = ">=3.8"
 dependencies = [
     "numpy",
     "pyyaml",
     "scipy",
     "pandas>=1.4.0",
-    "xarray", # or xarray[io,parallel,complete,...]
+    "xarray",
     "netcdf4",
     "scipy",
     "click",
     "pydantic",
-    "dask>=2022.11",
-    "distributed>=2022.11",
+    "dask",
+    "distributed",
     "psutil",
     "matplotlib",
     "cmocean",
