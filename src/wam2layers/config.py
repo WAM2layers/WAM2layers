@@ -1,11 +1,8 @@
-from pydantic import BaseModel, FilePath, validator, root_validator
+from pydantic import field_validator, ConfigDict, BaseModel, FilePath, root_validator
 import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Literal, Union
-
-import yaml
-from pydantic import BaseModel, FilePath, validator
 
 
 class Config(BaseModel):
@@ -319,12 +316,14 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @validator("preprocessed_data_folder", "region", "output_folder")
+    @field_validator("preprocessed_data_folder", "region", "output_folder")
+    @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
 
-    @validator("preprocessed_data_folder", "output_folder")
+    @field_validator("preprocessed_data_folder", "output_folder")
+    @classmethod
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
@@ -342,13 +341,5 @@ class Config(BaseModel):
                 raise ValueError("End date should be later than start date.")
 
         return values
-
-    class Config:
-        """This is the config of the **Pydantic** class, not the wam2layers config.
-
-        Note: this will change in v2
-        https://docs.pydantic.dev/blog/pydantic-v2-alpha/#changes-to-config
-        """
-        # Also force validation when new value is set on existing config
-        validate_assignment = True
+    model_config = ConfigDict(validate_assignment=True)
 
