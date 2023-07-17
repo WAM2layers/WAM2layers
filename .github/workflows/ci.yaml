@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-
+        # python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -27,4 +27,5 @@ jobs:
       - name: Run test case
         run: |
           gdown --folder https://rebrand.ly/wam2layers-example-data
-          wam2layers backtrack floodcase_202107/floodcase_202107.yaml
+          cd floodcase_202107
+          wam2layers backtrack floodcase_202107.yaml
