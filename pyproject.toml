@@ -28,7 +28,7 @@ dependencies = [
     "numpy",
     "pyyaml",
     "scipy",
-    "pandas>=1.4.0",
+    "pandas",
     "xarray",
     "netcdf4",
     "scipy",
