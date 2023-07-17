@@ -50,7 +50,7 @@ develop = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
-    "myst-nb==0.16.0",
+    "myst-nb",
     "pytest",
     "flake8",
     "build",
