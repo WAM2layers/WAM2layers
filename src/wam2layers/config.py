@@ -1,4 +1,4 @@
-from pydantic import field_validator, ConfigDict, BaseModel, FilePath, root_validator
+from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_validator
 import yaml
 from datetime import datetime
 from pathlib import Path
@@ -6,6 +6,10 @@ from typing import Literal, Union
 
 
 class Config(BaseModel):
+    # Pydantic configuration
+    model_config = ConfigDict(validate_assignment=True)
+
+    # Configuration settings
     filename_template: str
     """The filename pattern of the raw input data.
 
@@ -331,15 +335,14 @@ class Config(BaseModel):
             path.mkdir(parents=True)
         return path
 
-    @root_validator
-    def check_date_order(cls, values):
-        for date_field in ['track', 'event', 'preprocess']:
-            start = values.get(f'{date_field}_start_date')
-            end = values.get(f'{date_field}_end_date')
+    @model_validator(mode='after')
+    def check_date_order(self):
+        if self.track_start_date > self.track_end_date:
+            raise ValueError("track_end_date should be later than track_start_date")
+        if self.event_start_date > self.event_end_date:
+            raise ValueError("event_end_date should be later than event_start_date")
+        if self.preprocess_start_date > self.preprocess_end_date:
+            raise ValueError("preprocess_end_date should be later than preprocess_start_date")
 
-            if not start < end:
-                raise ValueError("End date should be later than start date.")
-
-        return values
-    model_config = ConfigDict(validate_assignment=True)
+        return self
 
