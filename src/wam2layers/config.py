@@ -2,7 +2,7 @@ from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_val
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal, Union
+from typing import List, Literal, Optional, Union
 
 
 class Config(BaseModel):
@@ -277,7 +277,7 @@ class Config(BaseModel):
 
     """
 
-    chunks: "Union[None, dict[str, int]]"
+    chunks: Optional[dict[str, int]]
     """Whether to use dask.
 
     Using dask can help process large datasets without memory issues, but its
