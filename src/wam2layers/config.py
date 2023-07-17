@@ -2,7 +2,7 @@ from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_val
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, Union
+from typing import List, Literal, Union
 
 
 class Config(BaseModel):
@@ -215,7 +215,7 @@ class Config(BaseModel):
 
     """
 
-    levels: "Union[list[int], Literal['All']]"
+    levels: "Union[List[int], Literal['All']]"
     """Which levels to use from the raw input data.
 
     A list of integers corresponding to the levels in the input data, or a
