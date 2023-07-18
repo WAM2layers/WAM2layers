@@ -37,6 +37,7 @@ def output_path(date, config):
     output_dir = config.output_folder
     return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H:%M')}.nc"
 
+
 # LRU Cache keeps the file open so we save a bit on I/O
 @lru_cache(maxsize=2)
 def read_data_at_date(d):
@@ -280,7 +281,6 @@ def backtrack(
     region,
     output,
 ):
-
     # Unpack input data
     fx_upper = fluxes["fx_upper"].values
     fy_upper = fluxes["fy_upper"].values
@@ -467,7 +467,6 @@ def run_experiment(config_file):
 
     progress_tracker = ProgressTracker(output)
     for t in reversed(tracking_dates):
-
         fluxes = load_fluxes(t)
         states_prev, states_next = load_states(t)
 
