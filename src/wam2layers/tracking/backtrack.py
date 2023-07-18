@@ -1,15 +1,13 @@
 from functools import lru_cache
-from pathlib import Path
 
 import click
 import numpy as np
 import pandas as pd
 import xarray as xr
-import yaml
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.utils.profiling import Profiler, ProgressTracker
+from wam2layers.utils.profiling import ProgressTracker
 
 
 def get_tracking_dates(config):
@@ -504,10 +502,12 @@ def run_experiment(config_file):
         )
 
         # Daily output
-        if t == t.floor(config.output_frequency):
+        if t == t.floor(config.output_frequency) or t == tracking_dates[0]:
             progress_tracker.print_progress(t, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t)
+
+    print("Experiment complete.")
 
 
 ###########################################################################
