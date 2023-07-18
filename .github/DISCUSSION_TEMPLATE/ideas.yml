@@ -1,0 +1,9 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to WAM2layers! 
+        If you're new here, please check our [readme](https://github.com/WAM2layers/WAM2layers), 
+        [documentation](https://wam2layers.readthedocs.io/en/latest/) first. 
+        Perhaps, the idea you'd like to suggest is already an outstanding issue, please check [issues](https://github.com/WAM2layers/WAM2layers/issues)
+        Still have ideas? Please introduce yourself if you are a new user, and share your idea as clearly as possible. 
