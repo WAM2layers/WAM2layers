@@ -227,6 +227,14 @@ def stabilize_fluxes(current, previous):
         fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
 
+        corrected = fy_corrected < fy_abs
+        corrected_percent = corrected.sum() / corrected.count() * 100
+        correction = np.where(corrected, fy_abs - fy_corrected, 0)
+        logger.debug(
+            f"Stability correction applied to {corrected_percent:.1f}% of "
+            f"{level} layer, average correction was {correction.mean():.1f}"
+        )
+
         # Get rid of any nan values
         fx_stable.fillna(0)
         fy_stable.fillna(0)
@@ -379,7 +387,7 @@ def backtrack(
         fy_s_upper_sn * s_track_relative_upper + fy_s_lower_sn * s_track_relative_lower
     )[-2, :]
 
-    if config.periodic_boundary == False:
+    if config.periodic_boundary is False:
         output["east_loss"] += (
             f_e_upper_ew * s_track_relative_upper
             + f_e_lower_ew * s_track_relative_lower
