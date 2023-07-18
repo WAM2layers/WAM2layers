@@ -10,6 +10,9 @@ from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import input_path, load_region, output_path
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def try_import_cartopy():
     """Import cartopy if it is available; else raise."""
@@ -171,7 +174,7 @@ def visualize_snapshots(config_file):
     out_dir.mkdir(exist_ok=True, parents=True)
 
     for date in dates:
-        print(date)
+        logger.info(date)
         ds_in = xr.open_dataset(input_path(date, config))
         ds_out = xr.open_dataset(output_path(date, config))
 

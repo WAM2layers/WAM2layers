@@ -3,7 +3,8 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
-
+import logging
+logger = logging.getLogger(__name__)
 
 class Config(BaseModel):
     # Pydantic configuration
@@ -331,7 +332,7 @@ class Config(BaseModel):
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
-            print(f"Creating output folder {path}")
+            logger.info(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
 

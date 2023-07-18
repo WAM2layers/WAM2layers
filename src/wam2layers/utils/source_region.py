@@ -17,6 +17,9 @@ import regionmask  # used for region mapping
 import xarray as xr  # used to read .nc files
 from cartopy import feature as cfeature
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def mask_with_regionmask(
     region_source, regions, input_file, output_file, return_plot
@@ -24,20 +27,20 @@ def mask_with_regionmask(
     """Source region by using a named region from regionmask.
 
     This function builds a source region based on available regions from the Region Mask Python Package.
-    
+
     Args:
         region_source (str): indicate here a region source from the Region Mask Python Package (Giorgi, SREX, AR6, PRUDENCE).
-        regions (list): single or multiple regions as list. 
+        regions (list): single or multiple regions as list.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the regionmask file. 
+        output_file: path where to store the regionmask file.
         return_plot: if true, return a plot that shows the source region on a map.
-    
+
     Returns:
         axes on which the region is plotted if `return_plot` is True
-    
+
     """
-    
+
     # Retrieve file dimensions
     file = xr.open_dataset(input_file)
 
@@ -49,7 +52,7 @@ def mask_with_regionmask(
         name,region_source = region_source.split('.')
         try:
             available_regions = getattr(regionmask.defined_regions.ar6,region_source)
-            
+
         except:
             raise KeyError(
                 'region_source not specified correctly, please check the "regionmask.defined_regions" options in the Region Mask documentation for more details'
@@ -97,9 +100,9 @@ def mask_with_regionmask(
 
     # save to NetCDF file
     export.to_netcdf(output_file)
-    
-    print(f"Stored source region in {output_file}.")
-    
+
+    logger.info(f"Stored source region in {output_file}.")
+
     # Plot as a check
     if return_plot:
         # Visualise all regions available
@@ -140,20 +143,20 @@ def mask_with_shapefile(
 ):
     """ Mask source region using a shapefile.
 
-    This function builds a source region based on an existing shapefile and stores the output file. 
+    This function builds a source region based on an existing shapefile and stores the output file.
 
     Args:
         shapefile: name of the shapefile. Include: .dbf, .prj, .sbn, .sbx, .shp, .shp.xml and .shx files in the input directory.
-        regions: if build up of multiple regions, indicate as list (int), otherwise FALSE. 
+        regions: if build up of multiple regions, indicate as list (int), otherwise FALSE.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the regionmask file. 
+        output_file: path where to store the regionmask file.
         return_plot: if true, return a plot that shows the source region on a map.
 
     Returns:
         axes on which the region is plotted if 'return_plot' is True.
     """
-    
+
     # Retrieve file dimensions
     file = xr.open_dataset(reference_file)
 
@@ -207,9 +210,9 @@ def mask_with_shapefile(
 
     # save to NetCDF file
     export.to_netcdf(output_file + "source_region.nc")
-    
-    print(f"Stored source region in {output_file}.")   
-    
+
+    logger.info(f"Stored source region in {output_file}.")
+
     if return_plot:
         # Visualise all regions available
 
@@ -308,7 +311,7 @@ def mask_around_point(
     # save to NetCDF file
     export.to_netcdf(output_file)
 
-    print(f"Stored source region in {output_file}.")
+    logger.info(f"Stored source region in {output_file}.")
 
     if return_plot:
         # Visualise all regions available

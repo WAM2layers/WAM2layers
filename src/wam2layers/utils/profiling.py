@@ -1,7 +1,8 @@
 import time
 
 import psutil
-
+import logging
+logger = logging.getLogger(__name__)
 
 class Profiler:
     def __init__(self):
@@ -66,7 +67,7 @@ class ProgressTracker:
 
         time, memory = self.profile()
 
-        print(
+        logger.info(
             f"{t} - "
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "
             f"Lost moisture: {lost_percentage.item():.2f}%. "
