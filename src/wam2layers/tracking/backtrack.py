@@ -10,7 +10,9 @@ from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def get_tracking_dates(config):
     """Dates for tracking."""

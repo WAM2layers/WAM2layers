@@ -7,7 +7,7 @@ Version 4.0 | 25-05-2023
 
 """
 
-#Import
+# Import
 import cartopy.crs as ccrs  # used for plotting on a map
 import geopandas as gpd  # reading shapefiles
 import matplotlib.patheffects as pe  # additional plotting functionalities
@@ -18,12 +18,11 @@ import xarray as xr  # used to read .nc files
 from cartopy import feature as cfeature
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
-def mask_with_regionmask(
-    region_source, regions, input_file, output_file, return_plot
-):
+def mask_with_regionmask(region_source, regions, input_file, output_file, return_plot):
     """Source region by using a named region from regionmask.
 
     This function builds a source region based on available regions from the Region Mask Python Package.
@@ -48,10 +47,10 @@ def mask_with_regionmask(
     latitude = np.array(file.latitude)
 
     # Set available regions
-    if 'ar6' in region_source:
-        name,region_source = region_source.split('.')
+    if "ar6" in region_source:
+        name, region_source = region_source.split(".")
         try:
-            available_regions = getattr(regionmask.defined_regions.ar6,region_source)
+            available_regions = getattr(regionmask.defined_regions.ar6, region_source)
 
         except:
             raise KeyError(
@@ -138,10 +137,8 @@ def mask_with_regionmask(
     return ax
 
 
-def mask_with_shapefile(
-    shapefile, regions, reference_file, output_file, return_plot
-):
-    """ Mask source region using a shapefile.
+def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_plot):
+    """Mask source region using a shapefile.
 
     This function builds a source region based on an existing shapefile and stores the output file.
 
@@ -251,6 +248,7 @@ def mask_with_shapefile(
         gl.xlabel_style = {"size": fontsizes}
         gl.ylabel_style = {"size": fontsizes}
         return ax
+
 
 def mask_around_point(
     centerpoint,

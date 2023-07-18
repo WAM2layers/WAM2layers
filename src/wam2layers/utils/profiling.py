@@ -2,7 +2,9 @@ import time
 
 import psutil
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class Profiler:
     def __init__(self):

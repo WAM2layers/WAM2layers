@@ -17,6 +17,7 @@ from wam2layers.preprocessing.shared import (
 )
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
