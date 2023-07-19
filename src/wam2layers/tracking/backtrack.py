@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 
 import click
@@ -8,8 +9,6 @@ import xarray as xr
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -227,6 +226,7 @@ def stabilize_fluxes(current, previous):
         fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
 
+        # TODO: move this to a method on a CorrectionTracker object
         corrected = fy_corrected < fy_abs
         corrected_percent = corrected.sum() / corrected.count() * 100
         correction = np.where(corrected, fy_abs - fy_corrected, 0)
