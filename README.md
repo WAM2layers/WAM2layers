@@ -26,7 +26,7 @@ Peter Kalverla (Netherlands eScienceCenter)
 # How to use
 See the [documentation](http://wam2layers.rtfd.io/) for a more detailed description. Still questions? Follow the flowchart below.
 
-(![Uploading FlowChart GitHub.png…])
+![Uploading FlowChart GitHub.png…]
 
 
 # Other versions
