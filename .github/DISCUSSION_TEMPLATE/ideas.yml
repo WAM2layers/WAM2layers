@@ -10,7 +10,7 @@ body:
         Perhaps, the idea you'd like to suggest is already an outstanding issue, please check [issues](https://github.com/WAM2layers/WAM2layers/issues) first
   - type: textarea
     attributes: 
-    label: My idea 
-      Please introduce yourself if you are a new user, and share your idea as clearly as possible. Thank you for contributing to the community.
+      label: My idea 
+      description: "Please introduce yourself if you are a new user, and share your idea as clearly as possible. Thank you for contributing to the community."
     validations: 
       required: true
