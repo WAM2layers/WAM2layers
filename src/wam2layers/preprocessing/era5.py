@@ -171,8 +171,6 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
     q = q.assign_coords(level=np.arange(nlev))
     p = p.assign_coords(level=np.arange(nlev))
 
-    # import IPython; IPython.embed(); quit()
-
     # Calculate pressure jump
     dp = p.diff("level")
     assert np.all(dp >= 0), "Pressure levels should increase monotonically"
