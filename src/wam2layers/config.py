@@ -3,12 +3,6 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
-<<<<<<< HEAD
-import logging
-
-logger = logging.getLogger(__name__)
-=======
->>>>>>> origin/main
 
 
 class Config(BaseModel):
