@@ -1,4 +1,5 @@
 import time
+import numpy as np
 
 import psutil
 import logging
@@ -31,6 +32,8 @@ class ProgressTracker:
         self.boundary = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
+        self.stability_correction_previous_grid = 0
+        self.stability_correction_previous_value = 0
 
     def store_intermediate_states(self, output):
         """Update moisture totals based on output since previous time step.
@@ -74,4 +77,32 @@ class ProgressTracker:
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "
             f"Lost moisture: {lost_percentage.item():.2f}%. "
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
+        )
+
+    def track_stability_correction(self, fy_corrected, fy_abs):
+        """Issue warning if correction exceeds criterion.
+
+        Warning advises to reduce the timestep.
+
+        Criteria:
+        1. A correction is applied for more than 5% of the grid (first time)
+        2. Previous correction is exceeded by either 5%-point of grid
+        3. Previous correction is doubled in magnitude
+        """
+        corrected = fy_corrected < fy_abs
+        corrected_percent = corrected.sum() / corrected.count() * 100
+        correction = np.where(corrected, fy_abs - fy_corrected, 0).mean()  # todo MAX?
+
+        # Reversed conditions lead to cleaner code
+        if correction < (2 * self.stability_correction_previous_value):
+            return
+        if (corrected_percent - 5) < self.stability_correction_previous_value:
+            return
+
+        self.stability_correction_previous_grid = corrected_percent
+        self.stability_correction_previous_value = correction
+
+        logger.warn(
+            f"Stability correction applied to {corrected_percent:.1f}% of "
+            f" grid, average correction was {correction.mean():.1f}"
         )

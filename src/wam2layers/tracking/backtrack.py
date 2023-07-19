@@ -206,7 +206,7 @@ def change_units(data, target_freq):
         data[variable] = data[variable].assign_attrs(units="m**3")
 
 
-def stabilize_fluxes(current, previous):
+def stabilize_fluxes(current, previous, progress_tracker):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
@@ -226,14 +226,7 @@ def stabilize_fluxes(current, previous):
         fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
 
-        # TODO: move this to a method on a CorrectionTracker object
-        corrected = fy_corrected < fy_abs
-        corrected_percent = corrected.sum() / corrected.count() * 100
-        correction = np.where(corrected, fy_abs - fy_corrected, 0)
-        logger.debug(
-            f"Stability correction applied to {corrected_percent:.1f}% of "
-            f"{level} layer, average correction was {correction.mean():.1f}"
-        )
+        progress_tracker.track_stability_correction(fy_corrected, fy_abs)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
@@ -488,7 +481,7 @@ def run_experiment(config_file):
         change_units(fluxes, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(fluxes, states_next)
+        stabilize_fluxes(fluxes, states_next, progress_tracker)
 
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
