@@ -1,4 +1,4 @@
-![FlowChart GitHub](https://github.com/WAM2layers/WAM2layers/assets/123247866/f5cbcf8f-a45f-4e73-b304-00956b4e2ee5)![image](https://github.com/WAM2layers/WAM2layers/assets/123247866/7e9daa2a-3197-4be0-8d53-e57d48081938)[![DOI](https://zenodo.org/badge/471007521.svg)](https://zenodo.org/badge/latestdoi/471007521)
+[![DOI](https://zenodo.org/badge/471007521.svg)](https://zenodo.org/badge/latestdoi/471007521)
 [![Documentation Status](https://readthedocs.org/projects/wam2layers/badge/?version=latest)](https://wam2layers.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/pypi/v/wam2layers)](https://pypi.org/project/wam2layers/)
 
@@ -26,7 +26,7 @@ Peter Kalverla (Netherlands eScienceCenter)
 # How to use
 See the [documentation](http://wam2layers.rtfd.io/) for a more detailed description. Still questions? Follow the flowchart below.
 
-![Uploading FlowChart GitHub.png…]
+![FlowChart GitHub](https://github.com/WAM2layers/WAM2layers/assets/123247866/f5cbcf8f-a45f-4e73-b304-00956b4e2ee5)![image](https://github.com/WAM2layers/WAM2layers/assets/123247866/7e9daa2a-3197-4be0-8d53-e57d48081938)
 
 
 # Other versions
