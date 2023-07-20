@@ -1,8 +1,11 @@
+from datetime import datetime
 import time
 import numpy as np
 
 import psutil
 import logging
+
+from wam2layers.utils import load_region
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +82,7 @@ class ProgressTracker:
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 
-    def track_stability_correction(self, fy_corrected, fy_abs):
+    def track_stability_correction(self, fy_corrected, fy_abs, config):
         """Issue warning if correction exceeds criterion.
 
         Warning advises to reduce the timestep.
@@ -91,18 +94,33 @@ class ProgressTracker:
         """
         corrected = fy_corrected < fy_abs
         corrected_percent = corrected.sum() / corrected.count() * 100
-        correction = np.where(corrected, fy_abs - fy_corrected, 0).mean()  # todo MAX?
+        correction = np.where(corrected, fy_abs - fy_corrected, 0)
+        correction_max = correction.max()
 
         # Reversed conditions lead to cleaner code
-        if correction < (2 * self.stability_correction_previous_value):
+        if correction_max < (2 * self.stability_correction_previous_value):
             return
         if (corrected_percent - 5) < self.stability_correction_previous_value:
             return
 
         self.stability_correction_previous_grid = corrected_percent
-        self.stability_correction_previous_value = correction
+        self.stability_correction_previous_value = correction_max
+
+        # Write correction field to output debug file
+        # TODO: doesn't feel like the right place to do this.
+        # a model object could improve the code structure.
+        debug_dir = config.output_folder / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = debug_dir / f"stability_correction_{timestamp}.nc"
+
+        ncfile = load_region(config).rename('correction')
+        ncfile.values = correction
+        ncfile.to_netcdf(filename)
 
         logger.warn(
             f"Stability correction applied to {corrected_percent:.1f}% of "
-            f" grid, average correction was {correction.mean():.1f}"
+            f"grid. Average correction was {correction.mean():.1f}, "
+            f"maximum correction was {correction.max()}. The total "
+            f"correction field is written to {filename}."
         )

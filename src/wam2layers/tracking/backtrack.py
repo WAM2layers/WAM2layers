@@ -9,6 +9,7 @@ import xarray as xr
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
+from wam2layers.utils import load_region
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +94,6 @@ def load_states(t):
 def time_in_range(start, end, current):
     """Returns whether current is in the range [start, end]"""
     return start <= current <= end
-
-
-def load_region(config):
-    # TODO: make variable name more generic
-    return xr.open_dataset(config.region).source_region
 
 
 def to_edges_zonal(fx, periodic_boundary=False):
@@ -226,7 +222,7 @@ def stabilize_fluxes(current, previous, progress_tracker):
         fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
 
-        progress_tracker.track_stability_correction(fy_corrected, fy_abs)
+        progress_tracker.track_stability_correction(fy_corrected, fy_abs, config)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
