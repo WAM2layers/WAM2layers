@@ -229,16 +229,6 @@ class Config(BaseModel):
 
     """
 
-    log_level: Literal["debug", "info", "warning", "error", "critical"]
-    """Verbosity of the output messages.
-
-    For example:
-
-    .. code-block:: yaml
-
-        log_level: info
-    """
-
     restart: bool
     """Whether to restart from previous run.
 
