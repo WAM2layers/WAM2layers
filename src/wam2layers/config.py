@@ -1,11 +1,15 @@
-from pydantic import BaseModel, FilePath, validator
+from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_validator
 import yaml
 from datetime import datetime
-from typing import Literal, Union
 from pathlib import Path
+from typing import Dict, List, Literal, Optional, Union
 
 
 class Config(BaseModel):
+    # Pydantic configuration
+    model_config = ConfigDict(validate_assignment=True)
+
+    # Configuration settings
     filename_template: str
     """The filename pattern of the raw input data.
 
@@ -83,7 +87,7 @@ class Config(BaseModel):
     """End date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
-    The preprocess_end_date is included in the preprocessing. 
+    The preprocess_end_date is included in the preprocessing.
 
     For example:
 
@@ -112,7 +116,6 @@ class Config(BaseModel):
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
-    When forward tracking the track_end_date is not written out as output date. 
 
     For example:
 
@@ -146,7 +149,7 @@ class Config(BaseModel):
     For tracking individual (e.g. heavy precipitation) events, you can set the
     start and end date of the event to something different than the total
     tracking start and end date, you can also indicate the hours that you want to track.
-    The event_end_date is included in the event tracking. 
+    The event_end_date is included in the event tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
@@ -212,7 +215,7 @@ class Config(BaseModel):
 
     """
 
-    levels: "Union[list[int], Literal['All']]"
+    levels: "Union[List[int], Literal['All']]"
     """Which levels to use from the raw input data.
 
     A list of integers corresponding to the levels in the input data, or a
@@ -274,7 +277,7 @@ class Config(BaseModel):
 
     """
 
-    chunks: "Union[None, dict[str, int]]"
+    chunks: Optional[Dict[str, int]]
     """Whether to use dask.
 
     Using dask can help process large datasets without memory issues, but its
@@ -317,15 +320,29 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @validator('preprocessed_data_folder', 'region', 'output_folder')
+    @field_validator("preprocessed_data_folder", "region", "output_folder")
+    @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
 
-    @validator('preprocessed_data_folder', 'output_folder')
+    @field_validator("preprocessed_data_folder", "output_folder")
+    @classmethod
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
             print(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
+
+    @model_validator(mode='after')
+    def check_date_order(self):
+        if self.track_start_date > self.track_end_date:
+            raise ValueError("track_end_date should be later than track_start_date")
+        if self.event_start_date > self.event_end_date:
+            raise ValueError("event_end_date should be later than event_start_date")
+        if self.preprocess_start_date > self.preprocess_end_date:
+            raise ValueError("preprocess_end_date should be later than preprocess_start_date")
+
+        return self
+

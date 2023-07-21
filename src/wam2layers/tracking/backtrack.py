@@ -1,15 +1,13 @@
 from functools import lru_cache
-from pathlib import Path
 
 import click
 import numpy as np
 import pandas as pd
 import xarray as xr
-import yaml
 
-from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.utils.profiling import Profiler, ProgressTracker
 from wam2layers.config import Config
+from wam2layers.preprocessing.shared import get_grid_info
+from wam2layers.utils.profiling import ProgressTracker
 
 
 def get_tracking_dates(config):
@@ -17,16 +15,16 @@ def get_tracking_dates(config):
     # E.g. if data from 00:00 to 23:00
     # Using target freq directly would end at 23:45 or so
     input_dates = pd.date_range(
-        start = config.track_start_date,
-        end = config.track_end_date,
-        freq = config.input_frequency,
+        start=config.track_start_date,
+        end=config.track_end_date,
+        freq=config.input_frequency,
     )
-    
+
     return pd.date_range(
-        start = input_dates[0],
-        end = input_dates[-1],
-        freq = config.target_frequency,
-        inclusive = "right",
+        start=input_dates[0],
+        end=input_dates[-1],
+        freq=config.target_frequency,
+        inclusive="right",
     )
 
 
@@ -37,7 +35,7 @@ def input_path(date, config):
 
 def output_path(date, config):
     output_dir = config.output_folder
-    return f"{output_dir}/{date.strftime('%Y-%m-%d-%HH')}_s_track.nc"
+    return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H:%M')}.nc"
 
 
 # LRU Cache keeps the file open so we save a bit on I/O
@@ -283,7 +281,6 @@ def backtrack(
     region,
     output,
 ):
-
     # Unpack input data
     fx_upper = fluxes["fx_upper"].values
     fy_upper = fluxes["fy_upper"].values
@@ -476,10 +473,9 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     tracking_dates = get_tracking_dates(config)
-    
+
     progress_tracker = ProgressTracker(output)
     for t in reversed(tracking_dates):
-
         fluxes = load_fluxes(t)
         states_prev, states_next = load_states(t)
 
@@ -521,10 +517,12 @@ def run_experiment(config_file):
         )
 
         # Daily output
-        if t == t.floor(config.output_frequency):
+        if t == t.floor(config.output_frequency) or t == tracking_dates[0]:
             progress_tracker.print_progress(t, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t)
+
+    print("Experiment complete.")
 
 
 ###########################################################################
