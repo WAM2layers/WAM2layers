@@ -42,9 +42,7 @@ def _plot_precip(config, ax):
     dates = pd.date_range(
         start=config.preprocess_start_date,
         end=config.preprocess_end_date,
-        freq=config[
-            "output_frequency"
-        ],  # Should be output frequency, since this is used to save the data
+        freq=config.output_frequency,  # Should be output frequency, since this is used to save the data
         inclusive="left",
     )
 
