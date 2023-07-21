@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import click
@@ -317,6 +318,7 @@ def prep_experiment(config_file):
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config.preprocessed_data_folder / filename
         ds.astype("float32").to_netcdf(output_path)
+        shutil.copy(config_file, output_path / config_file.name)
 
     # Close the dask cluster when done
     if config.chunks is not None:
