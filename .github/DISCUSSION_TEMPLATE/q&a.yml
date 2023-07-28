@@ -4,7 +4,7 @@ body:
       value: |
         Welcome to WAM2layers!
 
-        If you're new here, please check our [readme](https://github.com/WAM2layers/WAM2layers) and [documentation](https://wam2layers.readthedocs.io/en/latest/) first. 
+        If you're new here, please check our [readme](https://github.com/WAM2layers/WAM2layers#readme) and [documentation](https://wam2layers.readthedocs.io/en/latest/) first. 
         
         Perhaps, your question is related to an outstanding issue, please check [issues](https://github.com/WAM2layers/WAM2layers/issues) first.
   - type: textarea
