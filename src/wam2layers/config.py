@@ -162,6 +162,13 @@ class Config(BaseModel):
 
     """
 
+    reduced_domain_bounds: List[float]
+    """(Reduced) domain to perform the backtracking
+
+    TODO: ADD COMMENTS LIBBY
+
+    """
+
     input_frequency: str
     """Frequency of the raw input data.
 

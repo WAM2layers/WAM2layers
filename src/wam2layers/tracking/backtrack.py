@@ -10,6 +10,66 @@ from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
 
 
+def reduce_domain(da, config):
+    assert np.min(da.longitude.values) >= 0, "This approach assumes the raw/default longitudes run from 0-360."
+
+    # get the config domain bounds specified by the user
+    bounds = config.reduced_domain_bounds  # [south_lat, north_lat, left_lon, right_lon]
+    south_lat, north_lat = bounds[0], bounds[1]
+    left_lon, right_lon = bounds[2], bounds[3]
+
+    # check if need to map longitude to -180 to 180 for better definition of the domain
+    if left_lon > right_lon:
+        da.coords["longitude"] = (da.coords["longitude"] + 180) % 360 - 180
+        da = da.sortby(da.longitude)
+        da = da.transpose(..., "latitude", "longitude")
+
+        left_lon = (left_lon + 180.) % 360. - 180.
+        right_lon = (right_lon + 180.) % 360. - 180.
+        assert left_lon < right_lon, "Something is not right. Try flipping the order of your longitude bounds."
+
+        check_periodic_boundaries(longitude_units="180_180", config=config)
+    else:
+        check_periodic_boundaries(longitude_units="0_360", config=config)
+
+    mask_lon = (da.longitude >= left_lon) & (da.longitude <= right_lon)
+    mask_lat = (da.latitude >= south_lat) & (da.latitude <= north_lat)
+    return da.where(mask_lon & mask_lat, drop=True)
+
+
+def check_periodic_boundaries(longitude_units, config):
+
+    # get the config domain bounds specified by the user
+    bounds = config.reduced_domain_bounds
+    left_lon, right_lon = bounds[2], bounds[3]
+
+    # check periodic boundary settings
+    if longitude_units == "0_360":
+        if left_lon > 0.0 or right_lon < 360.0:
+            assert (
+                config.periodic_boundary is False
+            ), "you are running a reduced zonal domain. config.periodic boundary must be set to FALSE"
+
+        if (left_lon == 0.0) and (right_lon == 360.0):
+            assert (
+                config.periodic_boundary
+            ), "you are running a full zonal domain. config.periodic boundary must be set to TRUE"
+
+    elif longitude_units == "180_180":
+        # check periodic boundary settings
+        if left_lon > -180.0 or right_lon < 180.0:
+            assert (
+                config.periodic_boundary is False
+            ), "you are running a reduced zonal domain. config.periodic boundary must be set to FALSE"
+        if (left_lon == -180.0) and (right_lon == 180.0):
+            assert (
+                config.periodic_boundary
+            ), "you are running a full zonal domain. config.periodic boundary must be set to TRUE"
+
+    else:
+        raise NotImplementedError()
+
+
 def get_tracking_dates(config):
     """Dates for tracking."""
     # E.g. if data from 00:00 to 23:00
@@ -43,7 +103,8 @@ def output_path(date, config):
 def read_data_at_date(d):
     """Load input data for given date."""
     file = input_path(d, config)
-    return xr.open_dataset(file, cache=False)
+    da = xr.open_dataset(file, cache=False)
+    return reduce_domain(da, config)
 
 
 # This one can't be cached as we'll be overwriting the content.
@@ -94,7 +155,8 @@ def time_in_range(start, end, current):
 
 def load_region(config):
     # TODO: make variable name more generic
-    return xr.open_dataset(config.region).source_region
+    data = xr.open_dataset(config.region).source_region
+    return reduce_domain(data, config)
 
 
 def to_edges_zonal(fx, periodic_boundary=False):
@@ -469,6 +531,11 @@ def run_experiment(config_file):
     for t in reversed(tracking_dates):
         fluxes = load_fluxes(t)
         states_prev, states_next = load_states(t)
+
+        # Reduce the domain
+        fluxes = reduce_domain(fluxes, config)
+        states_prev = reduce_domain(states_prev, config)
+        states_next = reduce_domain(states_next, config)
 
         # Convert data to volumes
         change_units(states_prev, config.target_frequency)
