@@ -21,5 +21,6 @@ input_frequency: "1h"
 target_frequency: "10min"
 output_frequency: "1d"
 restart: False
+reduced_domain_bounds: [-80., 80., 0., 360.]  # [south_lat, north_lat, left_lon, right_lon]
 periodic_boundary: false
 kvf: 3

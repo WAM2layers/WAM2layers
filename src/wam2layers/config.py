@@ -165,7 +165,19 @@ class Config(BaseModel):
     reduced_domain_bounds: List[float]
     """(Reduced) domain to perform the backtracking
 
-    TODO: ADD COMMENTS LIBBY
+    Used to specify a reduced domain over which to compute the backtracking. The code currently
+    assumes that the ERA5 data is in its default longitude units of 0 to 360 degrees east
+    and -90 to 90 degrees north.
+
+    The input vector is of the form: [south_lat, north_lat, left_lon, right_lon] where longitudes
+    are given in positive units. The code will check whether the grid needs to be changed to
+    accomodate regions crossing the prime meridian.
+
+    For example:
+
+    .. code-block:: yaml
+
+        reduced_domain_bounds: [-80., 80., 0., 360.]
 
     """
 
