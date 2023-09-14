@@ -10,93 +10,6 @@ from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
 
 
-def get_tracking_dates(config):
-    """Dates for tracking."""
-    # E.g. if data from 00:00 to 23:00
-    # Using target freq directly would end at 23:45 or so
-    input_dates = pd.date_range(
-        start=config.track_start_date,
-        end=config.track_end_date,
-        freq=config.input_frequency,
-    )
-
-    return pd.date_range(
-        start=input_dates[0],
-        end=input_dates[-1],
-        freq=config.target_frequency,
-        inclusive="right",
-    )
-
-
-def input_path(date, config):
-    input_dir = config.preprocessed_data_folder
-    return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
-
-
-def output_path(date, config):
-    output_dir = config.output_folder
-    return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
-
-
-# LRU Cache keeps the file open so we save a bit on I/O
-@lru_cache(maxsize=2)
-def read_data_at_date(d):
-    """Load input data for given date."""
-    file = input_path(d, config)
-    return xr.open_dataset(file, cache=False)
-
-
-# This one can't be cached as we'll be overwriting the content.
-def read_data_at_time(t):
-    """Get a single time slice from input data at time t."""
-    ds = read_data_at_date(t)
-    return ds.sel(time=t, drop=True)
-
-
-def load_data(t, subset="fluxes"):
-    """Load variable at t, interpolate if needed."""
-    variables = {
-        "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
-        "states": ["s_upper", "s_lower"],
-    }
-
-    t1 = t.ceil(config.input_frequency)
-    da1 = read_data_at_time(t1)[variables[subset]]
-    if t == t1:
-        # this saves a lot of work if times are aligned with input
-        return da1
-
-    t0 = t.floor(config.input_frequency)
-    da0 = read_data_at_time(t0)[variables[subset]]
-    if t == t0:
-        return da0
-
-    return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
-
-
-def load_fluxes(t):
-    t_current = t - pd.Timedelta(config.target_frequency) / 2
-    return load_data(t_current, "fluxes")
-
-
-def load_states(t):
-    t_prev = t
-    t_next = t - pd.Timedelta(config.target_frequency)
-    states_prev = load_data(t_prev, "states")
-    states_next = load_data(t_next, "states")
-    return states_prev, states_next
-
-
-def time_in_range(start, end, current):
-    """Returns whether current is in the range [start, end]"""
-    return start <= current <= end
-
-
-def load_region(config):
-    # TODO: make variable name more generic
-    return xr.open_dataset(config.region).source_region
-
-
 def to_edges_zonal(fx, periodic_boundary=False):
     """Define the horizontal fluxes over the east/west boundaries."""
     fe = np.zeros_like(fx)
@@ -483,14 +396,7 @@ def run_experiment(config_file):
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
 
         # Only track the precipitation at certain timesteps
-        if (
-            time_in_range(
-                config.event_start_date,
-                config.event_end_date,
-                t,
-            )
-            == False
-        ):
+        if not config.event_start_date <= t <= config.event_end_date
             fluxes["precip"] = 0
 
         backtrack(
