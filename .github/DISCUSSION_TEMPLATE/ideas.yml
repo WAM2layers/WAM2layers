@@ -4,10 +4,9 @@ body:
       value: |
         Welcome to WAM2layers!
 
-        If you're new here, please check our [readme](https://github.com/WAM2layers/WAM2layers), 
-        [documentation](https://wam2layers.readthedocs.io/en/latest/) first. 
+        If you're new here, please check our [readme](https://github.com/WAM2layers/WAM2layers) and [documentation](https://wam2layers.readthedocs.io/en/latest/) first. 
         
-        Perhaps, the idea you'd like to suggest is already an outstanding issue, please check [issues](https://github.com/WAM2layers/WAM2layers/issues) first
+        Please check if the idea you'd like to suggest was already suggested or whether it is one of the outstanding [issues](https://github.com/WAM2layers/WAM2layers/issues).
   - type: textarea
     attributes: 
       label: My idea 

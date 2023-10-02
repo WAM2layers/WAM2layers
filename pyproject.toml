@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wam2layers"
 description = "Atmospheric moisture tracking model"
-version = "3.0.0-beta.4"
+version = "3.0.0-beta.5"
 readme = "README.md"
 license = { text = "Apache 2.0" }
 classifiers = [
@@ -23,19 +23,19 @@ keywords = [
   "moisture recycling",
   "moisture tracking",
 ]
-requires-python = ">=3.8,<3.10"
+requires-python = ">=3.8"
 dependencies = [
     "numpy",
     "pyyaml",
     "scipy",
-    "pandas>=1.4.0",
-    "xarray", # or xarray[io,parallel,complete,...]
+    "pandas",
+    "xarray",
     "netcdf4",
     "scipy",
     "click",
     "pydantic",
-    "dask>=2022.11",
-    "distributed>=2022.11",
+    "dask",
+    "distributed",
     "psutil",
     "matplotlib",
     "cmocean",
@@ -50,7 +50,7 @@ develop = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
-    "myst-nb==0.16.0",
+    "myst-nb",
     "pytest",
     "flake8",
     "build",
