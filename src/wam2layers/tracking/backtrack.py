@@ -242,7 +242,13 @@ def calculate_fv(fluxes, states_prev, states_next):
 
     Note: fluxes are given at temporal midpoints between states.
     """
+    
+    #import IPython; IPython.embed(); quit()
+    states_next.upper.values = 60000
+    states_
+    
     s_diff = states_prev - states_next
+    
     s_mean = (states_prev + states_next) / 2
     s_total = s_mean.s_upper + s_mean.s_lower
     s_rel = s_mean / s_total
@@ -263,6 +269,14 @@ def calculate_fv(fluxes, states_prev, states_next):
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
     fv = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
+
+    import IPython; IPython.embed(); quit()
+    import matplotlib.pyplot as plt
+    def spatialtestplot(variable):
+        import matplotlib.pyplot as plt
+        plt.figure(), plt.imshow(variable), plt.colorbar()
+    spatialtestplot(fv.values)
+    plt.savefig('testplot.png')
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
