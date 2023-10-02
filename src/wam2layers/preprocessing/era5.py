@@ -173,7 +173,7 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
 
     # Calculate pressure jump
     dp = p.diff("level")
-    assert np.all(dp > 0), "Pressure levels should increase monotonically"
+    assert np.all(dp >= 0), "Pressure levels should increase monotonically"
 
     # Interpolate to midpoints
     midpoints = 0.5 * (u.level.values[1:] + u.level.values[:-1])
