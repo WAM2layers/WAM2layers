@@ -20,12 +20,16 @@ This code is currently developed by a core team:
 Ruud van der Ent (Delft University of Technology)
 Imme Benedict (Wageningen University)
 Chris Weijenborg (Wageningen University)
+Vincent de Feiter (Wageningen University)
 Peter Kalverla (Netherlands eScienceCenter)
 
 # How to use
-See the [documentation](http://wam2layers.rtfd.io/) for a more detailed description.
+See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description. Still questions? Follow the flowchart below.
 
-## Other versions
+![FlowChart GitHub](https://github.com/WAM2layers/WAM2layers/assets/123247866/f5cbcf8f-a45f-4e73-b304-00956b4e2ee5)
+
+
+# Other versions
 
 This is the official codebase for the WAM-2layers moisture tracking model as of
 18/03/2022, but there are still several other older versions around:
@@ -35,7 +39,7 @@ This is the official codebase for the WAM-2layers moisture tracking model as of
 - [Adapted version for MERRA2 by Pat Keys](https://github.com/pkeys/WAM2layersPythonMerra2)
 - [Adapted version for ERA5 pressure levels by Mingzhong Xiao](https://zenodo.org/record/4796962#.Y25d1-TMIVA)
 
-## Reuse and acknowledgement
+# Reuse and acknowledgement
 
 We are actively developing the code at the moment, so it may be subject to
 change. We encourage anyone who is interested in re-using the code to get in
