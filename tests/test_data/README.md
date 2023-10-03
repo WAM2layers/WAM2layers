@@ -7,6 +7,6 @@ It is prepared through the following steps:
 For model levels the following variables are needed:
   - u, v, q on selected levels
   - tp, e, sp, and tcw at the surface
-(see the example downloading script for more details about CDS qurey of ERA5 fields in `scripts/download_era5_ml.py`)
+(see the example downloading script for more details about CDS qurey of ERA5 fields in `scripts/download_era5_ml.py`. Note that in the tests we use hourly data of corresponding ERA5 fields of the date 2022-08-31.)
 
 - Slice data to have a minimum sample set for testing and generate `source_region.nc`.
