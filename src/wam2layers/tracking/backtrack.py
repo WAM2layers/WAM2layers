@@ -154,8 +154,11 @@ def advection(q, u, v):
         """
         west = np.s_[:-1]
         east = np.s_[1:]
+
+        # TODO revert direction of era5 latitude in pre-processing(?)
         south = np.s_[1:]
         north = np.s_[:-1]
+
         inner = np.s_[1:-1]
 
         # Donor cell upwind scheme (2 directions seperately)
@@ -354,7 +357,7 @@ def backtrack(
 
     # Actual tracking (note: backtracking, all terms have been negated)
     s_track_lower[inner] += (
-        - advection(s_track_relative_lower, fx_lower, fy_lower)
+        + advection(s_track_relative_lower, -fx_lower, -fy_lower)
         + (f_upward * s_track_relative_upper)[inner]
         - (f_downward * s_track_relative_lower)[inner]
         + (tagged_precip * (s_lower / s_total))[inner]
@@ -362,7 +365,7 @@ def backtrack(
     )
 
     s_track_upper[inner] += (
-        - advection(s_track_relative_upper, fx_upper, fy_upper)
+        + advection(s_track_relative_upper, -fx_upper, -fy_upper)
         + (f_downward * s_track_relative_lower)[inner]
         - (f_upward * s_track_relative_upper)[inner]
         + (tagged_precip * (s_upper / s_total))[inner]
@@ -382,7 +385,7 @@ def backtrack(
     output["e_track"][-1, :] += (s_track_upper + s_track_lower)[-1, :]
     s_track_upper[0, :] = 0
     s_track_lower[-1, :] = 0
-    if config.periodic_boundary == False:
+    if config.periodic_boundary is False:
         output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
         output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
         s_track_upper[:, 0] = 0
