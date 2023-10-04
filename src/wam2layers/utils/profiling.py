@@ -82,7 +82,7 @@ class ProgressTracker:
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 
-    def track_stability_correction(self, fy_corrected, fy_abs, config):
+    def track_stability_correction(self, fy_corrected, fy_abs, config, t):
         """Issue warning if correction exceeds criterion.
 
         Warning advises to reduce the timestep.
@@ -111,7 +111,7 @@ class ProgressTracker:
         # a model object could improve the code structure.
         debug_dir = config.output_folder / "debug"
         debug_dir.mkdir(exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
         ncfile = load_region(config).rename('correction')
