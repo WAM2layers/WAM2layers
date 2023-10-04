@@ -1,14 +1,15 @@
-from pydantic import BaseModel, FilePath, validator, root_validator
+from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_validator
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, Union
-
-import yaml
-from pydantic import BaseModel, FilePath, validator
+from typing import Dict, List, Literal, Optional, Union
 
 
 class Config(BaseModel):
+    # Pydantic configuration
+    model_config = ConfigDict(validate_assignment=True)
+
+    # Configuration settings
     filename_template: str
     """The filename pattern of the raw input data.
 
@@ -214,7 +215,7 @@ class Config(BaseModel):
 
     """
 
-    levels: "Union[list[int], Literal['All']]"
+    levels: "Union[List[int], Literal['All']]"
     """Which levels to use from the raw input data.
 
     A list of integers corresponding to the levels in the input data, or a
@@ -226,16 +227,6 @@ class Config(BaseModel):
 
         levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
-    """
-
-    log_level: Literal["debug", "info", "warning", "error", "critical"]
-    """Verbosity of the output messages.
-
-    For example:
-
-    .. code-block:: yaml
-
-        log_level: info
     """
 
     restart: bool
@@ -276,7 +267,7 @@ class Config(BaseModel):
 
     """
 
-    chunks: "Union[None, dict[str, int]]"
+    chunks: Optional[Dict[str, int]]
     """Whether to use dask.
 
     Using dask can help process large datasets without memory issues, but its
@@ -319,36 +310,30 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @validator("preprocessed_data_folder", "region", "output_folder")
+    @field_validator("preprocessed_data_folder", "region", "output_folder")
+    @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
 
-    @validator("preprocessed_data_folder", "output_folder")
+    @field_validator("preprocessed_data_folder", "output_folder")
+    @classmethod
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
-            print(f"Creating output folder {path}")
+            logger.info(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
 
-    @root_validator
-    def check_date_order(cls, values):
-        for date_field in ['track', 'event', 'preprocess']:
-            start = values.get(f'{date_field}_start_date')
-            end = values.get(f'{date_field}_end_date')
+    @model_validator(mode='after')
+    def check_date_order(self):
+        if self.track_start_date > self.track_end_date:
+            raise ValueError("track_end_date should be later than track_start_date")
+        if self.event_start_date > self.event_end_date:
+            raise ValueError("event_end_date should be later than event_start_date")
+        if self.preprocess_start_date > self.preprocess_end_date:
+            raise ValueError(
+                "preprocess_end_date should be later than preprocess_start_date"
+            )
 
-            if not start < end:
-                raise ValueError("End date should be later than start date.")
-
-        return values
-
-    class Config:
-        """This is the config of the **Pydantic** class, not the wam2layers config.
-
-        Note: this will change in v2
-        https://docs.pydantic.dev/blog/pydantic-v2-alpha/#changes-to-config
-        """
-        # Also force validation when new value is set on existing config
-        validate_assignment = True
-
+        return self

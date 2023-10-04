@@ -10,7 +10,7 @@ def _warning_on_one_line(message, category, filename, lineno, file=None, line=No
 
     https://stackoverflow.com/a/26433913
     """
-    short_path = Path(filename).relative_to(Path(filename).parents[2])
+    short_path = Path(filename).relative_to(Path(filename).parents[0])
     return f"{short_path}:{lineno}: {category.__name__}: {message}\n"
 
 

@@ -5,7 +5,7 @@ WAM2layers can be used to determine where precipitation originally evaporated
 (backtracking), or where evaporated moisture eventually ends up (forward
 tracking).
 
-WAM2layers is written in Python an is most easy to use as a command line tool
+WAM2layers is written in Python and is most easy to use as a command line tool
 with configuration script that can be edited in your favorite editor.
 
 * We highly recommended to read the [theory](./theory.md) of tracking in
