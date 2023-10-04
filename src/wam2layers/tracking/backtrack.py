@@ -148,15 +148,27 @@ def pad_boundaries(*args, periodic=False):
 
 
 def advection(q, u, v):
-    """Calculate advection on a staggered grid.
+    """Calculate advection on a staggered grid using a donor cell scheme.
 
-    Can only calculate advection for the interior of the array. Hence the
+    It solves the advection equation `grad(u*q)` where u is the velocity vector
+    and q is any scalar, which is discretized as a double upwind scheme:
+
+    q(i-1/2) = q(i-1) if u(i-1/2) > 0
+               q(i+1) otherwise
+    q(j-1/2) = q(j-1) if v(j-1/2) > 0   TODO: check direction
+               q(j+1) otherwise
+
+    d(uq)/dx = u(i-1/2)*q(i-1/2) - u(i+1/2)*q(i+1/2) d(vq)/dy =
+    v(j-1/2)*q(j-1/2) - v(j+1/2)*q(j+1/2)
+
+    adv(q) = d(uq)/dx + d(vq)/dy
+
+    Can only calculate advection for the interior of the domain. Hence the
     resulting array is 2 cells smaller in both directions.
 
     Arguments:
-        q: array of shape [M, N]
-        u: array of shape = [M-2, N-1]
-        v: array of shape = [M-1, N-2]
+        q: array of shape [M, N] u: array of shape = [M-2, N-1] v: array of
+        shape = [M-1, N-2]
 
     Returns:
         array of shape [M-2, N-2]
