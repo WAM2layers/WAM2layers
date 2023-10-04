@@ -1,5 +1,5 @@
-from functools import lru_cache
 import functools
+from functools import lru_cache
 
 import click
 import numpy as np
@@ -109,7 +109,7 @@ def stagger_x(f):
     Returns:
         2d array of shape [M-2, N-1]
     """
-    return  0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
+    return 0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
 
 
 def stagger_y(f):
@@ -128,66 +128,60 @@ def stagger_y(f):
 
 def pad_boundaries(*args, periodic=False):
     """Add boundary padding to all input arrays."""
-    periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode='wrap')
-    zero_y = functools.partial(np.pad, pad_width=((1, 1), (0, 0)), mode='constant', constant_values=0)
-    zero_xy = functools.partial(np.pad, pad_width=1, mode='constant', constant_values=0)
+    periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
+    zero_y = functools.partial(
+        np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
+    )
+    zero_xy = functools.partial(np.pad, pad_width=1, mode="constant", constant_values=0)
     if periodic:
         return [periodic_x(zero_y(arg)) for arg in args]
     return [zero_xy(arg) for arg in args]
 
 
 def advection(q, u, v):
-        """Calculate advection on a staggered grid.
+    """Calculate advection on a staggered grid.
 
-        Can only calculate advection for the interior of the array. Hence the
-        resulting array is 2 cells smaller in both directions.
+    Can only calculate advection for the interior of the array. Hence the
+    resulting array is 2 cells smaller in both directions.
 
-        Arguments:
-            q: array of shape [M, N]
-            u: array of shape = [M-2, N-1]
-            v: array of shape = [M-1, N-2]
+    Arguments:
+        q: array of shape [M, N]
+        u: array of shape = [M-2, N-1]
+        v: array of shape = [M-1, N-2]
 
-        Returns:
-            array of shape [M-2, N-2]
+    Returns:
+        array of shape [M-2, N-2]
 
-        Example:
+    Example:
 
-            >>> q = np.zeros((5, 5))
-            >>> q[2, 2] = 1
-            >>> u = np.ones((3, 4)) * .5
-            >>> v = np.ones((4, 3)) * .5
-            >>> advection(q, u, v)
-            array([[ 0. ,  0.5,  0. ],
-                   [ 0. , -1. ,  0.5],
-                   [ 0. ,  0. ,  0. ]])
+        >>> q = np.zeros((5, 5))
+        >>> q[2, 2] = 1
+        >>> u = np.ones((3, 4)) * .5
+        >>> v = np.ones((4, 3)) * .5
+        >>> advection(q, u, v)
+        array([[ 0. ,  0.5,  0. ],
+               [ 0. , -1. ,  0.5],
+               [ 0. ,  0. ,  0. ]])
 
-        """
-        west = np.s_[:-1]
-        east = np.s_[1:]
+    """
+    west = np.s_[:-1]
+    east = np.s_[1:]
 
-        # TODO revert direction of era5 latitude in pre-processing(?)
-        south = np.s_[1:]
-        north = np.s_[:-1]
+    # TODO revert direction of era5 latitude in pre-processing(?)
+    south = np.s_[1:]
+    north = np.s_[:-1]
 
-        inner = np.s_[1:-1]
+    inner = np.s_[1:-1]
 
-        # Donor cell upwind scheme (2 directions seperately)
-        uq = np.where(
-            u > 0,
-            u * q[inner, west],
-            u * q[inner, east]
-            )  # [M-2, N-1]
+    # Donor cell upwind scheme (2 directions seperately)
+    uq = np.where(u > 0, u * q[inner, west], u * q[inner, east])  # [M-2, N-1]
 
-        vq = np.where(
-            v > 0,
-            v * q[south, inner],
-            v * q[north, inner]
-        )  # [M-1, N-2]
+    vq = np.where(v > 0, v * q[south, inner], v * q[north, inner])  # [M-1, N-2]
 
-        adv_x = uq[:, west] - uq[:, east]  # [M-2, N-2]
-        adv_y = vq[south, :] - vq[north, :]  # [M-2, N-2]
+    adv_x = uq[:, west] - uq[:, east]  # [M-2, N-2]
+    adv_y = vq[south, :] - vq[north, :]  # [M-2, N-2]
 
-        return adv_x + adv_y  # [M-2, N-2]
+    return adv_x + adv_y  # [M-2, N-2]
 
 
 def split_vertical_flux(Kvf, fv):
@@ -345,7 +339,7 @@ def backtrack(
     # Actual tracking (note: backtracking, all terms have been negated)
     padded = functools.partial(pad_boundaries, periodic=config.periodic_boundary)
     s_track_lower += (
-        + advection(*padded(s_track_relative_lower, -fx_lower, -fy_lower))
+        +advection(*padded(s_track_relative_lower, -fx_lower, -fy_lower))
         + (f_upward * s_track_relative_upper)
         - (f_downward * s_track_relative_lower)
         + (tagged_precip * (s_lower / s_total))
@@ -353,7 +347,7 @@ def backtrack(
     )
 
     s_track_upper += (
-        + advection(*padded(s_track_relative_upper, -fx_upper, -fy_upper))
+        +advection(*padded(s_track_relative_upper, -fx_upper, -fy_upper))
         + (f_downward * s_track_relative_lower)
         - (f_upward * s_track_relative_upper)
         + (tagged_precip * (s_upper / s_total))
@@ -362,8 +356,8 @@ def backtrack(
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
     lower_to_upper = np.maximum(0, s_track_lower - states_next["s_lower"])
     upper_to_lower = np.maximum(0, s_track_upper - states_next["s_upper"])
-    s_track_lower = (s_track_lower - lower_to_upper + upper_to_lower)
-    s_track_upper = (s_track_upper - upper_to_lower + lower_to_upper)
+    s_track_lower = s_track_lower - lower_to_upper + upper_to_lower
+    s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
 
     # Update output fields
     output["e_track"] += evap * np.minimum(s_track_lower / s_lower, 1.0)
