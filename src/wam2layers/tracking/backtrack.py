@@ -1,4 +1,5 @@
 from functools import lru_cache
+import functools
 
 import click
 import numpy as np
@@ -124,6 +125,15 @@ def stagger_y(f):
     """
     return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
 
+
+def pad_boundaries(*args, periodic=False):
+    """Add boundary padding to all input arrays."""
+    periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode='wrap')
+    zero_y = functools.partial(np.pad, pad_width=((1, 1), (0, 0)), mode='constant', constant_values=0)
+    zero_xy = functools.partial(np.pad, pad_width=1, mode='constant', constant_values=0)
+    if periodic:
+        return [periodic_x(zero_y(arg)) for arg in args]
+    return [zero_xy(arg) for arg in args]
 
 
 def advection(q, u, v):
@@ -320,62 +330,40 @@ def backtrack(
     # separate the direction of the vertical flux and make it absolute
     f_downward, f_upward = split_vertical_flux(config.kvf, f_vert)
 
-    # Apply periodic boundaries by adding a layer of 'ghost cells' in the x-direction
-    # Applying this to all arrays to keep the indexing consistent for all variables
-    if config.periodic_boundary:
-        fx_lower = np.pad(fx_lower, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        fx_upper = np.pad(fx_upper, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        fy_lower = np.pad(fy_lower, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        fy_upper = np.pad(fy_upper, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        f_downward = np.pad(f_downward, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        f_upward = np.pad(f_upward, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        s_lower = np.pad(s_lower, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        s_upper = np.pad(s_upper, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        s_total = np.pad(s_total, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        s_track_lower = np.pad(s_track_lower, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        s_track_upper = np.pad(s_track_upper, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        precip = np.pad(precip, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        evap = np.pad(evap, pad_width = ((0, 0), (1, 1)), mode='wrap')
-        tagged_precip = np.pad(tagged_precip, pad_width = ((0, 0), (1, 1)), mode='wrap')
-
     # Determine fluxes at the faces of the grid cells
     fx_lower = stagger_x(fx_lower)
     fx_upper = stagger_x(fx_upper)
     fy_lower = stagger_y(fy_lower)
     fy_upper = stagger_y(fy_upper)
 
-    # TODO move staggering and boundary padding to preprocessing (?)
+    # TODO move staggering to preprocessing (?)
 
     # Short name for often used expressions
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
-    if config.periodic_boundary:
-        inner = np.s_[1:-1, :]
-    else:
-        inner = np.s_[1:-1, 1:-1]
-
     # Actual tracking (note: backtracking, all terms have been negated)
-    s_track_lower[inner] += (
-        + advection(s_track_relative_lower, -fx_lower, -fy_lower)
-        + (f_upward * s_track_relative_upper)[inner]
-        - (f_downward * s_track_relative_lower)[inner]
-        + (tagged_precip * (s_lower / s_total))[inner]
-        - (evap * s_track_relative_lower)[inner]
+    padded = functools.partial(pad_boundaries, periodic=config.periodic_boundary)
+    s_track_lower += (
+        + advection(*padded(s_track_relative_lower, -fx_lower, -fy_lower))
+        + (f_upward * s_track_relative_upper)
+        - (f_downward * s_track_relative_lower)
+        + (tagged_precip * (s_lower / s_total))
+        - (evap * s_track_relative_lower)
     )
 
-    s_track_upper[inner] += (
-        + advection(s_track_relative_upper, -fx_upper, -fy_upper)
-        + (f_downward * s_track_relative_lower)[inner]
-        - (f_upward * s_track_relative_upper)[inner]
-        + (tagged_precip * (s_upper / s_total))[inner]
+    s_track_upper += (
+        + advection(*padded(s_track_relative_upper, -fx_upper, -fy_upper))
+        + (f_downward * s_track_relative_lower)
+        - (f_upward * s_track_relative_upper)
+        + (tagged_precip * (s_upper / s_total))
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
     lower_to_upper = np.maximum(0, s_track_lower - states_next["s_lower"])
     upper_to_lower = np.maximum(0, s_track_upper - states_next["s_upper"])
-    s_track_lower[inner] = (s_track_lower - lower_to_upper + upper_to_lower)[inner]
-    s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
+    s_track_lower = (s_track_lower - lower_to_upper + upper_to_lower)
+    s_track_upper = (s_track_upper - upper_to_lower + lower_to_upper)
 
     # Update output fields
     output["e_track"] += evap * np.minimum(s_track_lower / s_lower, 1.0)
@@ -384,11 +372,15 @@ def backtrack(
     output["e_track"][0, :] += (s_track_upper + s_track_lower)[0, :]
     output["e_track"][-1, :] += (s_track_upper + s_track_lower)[-1, :]
     s_track_upper[0, :] = 0
+    s_track_upper[-1, :] = 0
+    s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
     if config.periodic_boundary is False:
         output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
         output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
         s_track_upper[:, 0] = 0
+        s_track_upper[:, -1] = 0
+        s_track_lower[:, 0] = 0
         s_track_lower[:, -1] = 0
 
     output["s_track_lower_restart"].values = s_track_lower

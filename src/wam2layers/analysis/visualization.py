@@ -74,7 +74,7 @@ def _plot_evap(config, ax):
         end=config.track_end_date,
         freq=config.output_frequency,
         inclusive="left",
-    )
+    )[1:]
 
     output_files = []
     for date in dates:
@@ -85,7 +85,7 @@ def _plot_evap(config, ax):
 
     # Make figure
     e_track.plot(
-        ax=ax, vmin=0, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5)
+        ax=ax, vmin=0, robust=True, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5)
     )
     e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=["lightgrey", "grey"])
     ax.set_title("Moisture source of extreme precip [mm]", loc="left")
