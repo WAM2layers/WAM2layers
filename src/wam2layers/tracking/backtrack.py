@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 
 import click
@@ -8,6 +9,9 @@ import xarray as xr
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
+from wam2layers.utils import load_region
+
+logger = logging.getLogger(__name__)
 
 
 def get_tracking_dates(config):
@@ -90,11 +94,6 @@ def load_states(t):
 def time_in_range(start, end, current):
     """Returns whether current is in the range [start, end]"""
     return start <= current <= end
-
-
-def load_region(config):
-    # TODO: make variable name more generic
-    return xr.open_dataset(config.region).source_region
 
 
 def to_edges_zonal(fx, periodic_boundary=False):
@@ -203,7 +202,7 @@ def change_units(data, target_freq):
         data[variable] = data[variable].assign_attrs(units="m**3")
 
 
-def stabilize_fluxes(current, previous):
+def stabilize_fluxes(current, previous, progress_tracker, t):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
@@ -222,6 +221,8 @@ def stabilize_fluxes(current, previous):
 
         fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
+
+        progress_tracker.track_stability_correction(fy_corrected, fy_abs, config, t)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
@@ -376,7 +377,7 @@ def backtrack(
         fy_s_upper_sn * s_track_relative_upper + fy_s_lower_sn * s_track_relative_lower
     )[-2, :]
 
-    if config.periodic_boundary == False:
+    if config.periodic_boundary is False:
         output["east_loss"] += (
             f_e_upper_ew * s_track_relative_upper
             + f_e_lower_ew * s_track_relative_lower
@@ -393,7 +394,7 @@ def backtrack(
 
 def initialize(config_file):
     """Read config, region, and initial states."""
-    print(f"Initializing experiment with config file {config_file}")
+    logger.info(f"Initializing experiment with config file {config_file}")
 
     config = Config.from_yaml(config_file)
     region = load_region(config)
@@ -409,7 +410,7 @@ def initialize(config_file):
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
-    print(f"Output will be written to {config.output_folder}.")
+    logger.info(f"Output will be written to {config.output_folder}.")
     return config, region, output
 
 
@@ -436,7 +437,7 @@ def initialize_outputs(region):
 def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
-    print(f"{t} - Writing output to file {path}")
+    logger.info(f"{t} - Writing output to file {path}")
     output.astype("float32").to_netcdf(path)
 
     # Flush previous outputs
@@ -477,7 +478,7 @@ def run_experiment(config_file):
         change_units(fluxes, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(fluxes, states_next)
+        stabilize_fluxes(fluxes, states_next, progress_tracker, t)
 
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
@@ -507,7 +508,7 @@ def run_experiment(config_file):
             progress_tracker.store_intermediate_states(output)
             write_output(output, t)
 
-    print("Experiment complete.")
+    logger.info("Experiment complete.")
 
 
 ###########################################################################
@@ -531,8 +532,8 @@ def cli(config_file):
         - python path/to/backtrack.py path/to/cases/era5_2021.yaml
         - wam2layers backtrack path/to/cases/era5_2021.yaml
     """
-    print("Welcome to WAM2layers.")
-    print("Starting backtrack experiment.")
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting backtrack experiment.")
     run_experiment(config_file)
 
 

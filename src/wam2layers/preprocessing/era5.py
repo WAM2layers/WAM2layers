@@ -16,6 +16,10 @@ from wam2layers.preprocessing.shared import (
     sortby_ndarray,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def load_data(variable, date, config):
     """Load data for given variable and date."""
@@ -226,14 +230,14 @@ def prep_experiment(config_file):
     config = Config.from_yaml(config_file)
 
     if config.chunks is not None:
-        print("Starting dask cluster")
+        logger.info("Starting dask cluster")
         from dask.distributed import Client
 
         client = Client()
-        print(f"To see the dask dashboard, go to {client.dashboard_link}")
+        logger.info(f"To see the dask dashboard, go to {client.dashboard_link}")
 
     for date in get_input_dates(config):
-        print(date)
+        logger.info(date)
 
         # 4d fields
         levels = config.levels
