@@ -162,6 +162,7 @@ def look_west(array):
 
 
 def split_vertical_flux(Kvf, fv):
+    #import IPython; IPython.embed(); quit()
     f_downward = np.zeros_like(fv)
     f_upward = np.zeros_like(fv)
     f_downward[fv >= 0] = fv[fv >= 0]
@@ -174,6 +175,16 @@ def split_vertical_flux(Kvf, fv):
         f_upward[fv >= 0] = fv[fv >= 0] * Kvf
         f_downward = (1.0 + Kvf) * f_downward
         f_downward[fv <= 0] = np.abs(fv[fv <= 0]) * Kvf
+
+    import matplotlib.pyplot as plt
+    def spatialtestplot(variable):
+        import matplotlib.pyplot as plt
+        plt.figure(), plt.imshow(variable), plt.colorbar()
+    
+    spatialtestplot(f_downward)
+    plt.savefig('f_downward.png')
+    spatialtestplot(f_upward)
+    plt.savefig('f_upward.png')
 
     return f_downward, f_upward
 
@@ -244,8 +255,11 @@ def calculate_fv(fluxes, states_prev, states_next):
     """
     
     #import IPython; IPython.embed(); quit()
-    states_next.upper.values = 60000
-    states_
+    # temporary put test values
+    states_next["s_upper"].values.fill(60000)
+    states_next["s_lower"].values.fill(40000)
+    states_prev["s_upper"].values.fill(50000)
+    states_prev["s_lower"].values.fill(50000)
     
     s_diff = states_prev - states_next
     
@@ -256,12 +270,17 @@ def calculate_fv(fluxes, states_prev, states_next):
     tendency_upper = (
         convergence(fluxes.fx_upper, fluxes.fy_upper)
         - fluxes.precip.values * s_rel.s_upper
-    )
+    ).rename()
+
     tendency_lower = (
         convergence(fluxes.fx_lower, fluxes.fy_lower)
         - fluxes.precip.values * s_rel.s_lower
         + fluxes.evap
     )
+
+    # temporary put test values for tendency as if there were no horizontal fluxes and no evap/precip
+    tendency_upper.values.fill(0) # tendency is filled with the variable s_upper, but actually it's not a state!
+    tendency_lower.values.fill(0)
 
     residual_upper = s_diff.s_upper - tendency_upper
     residual_lower = s_diff.s_lower - tendency_lower
@@ -270,13 +289,20 @@ def calculate_fv(fluxes, states_prev, states_next):
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
     fv = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
 
-    import IPython; IPython.embed(); quit()
+    #import IPython; IPython.embed(); quit()
     import matplotlib.pyplot as plt
     def spatialtestplot(variable):
         import matplotlib.pyplot as plt
         plt.figure(), plt.imshow(variable), plt.colorbar()
+    
+    spatialtestplot(states_next["s_upper"].values)
+    plt.savefig('states_next_s_upper.png')
+    spatialtestplot(residual_upper.values)
+    plt.savefig('residual_upper.png')
+    spatialtestplot(residual_lower.values)
+    plt.savefig('residual_lower.png')
     spatialtestplot(fv.values)
-    plt.savefig('testplot.png')
+    plt.savefig('fv.png')
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
@@ -284,9 +310,10 @@ def calculate_fv(fluxes, states_prev, states_next):
     flux_limit = np.minimum(s_mean.s_upper, s_mean.s_lower)
     fv_stable = np.minimum(np.abs(fv), stab * flux_limit)
 
+    spatialtestplot(np.sign(fv) * fv_stable)
+    plt.savefig('fv_stable.png')
     # Reinstate the sign
     return np.sign(fv) * fv_stable
-
 
 def backtrack(
     fluxes,
