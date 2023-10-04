@@ -229,16 +229,6 @@ class Config(BaseModel):
 
     """
 
-    log_level: Literal["debug", "info", "warning", "error", "critical"]
-    """Verbosity of the output messages.
-
-    For example:
-
-    .. code-block:: yaml
-
-        log_level: info
-    """
-
     restart: bool
     """Whether to restart from previous run.
 
@@ -331,7 +321,7 @@ class Config(BaseModel):
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
-            print(f"Creating output folder {path}")
+            logger.info(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
 
@@ -342,7 +332,8 @@ class Config(BaseModel):
         if self.event_start_date > self.event_end_date:
             raise ValueError("event_end_date should be later than event_start_date")
         if self.preprocess_start_date > self.preprocess_end_date:
-            raise ValueError("preprocess_end_date should be later than preprocess_start_date")
+            raise ValueError(
+                "preprocess_end_date should be later than preprocess_start_date"
+            )
 
         return self
-
