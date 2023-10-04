@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-
+- Add tests for preprocess and backtrack workflow [#265](https://github.com/WAM2layers/WAM2layers/pull/265).
 
 ### Removed
 
-- 
+- Remove example test floodcase from CI
 
 ### Fixed
 
