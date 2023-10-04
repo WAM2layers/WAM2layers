@@ -9,7 +9,7 @@ from wam2layers.cli import cli
 
 def test_preprocess():
     runner = CliRunner()
-    result = runner.invoke(cli, ["preprocess", "era5", "tests/test_config.yaml"])
+    result = runner.invoke(cli, ["preprocess", "era5", "tests/test_data/test_config.yaml"])
     assert result.exit_code == 0
     output_path = Path("tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc")
     assert output_path.exists()
@@ -25,7 +25,7 @@ def test_preprocess():
 
 def test_backtrack():
     runner = CliRunner()
-    result = runner.invoke(cli, ["backtrack", "tests/test_config.yaml"])
+    result = runner.invoke(cli, ["backtrack", "tests/test_data/test_config.yaml"])
     assert result.exit_code == 0
     output_path = Path("tests/tmp/output_data/backtrack_2022-08-31T18-00.nc")
     assert output_path.exists()
