@@ -21,19 +21,7 @@ jobs:
           pip install gdown
       - name: Test installation
         run: |
-          pip install .
+          pip install .[develop]
           wam2layers --help
-      - name: Try to get sample data from cache
-        id: cache-sample-data
-        uses: actions/cache@v3
-        with:
-          path: ~/wam2layers
-          key: wam2layers_sample_data
-      - if: ${{ steps.cache-sample-data.outputs.cache-hit != 'true' }}
-        name: Download sample data if not available in cache
-        run: |
-          gdown -O ~/wam2layers --folder https://rebrand.ly/wam2layers-example-data
-      - name: Run test case
-        run: |
-          cd ~/wam2layers/
-          wam2layers backtrack floodcase_202107.yaml
+      - name: Test workflow # TODO: Run all the tests
+        run: pytest tests/test_workflow.py

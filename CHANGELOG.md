@@ -5,16 +5,35 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- flowchart for users on the readme
+- Add tests for preprocess and backtrack workflow [#265](https://github.com/WAM2layers/WAM2layers/pull/265).
 
 ### Removed
 
-- 
+- Remove example test floodcase from CI
 
 ### Fixed
 
 - 
 
+
+## Release v3.0.0-beta.5 (2023-07-21)
+
+### Added
+
+- flowchart for users on the readme
+- Improved templates of discussion forum
+- source-region designer
+
+### Removed
+
+- Old preprocessing script from EC-Earth
+
+### Fixed
+
+- pydantic issue
+- python versions >3.9 accepted
+- last time step is outputted (but with name of 00.10)
+- Output filenames now also include hours and minutes
 
 
 ## Release v3.0.0-beta.4 (2023-04-21)
