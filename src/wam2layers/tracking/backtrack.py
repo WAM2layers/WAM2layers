@@ -56,7 +56,7 @@ def read_data_at_time(t):
 def load_data(t, subset="fluxes"):
     """Load variable at t, interpolate if needed."""
     variables = {
-        "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
+        "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "fz_boundary", "evap", "precip"],
         "states": ["s_upper", "s_lower"],
     }
 
@@ -194,6 +194,8 @@ def change_units(data, target_freq):
             data[variable] *= total_seconds / density * ly
         elif variable in ["fy_upper", "fy_lower"]:
             data[variable] *= total_seconds / density * lx[:, None]
+        elif variable in ["fz_boundary"]:
+            data[variable] *= 1
         elif variable in ["evap", "precip"]:
             data[variable] *= total_seconds / density * a[:, None]
         elif variable in ["s_upper", "s_lower"]:
@@ -288,7 +290,16 @@ def backtrack(
     fy_lower = fluxes["fy_lower"].values
     evap = fluxes["evap"].values
     precip = fluxes["precip"].values
-    f_vert = fluxes["f_vert"].values
+    if(config.use_model_vflux == True):
+        f_vert = fluxes["fz_boundary"].values
+        density = 1000  # [kg/m3]
+        g = 9.80665
+        a, ly, lx = get_grid_info(states_prev)
+        total_seconds = pd.Timedelta(config.target_frequency).total_seconds()
+        f_vert = f_vert*total_seconds*a[:, None]/(density*g)
+    else:
+        f_vert = fluxes["f_vert"].values
+    f_vert2 = fluxes["fz_boundary"].values
     s_upper = states_prev["s_upper"].values
     s_lower = states_prev["s_lower"].values
 
@@ -349,7 +360,8 @@ def backtrack(
         - fy_n_lower_ns * s_track_relative_lower
         - f_e_lower_ew * s_track_relative_lower
         - f_w_lower_we * s_track_relative_lower
-        + tagged_precip * (s_lower / s_total)
+        + tagged_precip*(s_lower / s_total)
+        #+ tagged_precip #* s_track_relative_lower #(s_lower / s_total)
         - evap * s_track_relative_lower
     )[inner]
 
@@ -473,6 +485,7 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     tracking_dates = get_tracking_dates(config)
+    print(tracking_dates)
 
     progress_tracker = ProgressTracker(output)
     for t in reversed(tracking_dates):
@@ -495,7 +508,7 @@ def run_experiment(config_file):
         a, ly, lx = get_grid_info(states_prev)
 
         total_seconds = pd.Timedelta(config.target_frequency).total_seconds()
-        print(fluxes["f_vert"]/(total_seconds*a[:, None])*density*g)
+        #print(fluxes["f_vert"]/(total_seconds*a[:, None])*density*g)
 
         # Only track the precipitation at certain timesteps
         if (
