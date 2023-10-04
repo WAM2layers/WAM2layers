@@ -127,7 +127,16 @@ def stagger_y(f):
 
 
 def pad_boundaries(*args, periodic=False):
-    """Add boundary padding to all input arrays."""
+    """Add boundary padding to all input arrays.
+
+    Arguments:
+        *args: Input arrays to which boundary padding will be added.
+        periodic: If True, apply periodic boundary conditions when padding in
+            the x-direction. If False, pad with zeros in the x and y directions.
+
+    Returns:
+        List of input arrays with boundary padding added.
+    """
     periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
     zero_y = functools.partial(
         np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
