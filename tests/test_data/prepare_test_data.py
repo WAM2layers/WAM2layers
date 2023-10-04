@@ -10,8 +10,7 @@ from pathlib import Path
 
 import xarray as xr
 
-path_to_data = Path("/home/yangliu/WAM2layers/era5_raw")
-# path_to_data = Path("./path_to_daily_ERA5_data")
+path_to_data = Path("./path_to_daily_ERA5_data")
 era5_name_pattern = "ERA5_2022-08-31"
 variable_list = ["e", "sp", "tp", "ml_q", "ml_u", "ml_v"]
 
