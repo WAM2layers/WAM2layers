@@ -1,9 +1,5 @@
-import functools
-<<<<<<< HEAD
-=======
 import logging
->>>>>>> origin/main
-from functools import lru_cache
+from functools import lru_cache, partial
 
 import click
 import numpy as np
@@ -12,8 +8,8 @@ import xarray as xr
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.utils.profiling import ProgressTracker
 from wam2layers.utils import load_region
+from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
 
@@ -144,90 +140,113 @@ def pad_boundaries(*args, periodic=False):
     Returns:
         List of input arrays with boundary padding added.
     """
-    periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
-    zero_y = functools.partial(
+    zero_xy = partial(np.pad, pad_width=1, mode="constant", constant_values=0)
+    periodic_x = partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
+    zero_y = partial(
         np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
     )
-    zero_xy = functools.partial(np.pad, pad_width=1, mode="constant", constant_values=0)
+
     if periodic:
         return [periodic_x(zero_y(arg)) for arg in args]
     return [zero_xy(arg) for arg in args]
 
 
-def advection(q, u, v):
+def horizontal_advection(s, u, v):
     """Calculate advection on a staggered grid using a donor cell scheme.
 
-    It solves the advection equation `grad(u*q)` where u is the velocity vector
-    and q is any scalar, which is discretized as a double upwind scheme:
+    It solves the advection equation `grad(u*s)` where u is the velocity vector
+    and s is any scalar, which is discretized as a double upwind scheme:
 
-    q(i-1/2) = q(i-1) if u(i-1/2) > 0
-               q(i+1) otherwise
-    q(j-1/2) = q(j-1) if v(j-1/2) > 0   TODO: check direction
-               q(j+1) otherwise
+    s(i-1/2) = s(i-1) if u(i-1/2) > 0
+               s(i+1) otherwise
+    s(j-1/2) = s(j-1) if v(j-1/2) > 0   TODO: check direction
+               s(j+1) otherwise
 
-    d(uq)/dx = u(i-1/2)*q(i-1/2) - u(i+1/2)*q(i+1/2) d(vq)/dy =
-    v(j-1/2)*q(j-1/2) - v(j+1/2)*q(j+1/2)
+    d(us)/dx = u(i-1/2)*s(i-1/2) - u(i+1/2)*s(i+1/2)
+    d(vs)/dy = v(j-1/2)*s(j-1/2) - v(j+1/2)*s(j+1/2)
 
-    adv(q) = d(uq)/dx + d(vq)/dy
+    adv(s) = d(us)/dx + d(vs)/dy
 
-    Can only calculate advection for the interior of the array. Hence the
-    resulting array is 2 cells smaller in both directions.
+    Boundaries are padded with 0 or periodic boundaries
+    to maintain the original grid size.
 
     Arguments:
-        q: array of shape [M, N]
+        s: array of shape [M, N]
         u: array of shape = [M-2, N-1]
         v: array of shape = [M-1, N-2]
 
     Returns:
-        array of shape [M-2, N-2]
+        array of shape [M, N]
 
     Example:
 
-        >>> q = np.zeros((5, 5))
-        >>> q[2, 2] = 1
+        >>> s = np.zeros((5, 5))
+        >>> s[2, 2] = 1
         >>> u = np.ones((3, 4)) * .5
         >>> v = np.ones((4, 3)) * .5
-        >>> advection(q, u, v)
+        >>> horizontal_advection(s, u, v)
         array([[ 0. ,  0.5,  0. ],
                [ 0. , -1. ,  0.5],
                [ 0. ,  0. ,  0. ]])
 
     """
+    # Pad boundaries with ghost cells
+    qp, up, vp = pad_boundaries(s, u, v, periodic=config.periodic_boundary)
+    # shapes: [M+2, N+2], [M, N+1], [M+1, N]
+
     west = np.s_[:-1]
     east = np.s_[1:]
-
-    # TODO revert direction of era5 latitude in pre-processing(?)
-    south = np.s_[1:]
+    south = np.s_[1:]  # TODO check grid direction
     north = np.s_[:-1]
-
     inner = np.s_[1:-1]
 
     # Donor cell upwind scheme (2 directions seperately)
-    uq = np.where(u > 0, u * q[inner, west], u * q[inner, east])  # [M-2, N-1]
+    uq = np.where(up > 0, up * qp[inner, west], up * qp[inner, east])  # [M, N+1]
 
-    vq = np.where(v > 0, v * q[south, inner], v * q[north, inner])  # [M-1, N-2]
+    vq = np.where(vp > 0, vp * qp[south, inner], vp * qp[north, inner])  # [M, N+2]
 
-    adv_x = uq[:, west] - uq[:, east]  # [M-2, N-2]
-    adv_y = vq[south, :] - vq[north, :]  # [M-2, N-2]
+    adv_x = uq[:, west] - uq[:, east]  # [M, N]
+    adv_y = vq[south, :] - vq[north, :]  # [M, N]
 
-    return adv_x + adv_y  # [M-2, N-2]
+    return adv_x + adv_y  # [M, N]
 
 
-def split_vertical_flux(Kvf, fv):
-    f_downward = np.zeros_like(fv)
-    f_upward = np.zeros_like(fv)
-    f_downward[fv >= 0] = fv[fv >= 0]
-    f_upward[fv <= 0] = fv[fv <= 0]
-    f_upward = np.abs(f_upward)
+def vertical_advection(fv, s_lower, s_upper):
+    """Calculate 1d upwind advection of vertical flux.
 
-    # include the vertical dispersion
-    if Kvf != 0:
-        f_upward = (1.0 + Kvf) * f_upward
-        f_upward[fv >= 0] = fv[fv >= 0] * Kvf
-        f_downward = (1.0 + Kvf) * f_downward
-        f_downward[fv <= 0] = np.abs(fv[fv <= 0]) * Kvf
+    Upwind advection with fv positive downwards, so:
 
-    return f_downward, f_upward
+    fv * s = fv * s_upper if fv > 0
+           = fv * s_lower otherwise
+    """
+    return np.where(fv >= 0, fv * s_upper, fv * s_lower)
+
+
+def vertical_dispersion(fv, s_lower, s_upper):
+    """Calculate additional vertical mixing due to convective dispersion.
+
+    dispersion = kvf * |Fv| * dS/dz
+    """
+    return config.kvf * np.abs(fv) * (s_upper - s_lower)
+
+
+# def split_vertical_flux(fv, Kvf=0):
+#     """Split Fv in two components to enhance vertical mixing.
+
+#     Kvf is a dispersion coefficient. It will enhance transport of tagged
+#     moisture from upper to lower and lower to upper in all grid cells. So
+
+#     Fv = Fv_net + Fv_dispersion_downwards - Fv_dispersion_upwards,
+#     with Fv_dispersion = Kvf * abs(Fv)
+
+#     # TODO: I think this could alternatively be written as
+#     # dispersion = kvf * abs(Fv) * dS/dz
+#     # Then there's no need for splitting Fv and it's closer to the physics
+#     """
+#     f_downward = np.where(fv >= 0, fv * (1 + Kvf), -fv * Kvf)
+#     f_upward = np.where(fv < 0, -fv * (1 + Kvf), fv * Kvf)
+
+#     return f_downward, f_upward
 
 
 def change_units(data, target_freq):
@@ -301,18 +320,17 @@ def calculate_fv(fluxes, states_prev, states_next):
     s_total = s_mean.s_upper + s_mean.s_lower
     s_rel = s_mean / s_total
 
-    tendency_upper = (
-        convergence(fluxes.fx_upper, fluxes.fy_upper)
-        - fluxes.precip.values * s_rel.s_upper
+    residual_upper = (
+        s_diff.s_upper
+        - convergence(fluxes.fx_upper, fluxes.fy_upper)
+        + fluxes.precip.values * s_rel.s_upper
     )
-    tendency_lower = (
-        convergence(fluxes.fx_lower, fluxes.fy_lower)
-        - fluxes.precip.values * s_rel.s_lower
-        + fluxes.evap
+    residual_lower = (
+        s_diff.s_lower
+        - convergence(fluxes.fx_lower, fluxes.fy_lower)
+        + fluxes.precip.values * s_rel.s_lower
+        - fluxes.evap
     )
-
-    residual_upper = s_diff.s_upper - tendency_upper
-    residual_lower = s_diff.s_lower - tendency_lower
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
@@ -321,7 +339,9 @@ def calculate_fv(fluxes, states_prev, states_next):
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
     stab = 1.0 / (config.kvf + 1.0)
-    flux_limit = np.minimum(s_mean.s_upper, s_mean.s_lower)
+    flux_limit = np.minimum(
+        s_mean.s_upper, s_mean.s_lower
+    )  # TODO why is this not 'just' the upstream bucket?
     fv_stable = np.minimum(np.abs(fv), stab * flux_limit)
 
     # Reinstate the sign
@@ -353,7 +373,7 @@ def backtrack(
     s_total = s_upper + s_lower
 
     # separate the direction of the vertical flux and make it absolute
-    f_downward, f_upward = split_vertical_flux(config.kvf, f_vert)
+    # f_downward, f_upward = split_vertical_flux(f_vert, config.kvf)
 
     # Determine fluxes at the faces of the grid cells
     fx_lower = stagger_x(fx_lower)
@@ -367,20 +387,19 @@ def backtrack(
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
-    # Actual tracking (note: backtracking, all terms have been negated)
-    padded = functools.partial(pad_boundaries, periodic=config.periodic_boundary)
+    # Actual tracking (note: backtracking, all fluxes change sign)
     s_track_lower += (
-        +advection(*padded(s_track_relative_lower, -fx_lower, -fy_lower))
-        + (f_upward * s_track_relative_upper)
-        - (f_downward * s_track_relative_lower)
+        + horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower)
+        + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
+        + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + (tagged_precip * (s_lower / s_total))
         - (evap * s_track_relative_lower)
     )
 
     s_track_upper += (
-        +advection(*padded(s_track_relative_upper, -fx_upper, -fy_upper))
-        + (f_downward * s_track_relative_lower)
-        - (f_upward * s_track_relative_upper)
+        + horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper)
+        - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
+        - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + (tagged_precip * (s_upper / s_total))
     )
 

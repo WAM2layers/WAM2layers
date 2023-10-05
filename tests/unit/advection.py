@@ -1,4 +1,4 @@
-from wam2layers.tracking.backtrack import advection
+from wam2layers.tracking.backtrack import horizontal_advection
 import numpy as np
 
 def test_advection():
@@ -6,7 +6,7 @@ def test_advection():
     q[2, 2] = 1
     u = np.ones((3, 4)) * .5
     v = np.ones((4, 3)) * .5
-    tendency = advection(q, u, v)
+    tendency = horizontal_advection(q, u, v)
     expected = np.array([
         [ 0.,  .5,  0.],
         [ 0., -1.,  .5],
