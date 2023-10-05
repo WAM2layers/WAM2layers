@@ -162,6 +162,9 @@ git diff
 git add -u
 git add docs/develop.md
 
+# Run `pre-commit` before committing your changes
+pre-commit run
+
 # commit the staged changes with a short description
 git commit -m "updated develop documentation"
 
