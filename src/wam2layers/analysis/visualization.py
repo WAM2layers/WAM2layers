@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import click
@@ -9,9 +10,6 @@ from cmocean import cm
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.backtrack import input_path, output_path
-
-import logging
-
 from wam2layers.utils import load_region
 
 logger = logging.getLogger(__name__)
