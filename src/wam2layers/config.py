@@ -1,8 +1,12 @@
 from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_validator
+import logging
 import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
+
+
+logger = logging.getLogger(__name__)
 
 
 class Config(BaseModel):

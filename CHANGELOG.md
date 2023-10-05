@@ -13,8 +13,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- 
+- The "analyse output" command now excludes the first timestep when it looks for output files, as it is usually not present in backtrack output ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
 
+### Changed
+
+- There's now a dedicated function to compute the advection term. This makes it easier to apply different solvers. Padding is added to the edges of the domain, and boundary losses are added to e-track at the edges of the domain ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
 
 ## Release v3.0.0-beta.5 (2023-07-21)
 
