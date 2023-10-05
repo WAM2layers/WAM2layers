@@ -1,4 +1,8 @@
 import functools
+<<<<<<< HEAD
+=======
+import logging
+>>>>>>> origin/main
 from functools import lru_cache
 
 import click
@@ -9,6 +13,9 @@ import xarray as xr
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
+from wam2layers.utils import load_region
+
+logger = logging.getLogger(__name__)
 
 
 def get_tracking_dates(config):
@@ -127,7 +134,16 @@ def stagger_y(f):
 
 
 def pad_boundaries(*args, periodic=False):
-    """Add boundary padding to all input arrays."""
+    """Add boundary padding to all input arrays.
+
+    Arguments:
+        *args: Input arrays to which boundary padding will be added.
+        periodic: If True, apply periodic boundary conditions when padding in
+            the x-direction. If False, pad with zeros in the x and y directions.
+
+    Returns:
+        List of input arrays with boundary padding added.
+    """
     periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
     zero_y = functools.partial(
         np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
@@ -139,7 +155,20 @@ def pad_boundaries(*args, periodic=False):
 
 
 def advection(q, u, v):
-    """Calculate advection on a staggered grid.
+    """Calculate advection on a staggered grid using a donor cell scheme.
+
+    It solves the advection equation `grad(u*q)` where u is the velocity vector
+    and q is any scalar, which is discretized as a double upwind scheme:
+
+    q(i-1/2) = q(i-1) if u(i-1/2) > 0
+               q(i+1) otherwise
+    q(j-1/2) = q(j-1) if v(j-1/2) > 0   TODO: check direction
+               q(j+1) otherwise
+
+    d(uq)/dx = u(i-1/2)*q(i-1/2) - u(i+1/2)*q(i+1/2) d(vq)/dy =
+    v(j-1/2)*q(j-1/2) - v(j+1/2)*q(j+1/2)
+
+    adv(q) = d(uq)/dx + d(vq)/dy
 
     Can only calculate advection for the interior of the array. Hence the
     resulting array is 2 cells smaller in both directions.
@@ -226,7 +255,7 @@ def change_units(data, target_freq):
         data[variable] = data[variable].assign_attrs(units="m**3")
 
 
-def stabilize_fluxes(current, previous):
+def stabilize_fluxes(current, previous, progress_tracker, t):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
@@ -245,6 +274,8 @@ def stabilize_fluxes(current, previous):
 
         fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_corrected)
+
+        progress_tracker.track_stability_correction(fy_corrected, fy_abs, config, t)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
@@ -384,7 +415,7 @@ def backtrack(
 
 def initialize(config_file):
     """Read config, region, and initial states."""
-    print(f"Initializing experiment with config file {config_file}")
+    logger.info(f"Initializing experiment with config file {config_file}")
 
     config = Config.from_yaml(config_file)
     region = load_region(config)
@@ -400,7 +431,7 @@ def initialize(config_file):
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
-    print(f"Output will be written to {config.output_folder}.")
+    logger.info(f"Output will be written to {config.output_folder}.")
     return config, region, output
 
 
@@ -427,7 +458,7 @@ def initialize_outputs(region):
 def write_output(output, t):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
-    print(f"{t} - Writing output to file {path}")
+    logger.info(f"{t} - Writing output to file {path}")
     output.astype("float32").to_netcdf(path)
 
     # Flush previous outputs
@@ -468,7 +499,7 @@ def run_experiment(config_file):
         change_units(fluxes, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(fluxes, states_next)
+        stabilize_fluxes(fluxes, states_next, progress_tracker, t)
 
         # Determine the vertical moisture flux
         fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
@@ -498,7 +529,7 @@ def run_experiment(config_file):
             progress_tracker.store_intermediate_states(output)
             write_output(output, t)
 
-    print("Experiment complete.")
+    logger.info("Experiment complete.")
 
 
 ###########################################################################
@@ -522,8 +553,8 @@ def cli(config_file):
         - python path/to/backtrack.py path/to/cases/era5_2021.yaml
         - wam2layers backtrack path/to/cases/era5_2021.yaml
     """
-    print("Welcome to WAM2layers.")
-    print("Starting backtrack experiment.")
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting backtrack experiment.")
     run_experiment(config_file)
 
 
