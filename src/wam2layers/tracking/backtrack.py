@@ -151,7 +151,7 @@ def pad_boundaries(*args, periodic=False):
     return [zero_xy(arg) for arg in args]
 
 
-def horizontal_advection(s, u, v):
+def horizontal_advection(s, u, v, periodic_x=False):
     """Calculate advection on a staggered grid using a donor cell scheme.
 
     It solves the advection equation `grad(u*s)` where u is the velocity vector
@@ -185,13 +185,15 @@ def horizontal_advection(s, u, v):
         >>> u = np.ones((3, 4)) * .5
         >>> v = np.ones((4, 3)) * .5
         >>> horizontal_advection(s, u, v)
-        array([[ 0. ,  0.5,  0. ],
-               [ 0. , -1. ,  0.5],
-               [ 0. ,  0. ,  0. ]])
+        array([[ 0. ,  0. ,  0. ,  0. ,  0. ],
+               [ 0. ,  0. ,  0.5,  0. ,  0. ],
+               [ 0. ,  0. , -1. ,  0.5,  0. ],
+               [ 0. ,  0. ,  0. ,  0. ,  0. ],
+               [ 0. ,  0. ,  0. ,  0. ,  0. ]])
 
     """
     # Pad boundaries with ghost cells
-    qp, up, vp = pad_boundaries(s, u, v, periodic=config.periodic_boundary)
+    qp, up, vp = pad_boundaries(s, u, v, periodic=periodic_x)
     # shapes: [M+2, N+2], [M, N+1], [M+1, N]
 
     west = np.s_[:-1]
@@ -388,8 +390,9 @@ def backtrack(
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
     # Actual tracking (note: backtracking, all fluxes change sign)
+    bc = config.periodic_boundary
     s_track_lower += (
-        + horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower)
+        + horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
         + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + (tagged_precip * (s_lower / s_total))
@@ -397,7 +400,7 @@ def backtrack(
     )
 
     s_track_upper += (
-        + horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper)
+        + horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
         - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + (tagged_precip * (s_upper / s_total))
