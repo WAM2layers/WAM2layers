@@ -78,24 +78,6 @@ def load_data(t, subset="fluxes"):
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
-def load_fluxes(t):
-    t_current = t - pd.Timedelta(config.target_frequency) / 2
-    return load_data(t_current, "fluxes")
-
-
-def load_states(t):
-    t_prev = t
-    t_next = t - pd.Timedelta(config.target_frequency)
-    states_prev = load_data(t_prev, "states")
-    states_next = load_data(t_next, "states")
-    return states_prev, states_next
-
-
-def time_in_range(start, end, current):
-    """Returns whether current is in the range [start, end]"""
-    return start <= current <= end
-
-
 def load_region(config):
     # TODO: make variable name more generic
     return xr.open_dataset(config.region).source_region
@@ -151,7 +133,7 @@ def pad_boundaries(*args, periodic=False):
     return [zero_xy(arg) for arg in args]
 
 
-def horizontal_advection(s, u, v, periodic_x=False):
+def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     """Calculate advection on a staggered grid using a donor cell scheme.
 
     Boundaries are padded with 0 or periodic boundaries to maintain the original
@@ -251,25 +233,6 @@ def vertical_dispersion(fv, s_lower, s_upper):
     return config.kvf * np.abs(fv) * (s_upper - s_lower)
 
 
-# def split_vertical_flux(fv, Kvf=0):
-#     """Split Fv in two components to enhance vertical mixing.
-
-#     Kvf is a dispersion coefficient. It will enhance transport of tagged
-#     moisture from upper to lower and lower to upper in all grid cells. So
-
-#     Fv = Fv_net + Fv_dispersion_downwards - Fv_dispersion_upwards,
-#     with Fv_dispersion = Kvf * abs(Fv)
-
-#     # TODO: I think this could alternatively be written as
-#     # dispersion = kvf * abs(Fv) * dS/dz
-#     # Then there's no need for splitting Fv and it's closer to the physics
-#     """
-#     f_downward = np.where(fv >= 0, fv * (1 + Kvf), -fv * Kvf)
-#     f_upward = np.where(fv < 0, -fv * (1 + Kvf), fv * Kvf)
-
-#     return f_downward, f_upward
-
-
 def change_units(data, target_freq):
     """Change units to m3.
     Multiply by edge length or area to get flux in m3
@@ -331,31 +294,41 @@ def convergence(fx, fy):
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
-def calculate_fv(fluxes, states_prev, states_next):
+def calculate_fz(F, S0, S1):
     """Calculate the vertical fluxes.
 
-    Note: fluxes are given at temporal midpoints between states.
+    The vertical flux is calculated as a closure term. Residuals are distributed
+    proportionally to the amount of moisture in each layer.
+
+    The flux is constrained such that it can never exceed
+
+    Arguments:
+        F: xarray dataset with fluxes evaluated at temporal midpoints between states
+        S0: xarray dataset with states at current time t
+        S1: xarray dataset with states at updated time t+1 (always forward looking)
+
+    Returns:
+        fz: vertical flux, positive downward
     """
-    s_diff = states_prev - states_next
-    s_mean = (states_prev + states_next) / 2
+    s_mean = (S1 + S0) / 2
     s_total = s_mean.s_upper + s_mean.s_lower
     s_rel = s_mean / s_total
 
     residual_upper = (
-        s_diff.s_upper
-        - convergence(fluxes.fx_upper, fluxes.fy_upper)
-        + fluxes.precip.values * s_rel.s_upper
+        (S1 - S0).s_upper
+        - convergence(F.fx_upper, F.fy_upper)
+        + F.precip.values * s_rel.s_upper
     )
     residual_lower = (
-        s_diff.s_lower
-        - convergence(fluxes.fx_lower, fluxes.fy_lower)
-        + fluxes.precip.values * s_rel.s_lower
-        - fluxes.evap
+        (S1 - S0).s_lower
+        - convergence(F.fx_lower, F.fy_lower)
+        + F.precip.values * s_rel.s_lower
+        - F.evap
     )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
-    fv = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
+    fz = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
@@ -363,29 +336,30 @@ def calculate_fv(fluxes, states_prev, states_next):
     flux_limit = np.minimum(
         s_mean.s_upper, s_mean.s_lower
     )  # TODO why is this not 'just' the upstream bucket?
-    fv_stable = np.minimum(np.abs(fv), stab * flux_limit)
+    fz_stable = np.minimum(np.abs(fz), stab * flux_limit)
 
     # Reinstate the sign
-    return np.sign(fv) * fv_stable
+    return np.sign(fz) * fz_stable
 
 
 def backtrack(
-    fluxes,
-    states_prev,
-    states_next,
+    F,
+    S1,
+    S0,
     region,
     output,
 ):
     # Unpack input data
-    fx_upper = fluxes["fx_upper"].values
-    fy_upper = fluxes["fy_upper"].values
-    fx_lower = fluxes["fx_lower"].values
-    fy_lower = fluxes["fy_lower"].values
-    evap = fluxes["evap"].values
-    precip = fluxes["precip"].values
-    f_vert = fluxes["f_vert"].values
-    s_upper = states_prev["s_upper"].values
-    s_lower = states_prev["s_lower"].values
+    # TODO move staggering to preprocessing (?)
+    fx_upper = stagger_x(F["fx_upper"].values)
+    fy_upper = stagger_y(F["fy_upper"].values)
+    fx_lower = stagger_x(F["fx_lower"].values)
+    fy_lower = stagger_y(F["fy_lower"].values)
+    evap = F["evap"].values
+    precip = F["precip"].values
+    f_vert = F["f_vert"].values
+    s_upper = S1["s_upper"].values
+    s_lower = S1["s_lower"].values
 
     s_track_upper = output["s_track_upper_restart"].values
     s_track_lower = output["s_track_lower_restart"].values
@@ -393,16 +367,7 @@ def backtrack(
     tagged_precip = region * precip
     s_total = s_upper + s_lower
 
-    # separate the direction of the vertical flux and make it absolute
-    # f_downward, f_upward = split_vertical_flux(f_vert, config.kvf)
-
     # Determine fluxes at the faces of the grid cells
-    fx_lower = stagger_x(fx_lower)
-    fx_upper = stagger_x(fx_upper)
-    fy_lower = stagger_y(fy_lower)
-    fy_upper = stagger_y(fy_upper)
-
-    # TODO move staggering to preprocessing (?)
 
     # Short name for often used expressions
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
@@ -411,7 +376,7 @@ def backtrack(
     # Actual tracking (note: backtracking, all fluxes change sign)
     bc = config.periodic_boundary
     s_track_lower += (
-        + horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
+        +horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
         + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + (tagged_precip * (s_lower / s_total))
@@ -419,15 +384,15 @@ def backtrack(
     )
 
     s_track_upper += (
-        + horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
+        +horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
         - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + (tagged_precip * (s_upper / s_total))
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
-    lower_to_upper = np.maximum(0, s_track_lower - states_next["s_lower"])
-    upper_to_lower = np.maximum(0, s_track_upper - states_next["s_upper"])
+    lower_to_upper = np.maximum(0, s_track_lower - S0["s_lower"])
+    upper_to_lower = np.maximum(0, s_track_upper - S0["s_upper"])
     s_track_lower = s_track_lower - lower_to_upper + upper_to_lower
     s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
 
@@ -487,10 +452,6 @@ def initialize_outputs(region):
             "s_track_lower_restart": xr.zeros_like(proto),
             "e_track": xr.zeros_like(proto),
             "tagged_precip": xr.zeros_like(proto),
-            "north_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
-            "south_loss": xr.zeros_like(proto.isel(latitude=0, drop=True)),
-            "east_loss": xr.zeros_like(proto.isel(longitude=0, drop=True)),
-            "west_loss": xr.zeros_like(proto.isel(longitude=0, drop=True)),
         }
     )
     return output
@@ -503,16 +464,7 @@ def write_output(output, t):
     output.astype("float32").to_netcdf(path)
 
     # Flush previous outputs
-    output[
-        [
-            "e_track",
-            "tagged_precip",
-            "north_loss",
-            "south_loss",
-            "east_loss",
-            "west_loss",
-        ]
-    ] *= 0
+    output[["e_track", "tagged_precip"]] *= 0
 
 
 #############################################################################
@@ -528,47 +480,39 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     tracking_dates = get_tracking_dates(config)
+    event_start, event_end = config.event_start_date, config.event_end_date
 
     progress_tracker = ProgressTracker(output)
-    for t in reversed(tracking_dates):
-        fluxes = load_fluxes(t)
-        states_prev, states_next = load_states(t)
+    for t1 in reversed(tracking_dates):
+        t0 = t1 - pd.Timedelta(config.target_frequency)
+        th = t1 - pd.Timedelta(config.target_frequency) / 2
+
+        S1 = load_data(t1, "states")
+        S0 = load_data(t0, "states")
+        F = load_data(th, "fluxes")
 
         # Convert data to volumes
-        change_units(states_prev, config.target_frequency)
-        change_units(states_next, config.target_frequency)
-        change_units(fluxes, config.target_frequency)
+        change_units(S1, config.target_frequency)
+        change_units(S0, config.target_frequency)
+        change_units(F, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(fluxes, states_next, progress_tracker, t)
+        stabilize_fluxes(F, S0, progress_tracker, t1)
 
         # Determine the vertical moisture flux
-        fluxes["f_vert"] = calculate_fv(fluxes, states_prev, states_next)
+        F["f_vert"] = calculate_fz(F, S0, S1)
 
         # Only track the precipitation at certain timesteps
-        if (
-            time_in_range(
-                config.event_start_date,
-                config.event_end_date,
-                t,
-            )
-            == False
-        ):
-            fluxes["precip"] = 0
+        if not event_start <= t1 <= event_end:
+            F["precip"] = 0
 
-        backtrack(
-            fluxes,
-            states_prev,
-            states_next,
-            region,
-            output,
-        )
+        backtrack(F, S1, S0, region, output)
 
         # Daily output
-        if t == t.floor(config.output_frequency) or t == tracking_dates[0]:
-            progress_tracker.print_progress(t, output)
+        if t1 == t1.floor(config.output_frequency) or t1 == tracking_dates[0]:
+            progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t)
+            write_output(output, t1)
 
     logger.info("Experiment complete.")
 
