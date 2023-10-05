@@ -364,11 +364,6 @@ def backtrack(
     s_track_upper = output["s_track_upper_restart"].values
     s_track_lower = output["s_track_lower_restart"].values
 
-    tagged_precip = region * precip
-    s_total = s_upper + s_lower
-
-    # Determine fluxes at the faces of the grid cells
-
     # Short name for often used expressions
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
@@ -379,15 +374,15 @@ def backtrack(
         +horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
         + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
-        + (tagged_precip * (s_lower / s_total))
-        - (evap * s_track_relative_lower)
+        + region * precip * s_lower / (s_upper + s_lower)
+        - evap * s_track_relative_lower
     )
 
     s_track_upper += (
         +horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
         - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
-        + (tagged_precip * (s_upper / s_total))
+        + region * precip * s_upper / (s_upper + s_lower)
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
@@ -416,7 +411,7 @@ def backtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
-    output["tagged_precip"] += tagged_precip
+    output["tagged_precip"] += region * precip
 
 
 def initialize(config_file):
