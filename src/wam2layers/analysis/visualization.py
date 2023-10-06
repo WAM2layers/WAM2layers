@@ -48,25 +48,28 @@ def _plot_precip(config, ax):
     dates = pd.date_range(
         start=config.preprocess_start_date,
         end=config.preprocess_end_date,
-        freq=config.output_frequency,  # Should be output frequency, since this is used to save the data
+        freq=config.input_frequency,  # Should be output frequency, since this is used to save the data
         inclusive="left",
     )
 
     input_files = []
     for date in dates:
         input_files.append(input_path(date, config))
+    input_files = list(set(input_files))
 
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
     # TODO: make region time-dependent
     start = config.event_start_date
     end = config.event_end_date
+    #import IPython; IPython.embed(); quit()
     subset = ds.precip.sel(time=slice(start, end))
     precip = (subset * region * 3600).sum("time").compute()
+    #precip = (subset * 3600).sum("time").compute()
 
     # Make figure
     precip.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
     ax.set_title("Cumulative precipitation during event [mm]", loc="left")
-    polish(ax, region.where(region > 0, drop=True))
+    polish(ax, region.where(region >= 0, drop=True))
 
 
 def _plot_evap(config, ax):

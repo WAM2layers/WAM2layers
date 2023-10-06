@@ -267,6 +267,16 @@ class Config(BaseModel):
 
     """
 
+    use_model_vflux: bool
+    """Whether to use the vertical model flux.
+
+    For example:
+
+    .. code-block:: yaml
+
+        use_model_vflux: true
+    """
+
     chunks: Optional[Dict[str, int]]
     """Whether to use dask.
 
