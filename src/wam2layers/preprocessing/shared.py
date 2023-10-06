@@ -416,9 +416,9 @@ def calculate_fz(F, S0, S1, kvf=0):
         ... })
         >>> calculate_fz(F, S0, S1)
         <xarray.DataArray (lat: 3, lon: 3)>
-        array([[-1.41935484, -1.41935484, -1.41935484],
-               [-1.41935484, -1.41935484, -1.41935484],
-               [-1.41935484, -1.41935484, -1.41935484]])
+        array([[-1.46666667, -1.46666667, -1.46666667],
+               [-1.46666667, -1.46666667, -1.46666667],
+               [-1.46666667, -1.46666667, -1.46666667]])
         Dimensions without coordinates: lat, lon
 
     """
@@ -440,7 +440,7 @@ def calculate_fz(F, S0, S1, kvf=0):
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
-    fz = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
+    fz = S1.s_lower / (S1.s_lower + S1.s_upper) * (residual_upper + residual_lower) - residual_lower
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
