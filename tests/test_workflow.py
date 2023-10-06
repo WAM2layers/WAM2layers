@@ -3,17 +3,10 @@ from pathlib import Path
 
 import matplotlib.testing.compare
 import numpy
-import pytest
 import xarray as xr
 from click.testing import CliRunner
 
 from wam2layers.cli import cli
-
-CARTOPY_INSTALLED = True
-try:
-    import cartopy.crs as _
-except ImportError:
-    CARTOPY_INSTALLED = False
 
 
 def test_preprocess():
@@ -50,7 +43,6 @@ def test_backtrack():
     )
 
 
-@pytest.mark.skipif(not CARTOPY_INSTALLED, reason="cartopy is not installed")
 def test_visualize():
     runner = CliRunner()
     result = runner.invoke(

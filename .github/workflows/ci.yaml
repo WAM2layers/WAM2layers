@@ -1,26 +1,43 @@
-name: Python package
+name: Micromamba
 
-on: [push]
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
 
 jobs:
-  build:
 
-    runs-on: ubuntu-latest
+  build:
+    name: Micromamba test on (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: ["ubuntu-latest"]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+    env:
+      MPLBACKEND: Agg  # https://github.com/orgs/community/discussions/26434
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install requirements
+          environment-name: wamenv
+          create-args: >-
+            python=${{ matrix.python-version }}
+            cartopy
+          init-shell: bash
+      - name: Micromamba info
+        shell: bash -el {0}
         run: |
-          python -m pip install --upgrade pip
-      - name: Test installation
+          micromamba info
+      - name: Install dev dependencies
         run: |
           pip install .[develop]
           wam2layers --help
-      - name: Test workflow # TODO: Run all the tests
+        shell: bash -el {0}
+      - name: Run pytest
         run: pytest tests/test_workflow.py
+        shell: micromamba-shell {0}
