@@ -3,11 +3,11 @@ from pathlib import Path
 
 import matplotlib.testing.compare
 import numpy
+import pytest
 import xarray as xr
 from click.testing import CliRunner
 
 from wam2layers.cli import cli
-
 
 CARTOPY_INSTALLED = True
 try:
