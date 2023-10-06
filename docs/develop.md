@@ -149,6 +149,16 @@ isort .
 black .
 ```
 
+### Verify your changes
+
+When you make changes to the code, you can easily verify the outputs by running the tests for the `preprocess`, `backtrack` and `visualize` workflows by executing the following command:
+
+```py
+pytest tests/test_workflow.py
+```
+
+If the outputs changed, you will receive an error message. It also provides you the instruction about how to update the reference files if you want to keep the new results.
+
 ### Commit and push your changes
 
 Next, you can commit them and push your branch to the remote:
