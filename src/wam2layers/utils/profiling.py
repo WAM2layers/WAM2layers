@@ -1,9 +1,9 @@
-from datetime import datetime
-import time
-import numpy as np
-
-import psutil
 import logging
+import time
+from datetime import datetime
+
+import numpy as np
+import psutil
 
 from wam2layers.utils import load_region
 
@@ -101,7 +101,7 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = load_region(config).rename('correction')
+        ncfile = load_region(config).rename("correction")
         ncfile.values = correction
         ncfile.to_netcdf(filename)
 
