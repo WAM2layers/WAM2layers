@@ -390,6 +390,39 @@ def calculate_fz(F, S0, S1):
 
     Returns:
         fz: vertical flux, positive downward
+
+    Examples:
+
+        Create dummy input data. In the absence of any horizontal fluxes and
+        sources or sinks, this result can be verified manually.
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> from wam2layers.preprocessing.shared import calculate_fz
+        >>>
+        >>> F = xr.Dataset({
+        ...     'precip': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'evap': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fx_upper': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fy_upper': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fx_lower': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fy_lower': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> S0 = xr.Dataset({
+        ...     's_upper': 10 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ...     's_lower': 6 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> S1 = xr.Dataset({
+        ...     's_upper': 8 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ...     's_lower': 7 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> calculate_fz(F, S0, S1)
+        <xarray.DataArray (lat: 3, lon: 3)>
+        array([[-1.41935484, -1.41935484, -1.41935484],
+               [-1.41935484, -1.41935484, -1.41935484],
+               [-1.41935484, -1.41935484, -1.41935484]])
+        Dimensions without coordinates: lat, lon
+
     """
     s_mean = (S1 + S0) / 2
     s_total = s_mean.s_upper + s_mean.s_lower
