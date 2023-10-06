@@ -51,7 +51,7 @@ def test_visualize():
     assert result.exit_code == 0
     output_path = Path("tests/tmp/output_data/figures/cumulative_sources.png")
     assert output_path.exists()
-    expected_output = Path("tests/test_data/verify_output/cumulative_sources_new_advect.png")
+    expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
     stdout = matplotlib.testing.compare.compare_images(
         expected_output, output_path, tol=5
     )
