@@ -51,12 +51,15 @@ def test_visualize():
     assert result.exit_code == 0
     output_path = Path("tests/tmp/output_data/figures/cumulative_sources.png")
     assert output_path.exists()
-    expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
+    expected_output = Path("tests/test_data/verify_output/cumulative_sources_new_advect.png")
     stdout = matplotlib.testing.compare.compare_images(
-        output_path, expected_output, tol=5
+        expected_output, output_path, tol=5
     )
     if stdout:
         raise ValueError(
-            "Output figures are different! Please check the difference in the produced"
-            " `diff` figure and verify your results."
+            "Output figures are different! Please check the difference in the produced \n"
+            " `cumulative_sources-failed-diff.png` figure and verify your results. \n"
+            "If you want to keep the new results and include it in your commit, \n"
+            "you can update the reference figure with the following command: \n"
+            "`cp tests/tmp/output_data/figures/cumulative_sources.png tests/test_data/verify_output/cumulative_sources.png`"
         )
