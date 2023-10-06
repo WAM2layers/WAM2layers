@@ -9,7 +9,7 @@ preprocess_start_date: "2022-08-31T00:00"
 preprocess_end_date: "2022-08-31T23:00"
 track_start_date: "2022-08-31T00:00"
 track_end_date: "2022-08-31T23:00"
-event_start_date: "2022-08-31T10:00"
+event_start_date: "2022-08-31T12:00"
 event_end_date: "2022-08-31T23:00"
 
 # Time
