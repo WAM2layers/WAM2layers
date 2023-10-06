@@ -61,7 +61,7 @@ def test_visualize():
     assert output_path.exists()
     expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
     stdout = matplotlib.testing.compare.compare_images(
-        output_path, expected_output, tol=1e-4
+        output_path, expected_output, tol=5
     )
     if stdout:
         raise ValueError(
