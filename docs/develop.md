@@ -162,9 +162,6 @@ git diff
 git add -u
 git add docs/develop.md
 
-# Run `pre-commit` before committing your changes
-pre-commit run
-
 # commit the staged changes with a short description
 git commit -m "updated develop documentation"
 
@@ -174,6 +171,8 @@ git push -u origin developer-docs
 # later commits can be pushed directly
 git push
 ```
+
+To help you make clean commits, we have configured this repository with pre-commit. This is completely optional, but we recommend you to give it a try. You can run pre-commit once by typing `pre-commit run` before committing some changes. If you like this, and you want to do it automatically with each commit, you can type `pre-commit install`.
 
 Frequently committing and pushing your code helps to keep a clear project
 history and can save you from losing work. Also, others will be able to see what
