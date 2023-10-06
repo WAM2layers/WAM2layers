@@ -416,9 +416,9 @@ def calculate_fz(F, S0, S1, kvf=0):
         ... })
         >>> calculate_fz(F, S0, S1)
         <xarray.DataArray (lat: 3, lon: 3)>
-        array([[-1.46666667, -1.46666667, -1.46666667],
-               [-1.46666667, -1.46666667, -1.46666667],
-               [-1.46666667, -1.46666667, -1.46666667]])
+        array([[1.46666667, 1.46666667, 1.46666667],
+               [1.46666667, 1.46666667, 1.46666667],
+               [1.46666667, 1.46666667, 1.46666667]])
         Dimensions without coordinates: lat, lon
 
     """
@@ -426,12 +426,13 @@ def calculate_fz(F, S0, S1, kvf=0):
     s_total = s_mean.s_upper + s_mean.s_lower
     s_rel = s_mean / s_total
 
-    residual_upper = (
+    # Evaluate all terms in the moisture balance execpt the unknown Fz and err
+    foo_upper = (
         (S1 - S0).s_upper
         - convergence(F.fx_upper, F.fy_upper)
         + F.precip.values * s_rel.s_upper
     )
-    residual_lower = (
+    foo_lower = (
         (S1 - S0).s_lower
         - convergence(F.fx_lower, F.fy_lower)
         + F.precip.values * s_rel.s_lower
@@ -439,8 +440,10 @@ def calculate_fz(F, S0, S1, kvf=0):
     )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
-    # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
-    fz = S1.s_lower / (S1.s_lower + S1.s_upper) * (residual_upper + residual_lower) - residual_lower
+    # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
+    fz = foo_lower - S1.s_lower / (S1.s_lower + S1.s_upper) * (foo_upper + foo_lower)
+
+    # TODO: verify that err_lower/s_lower = err_upper/s_upper is satisfied on debug log
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
