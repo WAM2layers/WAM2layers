@@ -1,4 +1,4 @@
-from wam2layers.tracking.backtrack import horizontal_advection
+from wam2layers.tracking.core import horizontal_advection
 import numpy as np
 
 def test_advection():

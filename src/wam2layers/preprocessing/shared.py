@@ -5,8 +5,6 @@ import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
 
-from wam2layers.tracking.backtrack import config
-
 
 # old, keep only for reference and ecearth starting case
 def resample(variable, divt, count_time, method="interp"):
@@ -339,7 +337,7 @@ def change_units(data, target_freq):
         data[variable] = data[variable].assign_attrs(units="m**3")
 
 
-def stabilize_fluxes(current, previous, progress_tracker, t):
+def stabilize_fluxes(current, previous, progress_tracker, config, t):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
@@ -375,7 +373,7 @@ def convergence(fx, fy):
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
-def calculate_fz(F, S0, S1):
+def calculate_fz(F, S0, S1, kvf=0):
     """Calculate the vertical fluxes.
 
     The vertical flux is calculated as a closure term. Residuals are distributed
@@ -446,7 +444,7 @@ def calculate_fz(F, S0, S1):
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
-    stab = 1.0 / (config.kvf + 1.0)
+    stab = 1.0 / (kvf + 1.0)
     flux_limit = np.minimum(
         s_mean.s_upper, s_mean.s_lower
     )  # TODO why is this not 'just' the upstream bucket?

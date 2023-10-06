@@ -6,18 +6,11 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import (
-    calculate_fz,
-    change_units,
-    stabilize_fluxes,
-    stagger_x,
-    stagger_y,
-)
-from wam2layers.tracking.core import (
-    horizontal_advection,
-    vertical_advection,
-    vertical_dispersion,
-)
+from wam2layers.preprocessing.shared import (calculate_fz, change_units,
+                                             stabilize_fluxes, stagger_x,
+                                             stagger_y)
+from wam2layers.tracking.core import (horizontal_advection, vertical_advection,
+                                      vertical_dispersion)
 from wam2layers.tracking.io import load_data, load_region, output_path
 from wam2layers.utils.profiling import ProgressTracker
 
@@ -48,6 +41,7 @@ def backtrack(
     S0,
     region,
     output,
+    config,
 ):
     # Unpack input data
     # TODO move staggering to preprocessing (?)
@@ -73,7 +67,7 @@ def backtrack(
     s_track_lower += (
         +horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
         + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
-        + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
+        + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf)
         + region * precip * s_lower / (s_upper + s_lower)
         - evap * s_track_relative_lower
     )
@@ -81,7 +75,7 @@ def backtrack(
     s_track_upper += (
         +horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
         - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
-        - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper)
+        - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf)
         + region * precip * s_upper / (s_upper + s_lower)
     )
 
@@ -152,7 +146,7 @@ def initialize_outputs(region):
     return output
 
 
-def write_output(output, t):
+def write_output(output, t, config):
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
     logger.info(f"{t} - Writing output to file {path}")
@@ -170,8 +164,6 @@ def write_output(output, t):
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
-    global config
-
     config, region, output = initialize(config_file)
 
     tracking_dates = get_tracking_dates(config)
@@ -182,9 +174,9 @@ def run_experiment(config_file):
         t0 = t1 - pd.Timedelta(config.target_frequency)
         th = t1 - pd.Timedelta(config.target_frequency) / 2
 
-        S1 = load_data(t1, "states")
-        S0 = load_data(t0, "states")
-        F = load_data(th, "fluxes")
+        S1 = load_data(t1, config, "states")
+        S0 = load_data(t0, config, "states")
+        F = load_data(th, config, "fluxes")
 
         # Convert data to volumes
         change_units(S1, config.target_frequency)
@@ -192,22 +184,22 @@ def run_experiment(config_file):
         change_units(F, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(F, S0, progress_tracker, t1)
+        stabilize_fluxes(F, S0, progress_tracker, config, t1)
 
         # Determine the vertical moisture flux
-        F["f_vert"] = calculate_fz(F, S0, S1)
+        F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
         # Only track the precipitation at certain timesteps
         if not event_start <= t1 <= event_end:
             F["precip"] = 0
 
-        backtrack(F, S1, S0, region, output)
+        backtrack(F, S1, S0, region, output, config)
 
         # Daily output
         if t1 == t1.floor(config.output_frequency) or t1 == tracking_dates[0]:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t1)
+            write_output(output, t1, config)
 
     logger.info("Experiment complete.")
 

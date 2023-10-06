@@ -9,13 +9,9 @@ import yaml
 
 from wam2layers.analysis.checks import check_input
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import (
-    accumulation_to_flux,
-    calculate_humidity,
-    insert_level,
-    interpolate,
-    sortby_ndarray,
-)
+from wam2layers.preprocessing.shared import (accumulation_to_flux,
+                                             calculate_humidity, insert_level,
+                                             interpolate, sortby_ndarray)
 
 logger = logging.getLogger(__name__)
 

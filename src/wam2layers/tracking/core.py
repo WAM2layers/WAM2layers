@@ -1,6 +1,28 @@
+from functools import partial
+
 import numpy as np
 
-from wam2layers.tracking.backtrack import pad_boundaries
+
+def pad_boundaries(*args, periodic=False):
+    """Add boundary padding to all input arrays.
+
+    Arguments:
+        *args: Input arrays to which boundary padding will be added.
+        periodic: If True, apply periodic boundary conditions when padding in
+            the x-direction. If False, pad with zeros in the x and y directions.
+
+    Returns:
+        List of input arrays with boundary padding added.
+    """
+    zero_xy = partial(np.pad, pad_width=1, mode="constant", constant_values=0)
+    periodic_x = partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
+    zero_y = partial(
+        np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
+    )
+
+    if periodic:
+        return [periodic_x(zero_y(arg)) for arg in args]
+    return [zero_xy(arg) for arg in args]
 
 
 def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
@@ -82,3 +104,22 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     adv_y = vq[south, :] - vq[north, :]  # [M, N]
 
     return adv_x + adv_y  # [M, N]
+
+
+def vertical_advection(fv, s_lower, s_upper):
+    """Calculate 1d upwind advection of vertical flux.
+
+    Upwind advection with fv positive downwards, so:
+
+    fv * s = fv * s_upper if fv > 0
+           = fv * s_lower otherwise
+    """
+    return np.where(fv >= 0, fv * s_upper, fv * s_lower)
+
+
+def vertical_dispersion(fv, s_lower, s_upper, kvf):
+    """Calculate additional vertical mixing due to convective dispersion.
+
+    dispersion = kvf * |Fv| * dS/dz
+    """
+    return kvf * np.abs(fv) * (s_upper - s_lower)
