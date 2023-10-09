@@ -7,6 +7,8 @@ Version 4.0 | 25-05-2023
 
 """
 
+import logging
+
 # Import
 import cartopy.crs as ccrs  # used for plotting on a map
 import geopandas as gpd  # reading shapefiles
@@ -16,8 +18,6 @@ import numpy as np  # used for array calculations
 import regionmask  # used for region mapping
 import xarray as xr  # used to read .nc files
 from cartopy import feature as cfeature
-
-import logging
 
 logger = logging.getLogger(__name__)
 

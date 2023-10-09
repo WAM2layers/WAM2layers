@@ -9,8 +9,8 @@ import xarray as xr
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.utils.profiling import ProgressTracker
 from wam2layers.utils import load_region
+from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
 
