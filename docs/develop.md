@@ -182,8 +182,6 @@ git push -u origin developer-docs
 git push
 ```
 
-To help you make clean commits, we have configured this repository with pre-commit. This is completely optional, but we recommend you to give it a try. You can run pre-commit once by typing `pre-commit run` before committing some changes. If you like this, and you want to do it automatically with each commit, you can type `pre-commit install`.
-
 Frequently committing and pushing your code helps to keep a clear project
 history and can save you from losing work. Also, others will be able to see what
 you're working on, which can prevent double work and can be useful to ask for
@@ -195,6 +193,14 @@ extension](https://code.visualstudio.com/docs/sourcecontrol/overview). It
 provides a more visual experience. Similarly, you could also use [Github
 desktop](https://desktop.github.com/).
 ```
+
+#### Pre-commit
+
+To help you make clean commits, we have configured this repository with pre-commit. 
+This is completely optional, but we recommend you to give it a try. You can run 
+pre-commit once by typing `pre-commit run` before committing some changes. If you 
+like this, and you want to do it automatically with each commit, you can type 
+`pre-commit install`.
 
 ### Open a (draft) pull request
 
