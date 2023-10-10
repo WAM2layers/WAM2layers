@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import click
@@ -15,8 +16,6 @@ from wam2layers.preprocessing.shared import (
     interpolate,
     sortby_ndarray,
 )
-
-import logging
 
 logger = logging.getLogger(__name__)
 

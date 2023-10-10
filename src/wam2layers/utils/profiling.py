@@ -1,9 +1,9 @@
-from datetime import datetime
-import time
-import numpy as np
-
-import psutil
 import logging
+import time
+from datetime import datetime
+
+import numpy as np
+import psutil
 
 from wam2layers.utils import load_region
 
@@ -59,18 +59,12 @@ class ProgressTracker:
         totals = output.sum()
         tracked = self.tracked + totals["e_track"]
         total_tagged_moisture = self.total_tagged_moisture + totals["tagged_precip"]
-        boundary = self.boundary + (
-            totals["north_loss"]
-            + totals["south_loss"]
-            + totals["east_loss"]
-            + totals["west_loss"]
-        )
         still_in_atmosphere = (
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
 
-        total_tracked_moisture = tracked + still_in_atmosphere + boundary
-        tracked_percentage = (tracked + boundary) / total_tagged_moisture * 100
+        total_tracked_moisture = tracked + still_in_atmosphere
+        tracked_percentage = tracked / total_tagged_moisture * 100
         lost_percentage = (1 - total_tracked_moisture / total_tagged_moisture) * 100
 
         time, memory = self.profile()
@@ -114,7 +108,7 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = load_region(config).rename('correction')
+        ncfile = load_region(config).rename("correction")
         ncfile.values = correction
         ncfile.to_netcdf(filename)
 

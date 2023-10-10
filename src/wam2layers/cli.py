@@ -1,6 +1,7 @@
 """Command-line interface for the WAM2layers model."""
-from datetime import datetime
 import logging
+from datetime import datetime
+
 import click
 
 from wam2layers.analysis.visualization import cli as visualize_cli

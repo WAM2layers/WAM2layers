@@ -1,3 +1,4 @@
+import functools
 import logging
 from functools import lru_cache
 
@@ -8,8 +9,8 @@ import xarray as xr
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.utils.profiling import ProgressTracker
 from wam2layers.utils import load_region
+from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
 
@@ -96,68 +97,116 @@ def time_in_range(start, end, current):
     return start <= current <= end
 
 
-def to_edges_zonal(fx, periodic_boundary=False):
-    """Define the horizontal fluxes over the east/west boundaries."""
-    fe = np.zeros_like(fx)
-    fe[:, :-1] = 0.5 * (fx[:, :-1] + fx[:, 1:])
-    if periodic_boundary:
-        fe[:, -1] = 0.5 * (fx[:, -1] + fx[:, 0])
-
-    # find out where the positive and negative fluxes are
-    f_pos = np.ones_like(fx)
-    f_pos[fe < 0] = 0
-    f_neg = f_pos - 1
-
-    # separate directions west-east (all positive numbers)
-    fe_we = fe * f_pos
-    fe_ew = fe * f_neg
-
-    # fluxes over the western boundary
-    fw_we = look_west(fe_we)
-    fw_ew = look_west(fe_ew)
-
-    return fe_we, fe_ew, fw_we, fw_ew
+def load_region(config):
+    # TODO: make variable name more generic
+    return xr.open_dataset(config.region).source_region
 
 
-def to_edges_meridional(fy):
-    """Define the horizontal fluxes over the north/south boundaries."""
-    fn = np.zeros_like(fy)
-    fn[1:, :] = 0.5 * (fy[:-1, :] + fy[1:, :])
+def stagger_x(f):
+    """Interpolate f to the grid cell interfaces.
 
-    # find out where the positive and negative fluxes are
-    fn_pos = np.ones_like(fn)
-    fn_pos[fn < 0] = 0  # invalid value encountered in less
-    fn_neg = fn_pos - 1
+    Only the values at the interior interfaces are returned
 
-    # separate directions south-north (all positive numbers)
-    fn_sn = fn * fn_pos
-    fn_ns = fn * fn_neg
+    Arguments:
+        f: 2d array of shape [M, N]
 
-    # fluxes over the southern boundary
-    fs_sn = look_south(fn_sn)
-    fs_ns = look_south(fn_ns)
-
-    return fn_sn, fn_ns, fs_sn, fs_ns
+    Returns:
+        2d array of shape [M-2, N-1]
+    """
+    return 0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
 
 
-def look_north(array):
-    # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, 1, axis=-2)
+def stagger_y(f):
+    """Interpolate f to the grid cell interfaces.
+
+    Only the values at the interior interfaces are returned
+
+    Arguments:
+        f: 2d array of shape [M, N]
+
+    Returns:
+        2d array of shape [M-1, N-2]
+    """
+    return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
 
 
-def look_south(array):
-    # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, -1, axis=-2)
+def pad_boundaries(*args, periodic=False):
+    """Add boundary padding to all input arrays.
+
+    Arguments:
+        *args: Input arrays to which boundary padding will be added.
+        periodic: If True, apply periodic boundary conditions when padding in
+            the x-direction. If False, pad with zeros in the x and y directions.
+
+    Returns:
+        List of input arrays with boundary padding added.
+    """
+    periodic_x = functools.partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
+    zero_y = functools.partial(
+        np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
+    )
+    zero_xy = functools.partial(np.pad, pad_width=1, mode="constant", constant_values=0)
+    if periodic:
+        return [periodic_x(zero_y(arg)) for arg in args]
+    return [zero_xy(arg) for arg in args]
 
 
-def look_east(array):
-    # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, -1, axis=-1)
+def advection(q, u, v):
+    """Calculate advection on a staggered grid using a donor cell scheme.
 
+    It solves the advection equation `grad(u*q)` where u is the velocity vector
+    and q is any scalar, which is discretized as a double upwind scheme:
 
-def look_west(array):
-    # Note: edges are reinserted at other end; but they're not used anyway
-    return np.roll(array, 1, axis=-1)
+    q(i-1/2) = q(i-1) if u(i-1/2) > 0
+               q(i+1) otherwise
+    q(j-1/2) = q(j-1) if v(j-1/2) > 0   TODO: check direction
+               q(j+1) otherwise
+
+    d(uq)/dx = u(i-1/2)*q(i-1/2) - u(i+1/2)*q(i+1/2) d(vq)/dy =
+    v(j-1/2)*q(j-1/2) - v(j+1/2)*q(j+1/2)
+
+    adv(q) = d(uq)/dx + d(vq)/dy
+
+    Can only calculate advection for the interior of the domain. Hence the
+    resulting array is 2 cells smaller in both directions.
+
+    Arguments:
+        q: array of shape [M, N] u: array of shape = [M-2, N-1] v: array of
+        shape = [M-1, N-2]
+
+    Returns:
+        array of shape [M-2, N-2]
+
+    Example:
+
+        >>> q = np.zeros((5, 5))
+        >>> q[2, 2] = 1
+        >>> u = np.ones((3, 4)) * .5
+        >>> v = np.ones((4, 3)) * .5
+        >>> advection(q, u, v)
+        array([[ 0. ,  0.5,  0. ],
+               [ 0. , -1. ,  0.5],
+               [ 0. ,  0. ,  0. ]])
+
+    """
+    west = np.s_[:-1]
+    east = np.s_[1:]
+
+    # TODO revert direction of era5 latitude in pre-processing(?)
+    south = np.s_[1:]
+    north = np.s_[:-1]
+
+    inner = np.s_[1:-1]
+
+    # Donor cell upwind scheme (2 directions seperately)
+    uq = np.where(u > 0, u * q[inner, west], u * q[inner, east])  # [M-2, N-1]
+
+    vq = np.where(v > 0, v * q[south, inner], v * q[north, inner])  # [M-1, N-2]
+
+    adv_x = uq[:, west] - uq[:, east]  # [M-2, N-2]
+    adv_y = vq[south, :] - vq[north, :]  # [M-2, N-2]
+
+    return adv_x + adv_y  # [M-2, N-2]
 
 
 def split_vertical_flux(Kvf, fv):
@@ -320,91 +369,59 @@ def backtrack(
     total_seconds = pd.Timedelta(config.target_frequency).total_seconds()
     f_vert = f_vert/(total_seconds*a[:, None])*density*g
 
-    # Determine horizontal fluxes over the grid-cell boundaries
-    f_e_lower_we, f_e_lower_ew, f_w_lower_we, f_w_lower_ew = to_edges_zonal(
-        fx_lower, config.periodic_boundary
-    )
-    f_e_upper_we, f_e_upper_ew, f_w_upper_we, f_w_upper_ew = to_edges_zonal(
-        fx_upper, config.periodic_boundary
-    )
+    # Determine fluxes at the faces of the grid cells
+    fx_lower = stagger_x(fx_lower)
+    fx_upper = stagger_x(fx_upper)
+    fy_lower = stagger_y(fy_lower)
+    fy_upper = stagger_y(fy_upper)
 
-    (
-        fy_n_lower_sn,
-        fy_n_lower_ns,
-        fy_s_lower_sn,
-        fy_s_lower_ns,
-    ) = to_edges_meridional(fy_lower)
-    (
-        fy_n_upper_sn,
-        fy_n_upper_ns,
-        fy_s_upper_sn,
-        fy_s_upper_ns,
-    ) = to_edges_meridional(fy_upper)
+    # TODO move staggering to preprocessing (?)
 
     # Short name for often used expressions
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
-    if config.periodic_boundary:
-        inner = np.s_[1:-1, :]
-    else:
-        inner = np.s_[1:-1, 1:-1]
-
     # Actual tracking (note: backtracking, all terms have been negated)
-    s_track_lower[inner] += (
-        +f_e_lower_we * look_east(s_track_relative_lower)
-        + f_w_lower_ew * look_west(s_track_relative_lower)
-        + fy_n_lower_sn * look_north(s_track_relative_lower)
-        + fy_s_lower_ns * look_south(s_track_relative_lower)
-        + f_upward * s_track_relative_upper
-        - f_downward * s_track_relative_lower
-        - fy_s_lower_sn * s_track_relative_lower
-        - fy_n_lower_ns * s_track_relative_lower
-        - f_e_lower_ew * s_track_relative_lower
-        - f_w_lower_we * s_track_relative_lower
-        + tagged_precip*(s_lower / s_total)
+    padded = functools.partial(pad_boundaries, periodic=config.periodic_boundary)
+    s_track_lower += (
+        +advection(*padded(s_track_relative_lower, -fx_lower, -fy_lower))
+        + (f_upward * s_track_relative_upper)
+        - (f_downward * s_track_relative_lower)
+        + (tagged_precip * (s_lower / s_total))
         #+ tagged_precip #* s_track_relative_lower #(s_lower / s_total)
-        - evap * s_track_relative_lower
-    )[inner]
+        - (evap * s_track_relative_lower)
+    )
 
-    s_track_upper[inner] += (
-        +f_e_upper_we * look_east(s_track_relative_upper)
-        + f_w_upper_ew * look_west(s_track_relative_upper)
-        + fy_n_upper_sn * look_north(s_track_relative_upper)
-        + fy_s_upper_ns * look_south(s_track_relative_upper)
-        + f_downward * s_track_relative_lower
-        - f_upward * s_track_relative_upper
-        - fy_s_upper_sn * s_track_relative_upper
-        - fy_n_upper_ns * s_track_relative_upper
-        - f_w_upper_we * s_track_relative_upper
-        - f_e_upper_ew * s_track_relative_upper
-        + tagged_precip * (s_upper / s_total)
-    )[inner]
+    s_track_upper += (
+        +advection(*padded(s_track_relative_upper, -fx_upper, -fy_upper))
+        + (f_downward * s_track_relative_lower)
+        - (f_upward * s_track_relative_upper)
+        + (tagged_precip * (s_upper / s_total))
+    )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
     lower_to_upper = np.maximum(0, s_track_lower - states_next["s_lower"])
     upper_to_lower = np.maximum(0, s_track_upper - states_next["s_upper"])
-    s_track_lower[inner] = (s_track_lower - lower_to_upper + upper_to_lower)[inner]
-    s_track_upper[inner] = (s_track_upper - upper_to_lower + lower_to_upper)[inner]
+    s_track_lower = s_track_lower - lower_to_upper + upper_to_lower
+    s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
 
     # Update output fields
     output["e_track"] += evap * np.minimum(s_track_lower / s_lower, 1.0)
-    output["north_loss"] += (
-        fy_n_upper_ns * s_track_relative_upper + fy_n_lower_ns * s_track_relative_lower
-    )[1, :]
-    output["south_loss"] += (
-        fy_s_upper_sn * s_track_relative_upper + fy_s_lower_sn * s_track_relative_lower
-    )[-2, :]
 
+    # Bookkeep boundary losses as "tracked moisture at grid edges"
+    output["e_track"][0, :] += (s_track_upper + s_track_lower)[0, :]
+    output["e_track"][-1, :] += (s_track_upper + s_track_lower)[-1, :]
+    s_track_upper[0, :] = 0
+    s_track_upper[-1, :] = 0
+    s_track_lower[0, :] = 0
+    s_track_lower[-1, :] = 0
     if config.periodic_boundary is False:
-        output["east_loss"] += (
-            f_e_upper_ew * s_track_relative_upper
-            + f_e_lower_ew * s_track_relative_lower
-        )[:, -2]
-        output["west_loss"] += (
-            f_w_upper_we * s_track_relative_upper
-            + f_w_lower_we * s_track_relative_lower
-        )[:, 1]
+        output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
+        output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
+        s_track_upper[:, 0] = 0
+        s_track_upper[:, -1] = 0
+        s_track_lower[:, 0] = 0
+        s_track_lower[:, -1] = 0
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper

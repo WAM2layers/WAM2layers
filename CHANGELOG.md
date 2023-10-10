@@ -5,16 +5,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Add tests for preprocess and backtrack workflow [#265](https://github.com/WAM2layers/WAM2layers/pull/265).
+- Add tests for preprocess and backtrack workflow ([#265](https://github.com/WAM2layers/WAM2layers/pull/265)).
+- Add tests for visualize workflow ([#271](https://github.com/WAM2layers/WAM2layers/pull/271)).
+- Add `pre-commit` to check and fix code with `black` and `isort` formatter ([#273](https://github.com/WAM2layers/WAM2layers/pull/273)).
 
 ### Removed
 
-- Remove example test floodcase from CI
+- Remove example test floodcase from CI ([#265](https://github.com/WAM2layers/WAM2layers/pull/265)).
 
 ### Fixed
 
-- 
+- The "analyse output" command now excludes the first timestep when it looks for output files, as it is usually not present in backtrack output ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
 
+### Changed
+
+- There's now a dedicated function to compute the advection term. This makes it easier to apply different solvers. Padding is added to the edges of the domain, and boundary losses are added to e-track at the edges of the domain ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
 
 ## Release v3.0.0-beta.5 (2023-07-21)
 
