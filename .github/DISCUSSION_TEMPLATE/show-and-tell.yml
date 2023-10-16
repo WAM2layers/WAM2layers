@@ -6,8 +6,8 @@ body:
 
         I you've used WAM2layers in your analysis and you've come up with exciting visualizations, feel free to share your results here. The community and the maintainers will think along with you how to best make your code available to other users as well.
   - type: textarea
-    attributes: 
+    attributes:
       label: My cool analysis with WAM2layers
       description: "Please introduce yourself if you are a new user, and show your work! Thank you for contributing to the community."
-    validations: 
+    validations:
       required: true

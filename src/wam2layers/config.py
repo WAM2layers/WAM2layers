@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
 
 import yaml
-from pydantic import (BaseModel, ConfigDict, FilePath, field_validator,
-                      model_validator)
+from pydantic import BaseModel, ConfigDict, FilePath, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 

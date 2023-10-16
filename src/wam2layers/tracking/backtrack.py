@@ -6,11 +6,18 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import (calculate_fz, change_units,
-                                             stabilize_fluxes, stagger_x,
-                                             stagger_y)
-from wam2layers.tracking.core import (horizontal_advection, vertical_advection,
-                                      vertical_dispersion)
+from wam2layers.preprocessing.shared import (
+    calculate_fz,
+    change_units,
+    stabilize_fluxes,
+    stagger_x,
+    stagger_y,
+)
+from wam2layers.tracking.core import (
+    horizontal_advection,
+    vertical_advection,
+    vertical_dispersion,
+)
 from wam2layers.tracking.io import load_data, load_region, output_path
 from wam2layers.utils.profiling import ProgressTracker
 
@@ -68,7 +75,9 @@ def backtrack(
     s_track_lower += (
         +horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
         + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
-        + vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf)
+        + vertical_dispersion(
+            -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
+        )
         + region * precip * s_lower / (s_upper + s_lower)
         - evap * s_track_relative_lower
     )
@@ -76,7 +85,9 @@ def backtrack(
     s_track_upper += (
         +horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
         - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
-        - vertical_dispersion(-f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf)
+        - vertical_dispersion(
+            -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
+        )
         + region * precip * s_upper / (s_upper + s_lower)
     )
 
