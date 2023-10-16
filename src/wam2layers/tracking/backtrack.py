@@ -18,28 +18,10 @@ from wam2layers.tracking.core import (
     vertical_advection,
     vertical_dispersion,
 )
-from wam2layers.tracking.io import load_data, load_region, output_path
+from wam2layers.tracking.io import load_data, load_region, output_path, write_output
 from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
-
-
-def get_tracking_dates(config):
-    """Dates for tracking."""
-    # E.g. if data from 00:00 to 23:00
-    # Using target freq directly would end at 23:45 or so
-    input_dates = pd.date_range(
-        start=config.track_start_date,
-        end=config.track_end_date,
-        freq=config.input_frequency,
-    )
-
-    return pd.date_range(
-        start=input_dates[0],
-        end=input_dates[-1],
-        freq=config.target_frequency,
-        inclusive="right",
-    )
 
 
 def backtrack(
@@ -132,8 +114,7 @@ def initialize(config_file):
 
     if config.restart:
         # Reload last state from existing output
-        tracking_dates = get_tracking_dates(config)
-        date = tracking_dates[-1] + pd.Timedelta(days=1)
+        date = config.track_end_date
         ds = xr.open_dataset(output_path(date, config))
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
@@ -158,14 +139,21 @@ def initialize_outputs(region):
     return output
 
 
-def write_output(output, t, config):
-    # TODO: add back (and cleanup) coordinates and units
-    path = output_path(t, config)
-    logger.info(f"{t} - Writing output to file {path}")
-    output.astype("float32").to_netcdf(path)
+def initialize_time(config, direction="forward"):
+    dt = pd.Timedelta(config.target_frequency)
 
-    # Flush previous outputs
-    output[["e_track", "tagged_precip"]] *= 0
+    if direction == "forward":
+        t0 = pd.Timestamp(config.track_start_date)
+        th = t0 + dt / 2
+        t1 = t0 + dt
+    elif direction == "backward":
+        t1 = pd.Timestamp(config.track_end_date)
+        th = t1 - dt / 2
+        t0 = t1 - dt
+    else:
+        raise ValueError("Direction should be forward or backward")
+
+    return t0, th, t1, dt
 
 
 #############################################################################
@@ -178,22 +166,20 @@ def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     config, region, output = initialize(config_file)
 
-    tracking_dates = get_tracking_dates(config)
     event_start, event_end = config.event_start_date, config.event_end_date
-
     progress_tracker = ProgressTracker(output)
-    for t1 in reversed(tracking_dates):
-        t0 = t1 - pd.Timedelta(config.target_frequency)
-        th = t1 - pd.Timedelta(config.target_frequency) / 2
 
-        S1 = load_data(t1, config, "states")
+    t0, th, t1, dt = initialize_time(config, direction="backward")
+
+    while t0 >= config.track_start_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
+        S1 = load_data(t1, config, "states")
 
         # Convert data to volumes
-        change_units(S1, config.target_frequency)
         change_units(S0, config.target_frequency)
         change_units(F, config.target_frequency)
+        change_units(S1, config.target_frequency)
 
         # Apply a stability correction if needed
         stabilize_fluxes(F, S0, progress_tracker, config, t1)
@@ -206,9 +192,12 @@ def run_experiment(config_file):
             F["precip"] = 0
 
         backtrack(F, S1, S0, region, output, config)
+        t1 -= dt
+        th -= dt
+        t0 -= dt
 
         # Daily output
-        if t1 == t1.floor(config.output_frequency) or t1 == tracking_dates[0]:
+        if t1 == t1.floor(config.output_frequency) or t0 < config.track_start_date:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t1, config)
