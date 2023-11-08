@@ -185,6 +185,7 @@ def split_vertical_flux(Kvf, fv):
     plt.savefig('f_downward.png')
     spatialtestplot(f_upward)
     plt.savefig('f_upward.png')
+    plt.close('all')
 
     return f_downward, f_upward
 
@@ -256,10 +257,10 @@ def calculate_fv(fluxes, states_prev, states_next):
     
     #import IPython; IPython.embed(); quit()
     # temporary put test values
-    states_next["s_upper"].values.fill(60000)
-    states_next["s_lower"].values.fill(40000)
-    states_prev["s_upper"].values.fill(50000)
-    states_prev["s_lower"].values.fill(50000)
+    states_next["s_upper"].values.fill(50000)
+    states_next["s_lower"].values.fill(50000)
+    states_prev["s_upper"].values.fill(60000)
+    states_prev["s_lower"].values.fill(40000)
     
     s_diff = states_prev - states_next
     
@@ -289,7 +290,7 @@ def calculate_fv(fluxes, states_prev, states_next):
     # that the new residual_lower/s_lower = residual_upper/s_upper (positive downward)
     fv = s_rel.s_lower * (residual_upper + residual_lower) - residual_lower
 
-    #import IPython; IPython.embed(); quit()
+    import IPython; IPython.embed(); quit()
     import matplotlib.pyplot as plt
     def spatialtestplot(variable):
         import matplotlib.pyplot as plt
@@ -303,6 +304,7 @@ def calculate_fv(fluxes, states_prev, states_next):
     plt.savefig('residual_lower.png')
     spatialtestplot(fv.values)
     plt.savefig('fv.png')
+    plt.close('all')
 
     # stabilize the outfluxes / influxes; during the reduced timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
@@ -312,6 +314,7 @@ def calculate_fv(fluxes, states_prev, states_next):
 
     spatialtestplot(np.sign(fv) * fv_stable)
     plt.savefig('fv_stable.png')
+    plt.close('all')
     # Reinstate the sign
     return np.sign(fv) * fv_stable
 
