@@ -3,8 +3,6 @@ WAM2layers Source Region Designer functions
 
 @author: Vincent de Feiter | GitHub: vincentdefeiter
 
-Version 7.0 | 26 October, 2023
-
 """
 
 import logging
@@ -31,7 +29,7 @@ def mask_with_regionmask(region_source, regions, input_file, output_file, return
         regions (list): single or multiple regions as list.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the regionmask file.
+        output_file: path where to store the created source region.
         return_plot: if true, return a plot that shows the source region on a map.
 
     Returns:
@@ -155,7 +153,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
         regions: if build up of multiple regions, indicate as list (int), otherwise FALSE.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the regionmask file.
+        output_file: path where to store the created source region.
         return_plot: if true, return a plot that shows the source region on a map.
 
     Returns:
@@ -215,7 +213,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
 
     # save to NetCDF file
 
-    export.to_netcdf(output_file + "source_region.nc")
+    export.to_netcdf(output_file)
 
     logger.info(f"Stored source region in {output_file}.")
 
@@ -273,7 +271,7 @@ def mask_around_point(
     centerpoint,
     radius,
     reference_file,
-    output_dir,
+    output_file,
     return_plot,
 ):
     """Mask source region using a center point with a given radius.
@@ -286,7 +284,7 @@ def mask_around_point(
         radius (int): distance from center to edges of square box in degrees.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_dir: path where to store the created source region.    
+        output_file: path where to store the created source region.    
         return_plot: if true, return a plot that shows the source region on a map.
 
     Returns:
@@ -326,7 +324,7 @@ def mask_around_point(
     export["latitude"] = ("latitude", latitude_r)
 
     # save to NetCDF file
-    export.to_netcdf(output_dir)
+    export.to_netcdf(output_file)
 
     logger.info(f"Stored source region in {output_file}.")
 
