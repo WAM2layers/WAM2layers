@@ -52,6 +52,7 @@ develop = [
     "sphinx",
     "myst-nb",
     "pytest",
+    "pre-commit",
     "flake8",
     "build",
     "twine",
@@ -66,3 +67,6 @@ wam2layers = "wam2layers.cli:cli"
 
 [tool.setuptools.package-data]
 "wam2layers.preprocessing" = ["*.csv"]
+
+[tool.isort]
+profile = "black"

@@ -139,7 +139,6 @@ def interpolate_old(old_var, old_pressure_levels, new_pressure_levels, type="lin
     for t in range(ntime):
         for i in range(nlat):
             for j in range(nlon):
-
                 pressure_1d = old_pressure_levels[t, :, i, j]
                 var_1d = old_var[t, :, i, j]
 

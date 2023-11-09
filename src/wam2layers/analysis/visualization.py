@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import click
@@ -8,7 +9,10 @@ from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.backtrack import input_path, load_region, output_path
+from wam2layers.tracking.backtrack import input_path, output_path
+from wam2layers.utils import load_region
+
+logger = logging.getLogger(__name__)
 
 
 def try_import_cartopy():
@@ -74,7 +78,7 @@ def _plot_evap(config, ax):
         end=config.track_end_date,
         freq=config.output_frequency,
         inclusive="left",
-    )
+    )[1:]
 
     output_files = []
     for date in dates:
@@ -85,7 +89,11 @@ def _plot_evap(config, ax):
 
     # Make figure
     e_track.plot(
-        ax=ax, vmin=0, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5)
+        ax=ax,
+        vmin=0,
+        robust=True,
+        cmap=cm.rain,
+        cbar_kwargs=dict(fraction=0.05, shrink=0.5),
     )
     e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=["lightgrey", "grey"])
     ax.set_title("Moisture source of extreme precip [mm]", loc="left")
@@ -169,7 +177,7 @@ def visualize_snapshots(config_file):
     out_dir.mkdir(exist_ok=True, parents=True)
 
     for date in dates:
-        print(date)
+        logger.info(date)
         ds_in = xr.open_dataset(input_path(date, config))
         ds_out = xr.open_dataset(output_path(date, config))
 
