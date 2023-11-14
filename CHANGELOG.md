@@ -1,4 +1,5 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
@@ -8,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Add tests for preprocess and backtrack workflow ([#265](https://github.com/WAM2layers/WAM2layers/pull/265)).
 - Add tests for visualize workflow ([#271](https://github.com/WAM2layers/WAM2layers/pull/271)).
 - Add `pre-commit` to check and fix code with `black` and `isort` formatter ([#273](https://github.com/WAM2layers/WAM2layers/pull/273)).
+- Add additional documentation and doctest for vertical advection terms ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
 
 ### Removed
 
@@ -16,10 +18,14 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - The "analyse output" command now excludes the first timestep when it looks for output files, as it is usually not present in backtrack output ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
+- A long-existing bug in the calculation of vertical fluxes, effectively changing the direction of the vertical flux ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)). Also use the *new* state in the error correction term `S_1 / S_T * err_T`
+
 
 ### Changed
 
 - There's now a dedicated function to compute the advection term. This makes it easier to apply different solvers. Padding is added to the edges of the domain, and boundary losses are added to e-track at the edges of the domain ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
+- Seperated the vertical advection and dispersion terms: dispersion is modelled as `kvf * abs(Fv) * dS/dz` ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
+- Splitted the backtracking module, moving functions to separate io, core, and preprocessing.shared modules ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
 
 ## Release v3.0.0-beta.5 (2023-07-21)
 
