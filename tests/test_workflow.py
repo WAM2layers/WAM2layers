@@ -23,11 +23,14 @@ def test_preprocess():
     )
     output = xr.open_dataset(output_path)
     numpy.testing.assert_allclose(
-        expected_output["precip"].values, output["precip"].values,
-        err_msg = ("Output results are different! Please verify your results. \n"
-                   "If you want to keep the new results and include it in your commit, \n"
-                   "you can update the reference data with the following command: \n"
-                   "`cp tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc tests/test_data/verify_output/2022-08-31_fluxes_storages.nc`")
+        expected_output["precip"].values,
+        output["precip"].values,
+        err_msg=(
+            "Output results are different! Please verify your results. \n"
+            "If you want to keep the new results and include it in your commit, \n"
+            "you can update the reference data with the following command: \n"
+            "`cp tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc tests/test_data/verify_output/2022-08-31_fluxes_storages.nc`"
+        ),
     )
 
 
@@ -43,11 +46,14 @@ def test_backtrack():
     )
     output = xr.open_dataset(output_path)
     numpy.testing.assert_allclose(
-        expected_output["e_track"].values, output["e_track"].values,
-        err_msg = ("Output results are different! Please verify your results. \n"
-                   "If you want to keep the new results and include it in your commit, \n"
-                   "you can update the reference data with the following command: \n"
-                   "`cp tests/tmp/output_data/backtrack_2022-08-31T18-00.nc tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc`")
+        expected_output["e_track"].values,
+        output["e_track"].values,
+        err_msg=(
+            "Output results are different! Please verify your results. \n"
+            "If you want to keep the new results and include it in your commit, \n"
+            "you can update the reference data with the following command: \n"
+            "`cp tests/tmp/output_data/backtrack_2022-08-31T18-00.nc tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc`"
+        ),
     )
 
 

@@ -32,7 +32,6 @@ class ProgressTracker:
         """Keep track of tagged and tracked moisture."""
         self.total_tagged_moisture = 0
         self.tracked = 0
-        self.boundary = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
         self.stability_correction_previous_grid = 0
@@ -47,12 +46,6 @@ class ProgressTracker:
         totals = output.sum()
         self.tracked += totals["e_track"]
         self.total_tagged_moisture += totals["tagged_precip"]
-        self.boundary += (
-            totals["north_loss"]
-            + totals["south_loss"]
-            + totals["east_loss"]
-            + totals["west_loss"]
-        )
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""

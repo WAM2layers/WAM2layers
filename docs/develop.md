@@ -196,10 +196,10 @@ desktop](https://desktop.github.com/).
 
 #### Pre-commit
 
-To help you make clean commits, we have configured this repository with pre-commit. 
-This is completely optional, but we recommend you to give it a try. You can run 
-pre-commit once by typing `pre-commit run` before committing some changes. If you 
-like this, and you want to do it automatically with each commit, you can type 
+To help you make clean commits, we have configured this repository with pre-commit.
+This is completely optional, but we recommend you to give it a try. You can run
+pre-commit once by typing `pre-commit run` before committing some changes. If you
+like this, and you want to do it automatically with each commit, you can type
 `pre-commit install`.
 
 ### Open a (draft) pull request

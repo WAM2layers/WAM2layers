@@ -5,9 +5,7 @@ import click
 import numpy as np
 import pandas as pd
 import xarray as xr
-import yaml
 
-from wam2layers.analysis.checks import check_input
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     accumulation_to_flux,
