@@ -24,6 +24,7 @@ from wam2layers.utils.profiling import ProgressTracker
 logger = logging.getLogger(__name__)
 
 
+# TODO rename to forward
 def backtrack(
     F,
     S1,
@@ -53,6 +54,7 @@ def backtrack(
     # Actual tracking (note: backtracking, all fluxes change sign)
     bc = config.periodic_boundary
     # TODO: apply terms in successive steps instead of all at once?
+    # TODO change direction of fluxes and sources/sinks & handle region
     s_track_lower += (
         +horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
         + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
@@ -73,12 +75,14 @@ def backtrack(
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
+    # TODO verify whether this remains the same or not?
     lower_to_upper = np.maximum(0, s_track_lower - S0["s_lower"])
     upper_to_lower = np.maximum(0, s_track_upper - S0["s_upper"])
     s_track_lower = s_track_lower - lower_to_upper + upper_to_lower
     s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
 
     # Update output fields
+    # TODO change to p_track
     output["e_track"] += evap * np.minimum(s_track_lower / s_lower, 1.0)
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
@@ -98,6 +102,7 @@ def backtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
+    # TODO change to tagged evap
     output["tagged_precip"] += region * precip
 
 
@@ -126,6 +131,7 @@ def initialize_outputs(region):
     """Allocate output arrays."""
 
     proto = region
+    # TODO change e_track to p_track
     output = xr.Dataset(
         {
             # Keep last state for a restart
@@ -143,11 +149,11 @@ def initialize_time(config, direction="forward"):
 
     if direction == "forward":
         t0 = pd.Timestamp(config.track_start_date)
-        th = t0 + dt / 2
+        th = t0 + dt / 2  # th is "half" time, i.e. between t0 and t1
         t1 = t0 + dt
     elif direction == "backward":
         t1 = pd.Timestamp(config.track_end_date)
-        th = t1 - dt / 2
+        th = t1 - dt / 2  # th is "half" time, i.e. between t0 and t1
         t0 = t1 - dt
     else:
         raise ValueError("Direction should be forward or backward")
@@ -168,8 +174,10 @@ def run_experiment(config_file):
     event_start, event_end = config.event_start_date, config.event_end_date
     progress_tracker = ProgressTracker(output)
 
+    # TODO change time direction
     t0, th, t1, dt = initialize_time(config, direction="backward")
 
+    # TODO loop forward in time
     while t0 >= config.track_start_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
@@ -187,15 +195,18 @@ def run_experiment(config_file):
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
         # Only track the precipitation at certain timesteps
+        # TODO track evap instead
         if not event_start <= t1 <= event_end:
             F["precip"] = 0
 
+        # TODO change to forward track
         backtrack(F, S1, S0, region, output, config)
         t1 -= dt
         th -= dt
         t0 -= dt
 
         # Daily output
+        # TODO check that output is written for correct time stamp
         if t1 == t1.floor(config.output_frequency) or t0 < config.track_start_date:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
@@ -206,27 +217,27 @@ def run_experiment(config_file):
 
 ###########################################################################
 # The code below makes it possible to run wam2layers from the command line:
-# >>> python backtrack.py path/to/cases/era5_2021.yaml
+# >>> python forwardtrack.py path/to/cases/era5_2021.yaml
 # or even:
-# >>> wam2layers backtrack path/to/cases/era5_2021.yaml
+# >>> wam2layers forwardtrack path/to/cases/era5_2021.yaml
 ###########################################################################
 
 
 @click.command()
 @click.argument("config_file", type=click.Path(exists=True))
 def cli(config_file):
-    """Run WAM2layers backtrack experiment from the command line.
+    """Run WAM2layers forwardtrack experiment from the command line.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
 
     Usage examples:
 
         \b
-        - python path/to/backtrack.py path/to/cases/era5_2021.yaml
-        - wam2layers backtrack path/to/cases/era5_2021.yaml
+        - python path/to/forwardtrack.py path/to/cases/era5_2021.yaml
+        - wam2layers forwardtrack path/to/cases/era5_2021.yaml
     """
     logger.info("Welcome to WAM2layers.")
-    logger.info("Starting backtrack experiment.")
+    logger.info("Starting forwardtrack experiment.")
     run_experiment(config_file)
 
 
