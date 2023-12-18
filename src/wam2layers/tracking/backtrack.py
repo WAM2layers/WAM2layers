@@ -79,7 +79,7 @@ def backtrack(
     s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
 
     # Update output fields
-    output["e_track"] += evap * np.minimum(s_track_lower / s_lower, 1.0)
+    output["e_track"] += evap * s_track_relative_lower
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
     output["e_track"][0, :] += (s_track_upper + s_track_lower)[0, :]
