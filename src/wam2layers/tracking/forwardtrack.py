@@ -51,26 +51,26 @@ def forwardtrack(
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
     # Actual tracking (note: backtracking, all fluxes change sign)
-    bc = config.periodic_boundary
+    bc = config.periodic_boundary  # boundary condition True/False
     # TODO: apply terms in successive steps instead of all at once?
     # TODO change direction of fluxes and sources/sinks & handle region
     s_track_lower += (
-        +horizontal_advection(s_track_relative_lower, -fx_lower, -fy_lower, bc)
-        + vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
+        +horizontal_advection(s_track_relative_lower, fx_lower, fy_lower, bc)
+        + vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(
-            -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
+            f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * precip * s_lower / (s_upper + s_lower)
-        - evap * s_track_relative_lower
+        + region * evap * s_track_relative_lower
+        - precip * s_lower / (s_upper + s_lower)
     )
 
     s_track_upper += (
-        +horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
-        - vertical_advection(-f_vert, s_track_relative_lower, s_track_relative_upper)
+        +horizontal_advection(s_track_relative_upper, fx_upper, fy_upper, bc)
+        - vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(
-            -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
+            f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * precip * s_upper / (s_upper + s_lower)
+        - precip * s_upper / (s_upper + s_lower)
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
