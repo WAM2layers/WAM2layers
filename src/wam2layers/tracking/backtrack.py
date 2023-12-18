@@ -181,7 +181,7 @@ def run_experiment(config_file):
         change_units(S1, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(F, S0, progress_tracker, config, t1)
+        stabilize_fluxes(F, S1, progress_tracker, config, t1)
 
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
