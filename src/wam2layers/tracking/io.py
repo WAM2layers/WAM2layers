@@ -1,4 +1,8 @@
+import logging
+
 import xarray as xr
+
+logger = logging.getLogger(__name__)
 
 
 def input_path(date, config):
@@ -47,3 +51,13 @@ def load_data(t, config, subset="fluxes"):
 def load_region(config):
     # TODO: make variable name more generic
     return xr.open_dataset(config.region).source_region
+
+
+def write_output(output, t, config):
+    # TODO: add back (and cleanup) coordinates and units
+    path = output_path(t, config)
+    logger.info(f"{t} - Writing output to file {path}")
+    output.astype("float32").to_netcdf(path)
+
+    # Flush previous outputs
+    output[["e_track", "tagged_precip"]] *= 0
