@@ -214,8 +214,9 @@ def run_experiment(config_file):
 
 
 @click.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def cli(config_file):
+# @click.argument("config_file", type=click.Path(exists=True))
+@click.pass_obj
+def cli(config):
     """Run WAM2layers backtrack experiment from the command line.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
@@ -228,7 +229,7 @@ def cli(config_file):
     """
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting backtrack experiment.")
-    run_experiment(config_file)
+    run_experiment(config)
 
 
 if __name__ == "__main__":
