@@ -73,10 +73,11 @@ def backtrack(
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
+    # TODO build in logging for lost moisture
     lower_to_upper = np.maximum(0, s_track_lower - S0["s_lower"])
     upper_to_lower = np.maximum(0, s_track_upper - S0["s_upper"])
-    s_track_lower = s_track_lower - lower_to_upper + upper_to_lower
-    s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
+    s_track_lower = np.minimum(s_track_lower - lower_to_upper + upper_to_lower, s_lower)
+    s_track_upper = np.minimum(s_track_upper - upper_to_lower + lower_to_upper, s_upper)
 
     # Update output fields
     output["e_track"] += evap * s_track_relative_lower
@@ -88,7 +89,7 @@ def backtrack(
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
-    if config.periodic_boundary is False:
+    if config.periodic_boundary is False: # bookkeep west and east losses
         output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
         output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
         s_track_upper[:, 0] = 0

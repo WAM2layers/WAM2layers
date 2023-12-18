@@ -40,13 +40,15 @@ def forwardtrack(
     evap = F["evap"].values
     precip = F["precip"].values
     f_vert = F["f_vert"].values
-    s_upper = S1["s_upper"].values
-    s_lower = S1["s_lower"].values
-
+    s_upper = S0["s_upper"].values
+    s_lower = S0["s_lower"].values
+    
     s_track_upper = output["s_track_upper_restart"].values
     s_track_lower = output["s_track_lower_restart"].values
 
     # Short name for often used expressions
+    precip_lower = precip * s_lower / (s_upper + s_lower)
+    precip_upper = precip * s_upper / (s_upper + s_lower)
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
@@ -54,45 +56,49 @@ def forwardtrack(
     bc = config.periodic_boundary  # boundary condition True/False
     # TODO: apply terms in successive steps instead of all at once?
     s_track_lower += (
-        +horizontal_advection(s_track_relative_lower, fx_lower, fy_lower, bc)
+        horizontal_advection(s_track_relative_lower, fx_lower, fy_lower, bc)
         + vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(
             f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * evap * s_track_relative_lower
-        - precip * s_lower / (s_upper + s_lower)
+        + region * evap 
+        - precip_lower * s_track_relative_lower
     )
 
     s_track_upper += (
-        +horizontal_advection(s_track_relative_upper, fx_upper, fy_upper, bc)
+        horizontal_advection(s_track_relative_upper, fx_upper, fy_upper, bc)
         - vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(
             f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        - precip * s_upper / (s_upper + s_lower)
+        - precip_upper * s_track_relative_upper
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
-    # TODO verify whether this remains the same or not?
-    lower_to_upper = np.maximum(0, s_track_lower - S0["s_lower"])
-    upper_to_lower = np.maximum(0, s_track_upper - S0["s_upper"])
-    s_track_lower = s_track_lower - lower_to_upper + upper_to_lower
-    s_track_upper = s_track_upper - upper_to_lower + lower_to_upper
-
+    # TODO build in logging for lost moisture
+    lower_to_upper = np.maximum(0, s_track_lower - S1["s_lower"])
+    upper_to_lower = np.maximum(0, s_track_upper - S1["s_upper"])
+    s_track_lower = np.minimum(s_track_lower - lower_to_upper + upper_to_lower, s_lower)
+    s_track_upper = np.minimum(s_track_upper - upper_to_lower + lower_to_upper, s_upper)
+ 
     # Update output fields
-    # TODO change to p_track
-    output["e_track"] += evap * np.minimum(s_track_lower / s_lower, 1.0)
-
+    output["p_track_lower"] += precip_lower * s_track_relative_lower
+    output["p_track_upper"] += precip_upper * s_track_relative_upper
+    
     # Bookkeep boundary losses as "tracked moisture at grid edges"
-    output["e_track"][0, :] += (s_track_upper + s_track_lower)[0, :]
-    output["e_track"][-1, :] += (s_track_upper + s_track_lower)[-1, :]
+    output["p_track_lower"][0, :] += s_track_lower[0, :]
+    output["p_track_lower"][-1, :] += s_track_lower[-1, :]
+    output["p_track_upper"][0, :] += s_track_upper[0, :]
+    output["p_track_upper"][-1, :] += s_track_upper[-1, :]
     s_track_upper[0, :] = 0
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
-    if config.periodic_boundary is False:
-        output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
-        output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
+    if config.periodic_boundary is False: # bookkeep west and east losses
+        output["p_track_lower"][:, 0] += s_track_lower[:, 0]
+        output["p_track_lower"][:, -1] += s_track_lower[:, -1]
+        output["p_track_upper"][:, 0] += s_track_upper[:, 0]
+        output["p_track_upper"][:, -1] += s_track_upper[:, -1]
         s_track_upper[:, 0] = 0
         s_track_upper[:, -1] = 0
         s_track_lower[:, 0] = 0
@@ -100,8 +106,7 @@ def forwardtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
-    # TODO change to tagged evap
-    output["tagged_precip"] += region * precip
+    output["tagged_evap"] += region * evap
 
 
 def initialize(config_file):
@@ -129,14 +134,14 @@ def initialize_outputs(region):
     """Allocate output arrays."""
 
     proto = region
-    # TODO change e_track to p_track
     output = xr.Dataset(
         {
             # Keep last state for a restart
             "s_track_upper_restart": xr.zeros_like(proto),
             "s_track_lower_restart": xr.zeros_like(proto),
-            "e_track": xr.zeros_like(proto),
-            "tagged_precip": xr.zeros_like(proto),
+            "p_track_upper": xr.zeros_like(proto),
+            "p_track_lower": xr.zeros_like(proto),
+            "tagged_evap": xr.zeros_like(proto),
         }
     )
     return output
@@ -174,7 +179,6 @@ def run_experiment(config_file):
 
     t0, th, t1, dt = initialize_time(config, direction="forward")
 
-    # TODO loop forward in time
     while t1 <= config.track_end_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
