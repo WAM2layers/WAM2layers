@@ -190,13 +190,16 @@ def run_experiment(config_file):
         if not event_start <= t1 <= event_end:
             F["precip"] = 0
 
+        # Inside backtrack the "output" dictionary is updated
         backtrack(F, S1, S0, region, output, config)
         t1 -= dt
         th -= dt
         t0 -= dt
 
         # Daily output
-        if t1 == t1.floor(config.output_frequency) or t0 < config.track_start_date:
+        is_output_time = t1 == t1.floor(config.output_frequency)
+        is_final_step = t0 < config.track_start_date
+        if is_output_time or is_final_step:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t1, config)

@@ -24,8 +24,7 @@ from wam2layers.utils.profiling import ProgressTracker
 logger = logging.getLogger(__name__)
 
 
-# TODO rename to forward
-def backtrack(
+def forwardtrack(
     F,
     S1,
     S0,
@@ -168,17 +167,16 @@ def initialize_time(config, direction="forward"):
 
 
 def run_experiment(config_file):
-    """Run a backtracking experiment from start to finish."""
+    """Run a forwardtracking experiment from start to finish."""
     config, region, output = initialize(config_file)
 
     event_start, event_end = config.event_start_date, config.event_end_date
     progress_tracker = ProgressTracker(output)
 
-    # TODO change time direction
-    t0, th, t1, dt = initialize_time(config, direction="backward")
+    t0, th, t1, dt = initialize_time(config, direction="forward")
 
     # TODO loop forward in time
-    while t0 >= config.track_start_date:
+    while t1 <= config.track_end_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
@@ -189,28 +187,29 @@ def run_experiment(config_file):
         change_units(S1, config.target_frequency)
 
         # Apply a stability correction if needed
-        stabilize_fluxes(F, S0, progress_tracker, config, t1)
+        stabilize_fluxes(F, S0, progress_tracker, config, t0)
 
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
         # Only track the precipitation at certain timesteps
-        # TODO track evap instead
-        if not event_start <= t1 <= event_end:
-            F["precip"] = 0
+        if not event_start <= t0 <= event_end:
+            F["evap"] = 0
 
-        # TODO change to forward track
-        backtrack(F, S1, S0, region, output, config)
-        t1 -= dt
-        th -= dt
-        t0 -= dt
+        # TODO: consider changing signature to F, S0, S1
+        # Inside forwardtrack the "output" dictionary is updated
+        forwardtrack(F, S1, S0, region, output, config)
+        t1 += dt
+        th += dt
+        t0 += dt
 
         # Daily output
-        # TODO check that output is written for correct time stamp
-        if t1 == t1.floor(config.output_frequency) or t0 < config.track_start_date:
-            progress_tracker.print_progress(t1, output)
+        is_output_time = t0 == t0.floor(config.output_frequency)
+        is_final_step = t1 > config.track_end_date
+        if is_output_time or is_final_step:
+            progress_tracker.print_progress(t0, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t1, config)
+            write_output(output, t0, config)
 
     logger.info("Experiment complete.")
 
