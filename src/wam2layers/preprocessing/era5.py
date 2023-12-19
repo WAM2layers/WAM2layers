@@ -1,11 +1,11 @@
 import logging
+from functools import lru_cache
 from pathlib import Path
 
 import click
 import numpy as np
 import pandas as pd
 import xarray as xr
-
 from IPython import embed
 
 from wam2layers.config import Config
@@ -17,10 +17,8 @@ from wam2layers.preprocessing.shared import (
     sortby_ndarray,
 )
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
-
 
 
 @lru_cache(10)
@@ -266,14 +264,18 @@ def prep_experiment(config_file):
         try:
             # Calculate column water instead of column water vapour
             tcw = load_data("tcw", datetime, config)  # kg/m2
-            correction = (tcw / cwv.sum(dim="level"))
+            correction = tcw / cwv.sum(dim="level")
             cw = correction * cwv  # column water (kg/m2)
-            logger.info(f"Total column water correction applied. Mean correction over grid was {correction.mean().item():.4f}")
+            logger.info(
+                f"Total column water correction applied. Mean correction over grid was {correction.mean().item():.4f}"
+            )
 
         except FileNotFoundError:
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
-            log_once(logger, f"Total column water not available; using water vapour only") #CONTINUE HERE
+            log_once(
+                logger, f"Total column water not available; using water vapour only"
+            )  # CONTINUE HERE
 
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
@@ -307,18 +309,22 @@ def prep_experiment(config_file):
         precip, evap = preprocess_precip_and_evap(datetime, config)
 
         # Combine everything into one dataset
-        ds = xr.Dataset(
-            {
-                "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
-                "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
-                "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
-                "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
-                "s_upper": s_upper.assign_attrs(units="kg m-2"),
-                "s_lower": s_lower.assign_attrs(units="kg m-2"),
-                "evap": evap,
-                "precip": precip,
-            }
-        ).expand_dims('time').astype("float32")
+        ds = (
+            xr.Dataset(
+                {
+                    "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
+                    "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
+                    "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
+                    "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+                    "s_upper": s_upper.assign_attrs(units="kg m-2"),
+                    "s_lower": s_lower.assign_attrs(units="kg m-2"),
+                    "evap": evap,
+                    "precip": precip,
+                }
+            )
+            .expand_dims("time")
+            .astype("float32")
+        )
 
         # Verify that the data meets all the requirements for the model
         # check_input(ds)
@@ -328,10 +334,10 @@ def prep_experiment(config_file):
         output_path = config.preprocessed_data_folder / filename
         # TODO append is tricky; clear folder before starting?
         if not output_path.exists():
-            ds.to_netcdf(output_path, unlimited_dims=['time'], mode='a')
+            ds.to_netcdf(output_path, unlimited_dims=["time"], mode="a")
         else:
             # TODO: append doesn't overwrite existing but rather adds a duplicate time.
-            append_to_netcdf(output_path, ds, unlimited_dims='time')
+            append_to_netcdf(output_path, ds, unlimited_dims="time")
 
 
 ################################################################################
