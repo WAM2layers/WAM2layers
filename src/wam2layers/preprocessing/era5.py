@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from IPython import embed
+
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     accumulation_to_flux,
@@ -255,10 +257,17 @@ def prep_experiment(config_file):
             # Calculate column water instead of column water vapour
             tcw = load_data("tcw", datetime, config)  # kg/m2
             cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
-            # TODO: warning if cw >> cwv
+
+            # log what is the mean of the ratio between total column water and total column water vapour
+            ratio_tcw_tcwv = (tcw / cwv.sum(dim="level"))   
+                                 
+            logger.info('Used the total column water variable from ERA5 to correct column water vapour to column water')
+            logger.info(f"Mean over the day (24 timesteps) and grid of the ratio between total column water (tcw) and total column water vapor (tcwv): {ratio_tcw_tcwv.mean().compute().values:.4f}")
+       
         except FileNotFoundError:
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
+            logger.info(f"Total column water variable from ERA5 not available; column water vapour is set equal to column water") #CONTINUE HERE
 
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
