@@ -6,7 +6,6 @@ import click
 import numpy as np
 import pandas as pd
 import xarray as xr
-from IPython import embed
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
