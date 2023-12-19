@@ -178,6 +178,7 @@ def visualize_input_data(config_file):
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "input_event.png", dpi=200)
+    logger.info("Generate figure showing the cumulative moisture inputs.")
 
 
 def visualize_output_data(config_file):
@@ -198,6 +199,7 @@ def visualize_output_data(config_file):
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
+    logger.info("Generate figure showing the cumulative moisture origins.")
 
 
 def visualize_both(config_file):
@@ -217,6 +219,7 @@ def visualize_both(config_file):
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "summary_subplots.png", dpi=200)
+    logger.info("Generate diagnostic figure showing the input and output data.")
 
 
 def visualize_snapshots(config_file):
@@ -284,6 +287,7 @@ def visualize_snapshots(config_file):
         output_file = out_dir / f"input_output_{date.strftime('%Y%m%d')}.png"
         fig.savefig(output_file)
         plt.close()
+        logger.info("Generate snapshot figure.")
 
 
 if __name__ == "__main__":
