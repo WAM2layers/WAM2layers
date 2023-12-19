@@ -40,8 +40,8 @@ def load_data(variable, date, config):
         levtype=prefix,
         variable=variable,
     )
-    da = xr.open_dataset(filepath, chunks=config.chunks).sel(
-        time=date.strftime("%Y%m%d")
+    da = xr.open_dataset(filepath).sel(
+        time=datetime.strftime("%Y%m%d")
     )[variable]
 
     if "lev" in da.coords:
@@ -226,13 +226,6 @@ def prep_experiment(config_file):
     """
     config = Config.from_yaml(config_file)
 
-    if config.chunks is not None:
-        logger.info("Starting dask cluster")
-        from dask.distributed import Client
-
-        client = Client()
-        logger.info(f"To see the dask dashboard, go to {client.dashboard_link}")
-
     for date in get_input_dates(config):
         logger.info(date)
 
@@ -318,10 +311,6 @@ def prep_experiment(config_file):
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config.preprocessed_data_folder / filename
         ds.astype("float32").to_netcdf(output_path)
-
-    # Close the dask cluster when done
-    if config.chunks is not None:
-        client.shutdown()
 
 
 ################################################################################
