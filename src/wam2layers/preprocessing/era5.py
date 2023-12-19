@@ -17,8 +17,18 @@ from wam2layers.preprocessing.shared import (
     sortby_ndarray,
 )
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
+
+
+@lru_cache(10)
+def log_once(logger, msg: str):
+    """Keep track of 10 different messages and then warn again.
+
+    Adapted from: https://stackoverflow.com/a/66062313"""
+    logger.info(msg)
 
 
 def load_data(variable, datetime, config):
@@ -256,18 +266,14 @@ def prep_experiment(config_file):
         try:
             # Calculate column water instead of column water vapour
             tcw = load_data("tcw", datetime, config)  # kg/m2
-            cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
+            correction = (tcw / cwv.sum(dim="level"))
+            cw = correction * cwv  # column water (kg/m2)
+            logger.info(f"Total column water correction applied. Mean correction over grid was {correction.mean().item():.4f}")
 
-            # log what is the mean of the ratio between total column water and total column water vapour
-            ratio_tcw_tcwv = (tcw / cwv.sum(dim="level"))   
-                                 
-            logger.info('Used the total column water variable from ERA5 to correct column water vapour to column water')
-            logger.info(f"Mean over the day (24 timesteps) and grid of the ratio between total column water (tcw) and total column water vapor (tcwv): {ratio_tcw_tcwv.mean().compute().values:.4f}")
-       
         except FileNotFoundError:
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
-            logger.info(f"Total column water variable from ERA5 not available; column water vapour is set equal to column water") #CONTINUE HERE
+            log_once(logger, f"Total column water not available; using water vapour only") #CONTINUE HERE
 
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
