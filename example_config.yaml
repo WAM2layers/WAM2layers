@@ -12,11 +12,17 @@ level_type: model_levels
 levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
 # Tracking
-region: /data/volume_2/era5_2021/source_region_global.nc
-track_start_date: "2021-07-01T00:00"
-track_end_date: "2021-07-15T00:00"
-event_start_date: "2021-07-13T00:00"
-event_end_date: "2021-07-15T00:00"
+tracking_region: /data/volume_2/era5_2021/source_region_global.nc
+# tracking_region: [minx, miny, maxx, maxy]  # alternative to mask file
+tracking_start_date: "2021-07-01T00:00"
+tracking_end_date: "2021-07-15T00:00"
+
+# Tagging
+tagging_region: /data/volume_2/era5_2021/source_region_global.nc
+# tagging_region: [minx, miny, maxx, maxy]  # alternative to mask file
+tagging_start_date: "2021-07-13T00:00"
+tagging_end_date: "2021-07-15T00:00"
+
 input_frequency: "1h"
 target_frequency: "10min"
 output_frequency: "1d"

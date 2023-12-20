@@ -1,12 +1,19 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, NamedTuple, Optional, Union
 
 import yaml
 from pydantic import BaseModel, ConfigDict, FilePath, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
+
+
+class BoundingBox(NamedTuple):
+    west: float
+    south: float
+    east: float
+    north: float
 
 
 class Config(BaseModel):
@@ -49,8 +56,11 @@ class Config(BaseModel):
 
     """
 
-    region: FilePath
-    """Location where the region mask is stored.
+    tagging_region: Union[FilePath, BoundingBox]
+    """Subdomain delimiting the source/sink regions for tagged moisture.
+
+    You can either specify a path that contains a
+    netcdf file, or a bounding box of the form [west, south, east, north].
 
     The file should exist.
 
@@ -58,7 +68,27 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        region: /data/volume_2/era5_2021/source_region_global.nc
+        region: /data/volume_2/era5_2021/tagging_region_global.nc
+        region: [0, 50, 10, 55]
+    """
+
+    tracking_region: Union[FilePath, BoundingBox]
+    """Subdomain delimiting the region considered during tracking.
+
+    This is useful when you have global pre-processed data but you don't need
+    global tracking.
+
+    You can either specify a path that contains a
+    netcdf file, or a bounding box of the form [west, south, east, north].
+
+    The file should exist.
+
+    For example:
+
+    .. code-block:: yaml
+
+        region: /data/volume_2/era5_2021/tracking_region_global.nc
+        region: [0, 50, 10, 55]
 
     """
 
@@ -128,13 +158,13 @@ class Config(BaseModel):
         track_end_date: "2021-07-15T23:00"
     """
 
-    event_start_date: datetime
-    """Start date for event.
+    tagging_start_date: datetime
+    """Start date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
-    start and end date of the event to something different than the total
-    tracking start and end date, you can also indicate the hours that you want to track.
-    The event_start_date is included in the event tracking.
+    start and end date to something different than the total tracking start and
+    end date, you can also indicate the hours that you want to track. The
+    start date is included.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
@@ -147,13 +177,13 @@ class Config(BaseModel):
 
     """
 
-    event_end_date: datetime
-    """Start date for event.
+    tagging_end_date: datetime
+    """End date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
-    start and end date of the event to something different than the total
-    tracking start and end date, you can also indicate the hours that you want to track.
-    The event_end_date is included in the event tracking.
+    start and end date to something different than the total tracking start and
+    end date, you can also indicate the hours that you want to track. The
+    end date is included.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
