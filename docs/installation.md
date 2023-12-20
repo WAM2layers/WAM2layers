@@ -14,7 +14,7 @@ instructions in the [contributing](./contributing) section of the documentation.
 If you know your way around, the following quick reference might be all you need:
 
 ```
-conda create --name wamenv -c conda-forge python=3.9 jupyterlab cartopy matplotlib
+conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy matplotlib
 conda activate wamenv
 git clone git@github.com:WAM2layers/WAM2layers.git
 cd WAM2layers
@@ -57,7 +57,7 @@ dedicated environment for your moisture tracking experiments. For example:
 
 ```
 # Create a fresh conda environment
-conda create --name wamenv -c conda-forge python=3.9 jupyterlab cartopy matplotlib
+conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy matplotlib
 
 # Activate the environment
 conda activate wamenv

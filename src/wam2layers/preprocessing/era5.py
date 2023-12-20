@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -13,11 +14,20 @@ from wam2layers.preprocessing.shared import (
     interpolate,
     sortby_ndarray,
 )
+from wam2layers.preprocessing.xarray_append import append_to_netcdf
 
 logger = logging.getLogger(__name__)
 
 
-def load_data(variable, date, config):
+@lru_cache(10)
+def log_once(logger, msg: str):
+    """Keep track of 10 different messages and then warn again.
+
+    Adapted from: https://stackoverflow.com/a/66062313"""
+    logger.info(msg)
+
+
+def load_data(variable, datetime, config):
     """Load data for given variable and date."""
     template = config.filename_template
 
@@ -33,15 +43,15 @@ def load_data(variable, date, config):
 
     # Load data
     filepath = template.format(
-        year=date.year,
-        month=date.month,
-        day=date.day,
+        year=datetime.year,
+        month=datetime.month,
+        day=datetime.day,
+        hour=datetime.hour,
+        minute=datetime.minute,
         levtype=prefix,
         variable=variable,
     )
-    da = xr.open_dataset(filepath, chunks=config.chunks).sel(
-        time=date.strftime("%Y%m%d")
-    )[variable]
+    da = xr.open_dataarray(filepath).sel(time=datetime.strftime("%Y%m%d%H%M"))
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
@@ -53,11 +63,11 @@ def load_data(variable, date, config):
     return da
 
 
-def preprocess_precip_and_evap(date, config):
+def preprocess_precip_and_evap(datetime, config):
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
-    evap = load_data("e", date, config)
-    precip = load_data("tp", date, config)  # total precipitation
+    evap = load_data("e", datetime, config)
+    precip = load_data("tp", datetime, config)  # total precipitation
 
     # Transfer negative (originally positive) values of evap to precip
     precip = np.maximum(precip, 0) + np.maximum(evap, 0)
@@ -66,8 +76,8 @@ def preprocess_precip_and_evap(date, config):
     # Change sign convention to all positive,
     evap = np.abs(np.minimum(evap, 0))
 
-    precip = accumulation_to_flux(precip)
-    evap = accumulation_to_flux(evap)
+    precip = accumulation_to_flux(precip, input_frequency=config.input_frequency)
+    evap = accumulation_to_flux(evap, input_frequency=config.input_frequency)
     return precip, evap
 
 
@@ -198,7 +208,7 @@ def get_input_dates(config):
     return pd.date_range(
         start=config.preprocess_start_date,
         end=config.preprocess_end_date,
-        freq="1d",
+        freq=config.input_frequency,
     )
 
 
@@ -225,31 +235,25 @@ def prep_experiment(config_file):
     """
     config = Config.from_yaml(config_file)
 
-    if config.chunks is not None:
-        logger.info("Starting dask cluster")
-        from dask.distributed import Client
-
-        client = Client()
-        logger.info(f"To see the dask dashboard, go to {client.dashboard_link}")
-
-    for date in get_input_dates(config):
-        logger.info(date)
+    for datetime in get_input_dates(config):
+        is_new_day = datetime == datetime.floor("1d")
+        logger.info(datetime)
 
         # 4d fields
         levels = config.levels
-        q = load_data("q", date, config)  # in kg kg-1
-        u = load_data("u", date, config)  # in m/s
-        v = load_data("v", date, config)  # in m/s
-        sp = load_data("sp", date, config)  # in Pa
+        q = load_data("q", datetime, config)  # in kg kg-1
+        u = load_data("u", datetime, config)  # in m/s
+        v = load_data("v", datetime, config)  # in m/s
+        sp = load_data("sp", datetime, config)  # in Pa
 
         if config.level_type == "model_levels":
             dp = get_dp_modellevels(sp, levels)
 
         if config.level_type == "pressure_levels":
-            d2m = load_data("d2m", date, config)  # Dew point in K
+            d2m = load_data("d2m", datetime, config)  # Dew point in K
             q2m = calculate_humidity(d2m, sp)  # kg kg-1
-            u10 = load_data("u10", date, config)  # in m/s
-            v10 = load_data("v10", date, config)  # in m/s
+            u10 = load_data("u10", datetime, config)  # in m/s
+            v10 = load_data("v10", datetime, config)  # in m/s
             dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
 
         # Calculate column water vapour
@@ -258,12 +262,20 @@ def prep_experiment(config_file):
 
         try:
             # Calculate column water instead of column water vapour
-            tcw = load_data("tcw", date, config)  # kg/m2
-            cw = (tcw / cwv.sum(dim="level")) * cwv  # column water (kg/m2)
-            # TODO: warning if cw >> cwv
+            tcw = load_data("tcw", datetime, config)  # kg/m2
+            correction = tcw / cwv.sum(dim="level")
+            cw = correction * cwv  # column water (kg/m2)
+            if is_new_day:
+                logger.info(
+                    f"Total column water correction: mean over grid for this timestep {correction.mean().item():.4f}"
+                )
+
         except FileNotFoundError:
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
+            log_once(
+                logger, f"Total column water not available; using water vapour only"
+            )
 
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
@@ -294,30 +306,33 @@ def prep_experiment(config_file):
         fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
         fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
-        precip, evap = preprocess_precip_and_evap(date, config)
+        precip, evap = preprocess_precip_and_evap(datetime, config)
 
         # Combine everything into one dataset
-        ds = xr.Dataset(
-            {
-                "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
-                "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
-                "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
-                "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
-                "s_upper": s_upper.assign_attrs(units="kg m-2"),
-                "s_lower": s_lower.assign_attrs(units="kg m-2"),
-                "evap": evap,
-                "precip": precip,
-            }
+        ds = (
+            xr.Dataset(
+                {
+                    "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
+                    "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
+                    "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
+                    "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+                    "s_upper": s_upper.assign_attrs(units="kg m-2"),
+                    "s_lower": s_lower.assign_attrs(units="kg m-2"),
+                    "evap": evap,
+                    "precip": precip,
+                }
+            )
+            .expand_dims("time")
+            .astype("float32")
         )
 
         # Verify that the data meets all the requirements for the model
         # check_input(ds)
 
         # Save preprocessed data
-        filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+        filename = f"{datetime.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config.preprocessed_data_folder / filename
-        ds.astype("float32").to_netcdf(output_path)
-
-    # Close the dask cluster when done
-    if config.chunks is not None:
-        client.shutdown()
+        if is_new_day:
+            ds.to_netcdf(output_path, unlimited_dims=["time"], mode="w")
+        else:
+            append_to_netcdf(output_path, ds, expanding_dim="time")
