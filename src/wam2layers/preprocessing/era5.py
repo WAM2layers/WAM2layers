@@ -336,7 +336,7 @@ def prep_experiment(config_file):
         if is_new_day:
             ds.to_netcdf(output_path, unlimited_dims=["time"], mode="w")
         else:
-            append_to_netcdf(output_path, ds, unlimited_dims="time")
+            append_to_netcdf(output_path, ds, expanding_dim="time")
 
 
 ################################################################################
