@@ -3,6 +3,8 @@ WAM2layers Source Region Designer functions
 
 @author: Vincent de Feiter | GitHub: vincentdefeiter
 
+Adapted by Chris Weijenborg
+
 """
 
 import logging
