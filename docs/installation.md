@@ -92,7 +92,7 @@ Now, if you simply want to use WAM2Layers as is, without modifying the source co
 pip install wam2layers
 
 # You can also install a specific version:
-pip install wam2layers=3.0.0-beta2
+pip install wam2layers=3.0.0-beta5
 ```
 
 In principle, this is enough to start using WAM2Layers.
