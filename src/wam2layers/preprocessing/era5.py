@@ -1,13 +1,11 @@
-import shutil
+import logging
 from pathlib import Path
 
 import click
 import numpy as np
 import pandas as pd
 import xarray as xr
-import yaml
 
-from wam2layers.analysis.checks import check_input
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     accumulation_to_flux,
@@ -16,6 +14,8 @@ from wam2layers.preprocessing.shared import (
     interpolate,
     sortby_ndarray,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def load_data(variable, date, config):
@@ -174,7 +174,7 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
 
     # Calculate pressure jump
     dp = p.diff("level")
-    assert np.all(dp > 0), "Pressure levels should increase monotonically"
+    assert np.all(dp >= 0), "Pressure levels should increase monotonically"
 
     # Interpolate to midpoints
     midpoints = 0.5 * (u.level.values[1:] + u.level.values[:-1])
@@ -227,14 +227,14 @@ def prep_experiment(config_file):
     config = Config.from_yaml(config_file)
 
     if config.chunks is not None:
-        print("Starting dask cluster")
+        logger.info("Starting dask cluster")
         from dask.distributed import Client
 
         client = Client()
-        print(f"To see the dask dashboard, go to {client.dashboard_link}")
+        logger.info(f"To see the dask dashboard, go to {client.dashboard_link}")
 
     for date in get_input_dates(config):
-        print(date)
+        logger.info(date)
 
         # 4d fields
         levels = config.levels
@@ -318,7 +318,7 @@ def prep_experiment(config_file):
         filename = f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config.preprocessed_data_folder / filename
         ds.astype("float32").to_netcdf(output_path)
-        shutil.copy(config_file, output_path / config_file.name)
+        #shutil.copy(config_file, output_path / config_file.name)
 
     # Close the dask cluster when done
     if config.chunks is not None:

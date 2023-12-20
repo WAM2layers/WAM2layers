@@ -9,10 +9,10 @@ https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-
 This repository contains the source code of the WAM2layers moisture tracking
 code. It can be used to determine where
 precipitation originally evaporated (backtracking), or where evaporated moisture
-eventually ends up (forward tracking). 
+eventually ends up (forward tracking).
 
-The animation above illustrates the concept of backtracking: you first see the water 
-content and fluxes move forward in time (left panel). Midway through, the animation 
+The animation above illustrates the concept of backtracking: you first see the water
+content and fluxes move forward in time (left panel). Midway through, the animation
 reverses and the moisture from the "source region" is tracked backward in time (right panel).
 
 
@@ -47,8 +47,7 @@ touch. We may be able to help.
 
 If you use the code for a publication, please cite it using the [DOI of the
 appropriate release](https://doi.org/10.5281/zenodo.7010594) and the
-following paper: 
+following paper:
 [Contrasting roles of interception and transpiration in the
 hydrological cycle - Part 2: Moisture
 recycling](https://doi.org/10.5194/esd-5-471-2014)
-

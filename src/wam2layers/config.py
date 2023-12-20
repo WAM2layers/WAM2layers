@@ -1,8 +1,12 @@
-from pydantic import field_validator, ConfigDict, BaseModel, FilePath, model_validator
-import yaml
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
+
+import yaml
+from pydantic import BaseModel, ConfigDict, FilePath, field_validator, model_validator
+
+logger = logging.getLogger(__name__)
 
 
 class Config(BaseModel):
@@ -229,16 +233,6 @@ class Config(BaseModel):
 
     """
 
-    log_level: Literal["debug", "info", "warning", "error", "critical"]
-    """Verbosity of the output messages.
-
-    For example:
-
-    .. code-block:: yaml
-
-        log_level: info
-    """
-
     restart: bool
     """Whether to restart from previous run.
 
@@ -331,18 +325,19 @@ class Config(BaseModel):
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
         if not path.exists():
-            print(f"Creating output folder {path}")
+            logger.info(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_date_order(self):
         if self.track_start_date > self.track_end_date:
             raise ValueError("track_end_date should be later than track_start_date")
         if self.event_start_date > self.event_end_date:
             raise ValueError("event_end_date should be later than event_start_date")
         if self.preprocess_start_date > self.preprocess_end_date:
-            raise ValueError("preprocess_end_date should be later than preprocess_start_date")
+            raise ValueError(
+                "preprocess_end_date should be later than preprocess_start_date"
+            )
 
         return self
-

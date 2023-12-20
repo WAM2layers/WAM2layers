@@ -76,7 +76,6 @@ c = cdsapi.Client()
 
 # We want one file per variable per day
 for date in datelist:
-
     # Create data directory if it doesn't exist yet
     outfolder = Path(target_dir) / f"{date.year:04d}" / f"{date.month:02d}"
     outfolder.mkdir(exist_ok=True, parents=True)

@@ -139,7 +139,6 @@ def interpolate_old(old_var, old_pressure_levels, new_pressure_levels, type="lin
     for t in range(ntime):
         for i in range(nlat):
             for j in range(nlon):
-
                 pressure_1d = old_pressure_levels[t, :, i, j]
                 var_1d = old_var[t, :, i, j]
 
@@ -283,3 +282,176 @@ def accumulation_to_flux(data):
     # Extrapolation introduces a small inconsistency at the last midnight...
     # data.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
     return fluxdata
+
+
+def stagger_x(f):
+    """Interpolate f to the grid cell interfaces.
+
+    Only the values at the interior interfaces are returned
+
+    Arguments:
+        f: 2d array of shape [M, N]
+
+    Returns:
+        2d array of shape [M-2, N-1]
+    """
+    return 0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
+
+
+def stagger_y(f):
+    """Interpolate f to the grid cell interfaces.
+
+    Only the values at the interior interfaces are returned
+
+    Arguments:
+        f: 2d array of shape [M, N]
+
+    Returns:
+        2d array of shape [M-1, N-2]
+    """
+    return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
+
+
+def change_units(data, target_freq):
+    """Change units to m3.
+    Multiply by edge length or area to get flux in m3
+    Multiply by time to get accumulation instead of flux
+    Divide by density of water to go from kg to m3
+    """
+    density = 1000  # [kg/m3]
+    a, ly, lx = get_grid_info(data)
+
+    total_seconds = pd.Timedelta(target_freq).total_seconds()
+
+    for variable in data.data_vars:
+        if variable in ["fx_upper", "fx_lower"]:
+            data[variable] *= total_seconds / density * ly
+        elif variable in ["fy_upper", "fy_lower"]:
+            data[variable] *= total_seconds / density * lx[:, None]
+        elif variable in ["evap", "precip"]:
+            data[variable] *= total_seconds / density * a[:, None]
+        elif variable in ["s_upper", "s_lower"]:
+            data[variable] *= a[:, None] / density
+        else:
+            raise ValueError(f"Unrecognized variable {variable}")
+        data[variable] = data[variable].assign_attrs(units="m**3")
+
+
+def stabilize_fluxes(current, previous, progress_tracker, config, t):
+    """Stabilize the outfluxes / influxes.
+
+    CFL: Water cannot move further than one grid cell per timestep.
+    """
+    for level in ["upper", "lower"]:
+        fx = current["fx_" + level]
+        fy = current["fy_" + level]
+        s = previous["s_" + level]
+
+        fx_abs = np.abs(fx)
+        fy_abs = np.abs(fy)
+        ft_abs = fx_abs + fy_abs
+
+        fx_corrected = 1 / 2 * fx_abs / ft_abs * s.values
+        fx_stable = np.minimum(fx_abs, fx_corrected)
+
+        fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
+        fy_stable = np.minimum(fy_abs, fy_corrected)
+
+        progress_tracker.track_stability_correction(fy_corrected, fy_abs, config, t)
+
+        # Get rid of any nan values
+        fx_stable.fillna(0)
+        fy_stable.fillna(0)
+
+        # Re-instate the sign
+        current["fx_" + level] = np.sign(fx) * fx_stable
+        current["fy_" + level] = np.sign(fy) * fy_stable
+
+
+def convergence(fx, fy):
+    # Note: latitude decreasing, hence positive fy gradient is convergence
+    return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
+
+
+def calculate_fz(F, S0, S1, kvf=0):
+    """Calculate the vertical fluxes.
+
+    The vertical flux is calculated as a closure term. Residuals are distributed
+    proportionally to the amount of moisture in each layer.
+
+    The flux is constrained such that it can never exceed
+
+    Arguments:
+        F: xarray dataset with fluxes evaluated at temporal midpoints between states
+        S0: xarray dataset with states at current time t
+        S1: xarray dataset with states at updated time t+1 (always forward looking)
+
+    Returns:
+        fz: vertical flux, positive downward
+
+    Examples:
+
+        Create dummy input data. In the absence of any horizontal fluxes and
+        sources or sinks, this result can be verified manually.
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> from wam2layers.preprocessing.shared import calculate_fz
+        >>>
+        >>> F = xr.Dataset({
+        ...     'precip': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'evap': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fx_upper': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fy_upper': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fx_lower': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fy_lower': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> S0 = xr.Dataset({
+        ...     's_upper': 10 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ...     's_lower': 6 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> S1 = xr.Dataset({
+        ...     's_upper': 8 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ...     's_lower': 7 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> calculate_fz(F, S0, S1)
+        <xarray.DataArray (lat: 3, lon: 3)>
+        array([[1.46666667, 1.46666667, 1.46666667],
+               [1.46666667, 1.46666667, 1.46666667],
+               [1.46666667, 1.46666667, 1.46666667]])
+        Dimensions without coordinates: lat, lon
+
+    """
+    s_mean = (S1 + S0) / 2
+    s_total = s_mean.s_upper + s_mean.s_lower
+    s_rel = s_mean / s_total
+
+    # Evaluate all terms in the moisture balance execpt the unknown Fz and err
+    foo_upper = (
+        (S1 - S0).s_upper
+        - convergence(F.fx_upper, F.fy_upper)
+        + F.precip.values * s_rel.s_upper
+    )
+    foo_lower = (
+        (S1 - S0).s_lower
+        - convergence(F.fx_lower, F.fy_lower)
+        + F.precip.values * s_rel.s_lower
+        - F.evap
+    )
+
+    # compute the resulting vertical moisture flux; the vertical velocity so
+    # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
+    fz = foo_lower - S1.s_lower / (S1.s_lower + S1.s_upper) * (foo_upper + foo_lower)
+
+    # TODO: verify that err_lower/s_lower = err_upper/s_upper is satisfied on debug log
+
+    # stabilize the outfluxes / influxes; during the reduced timestep the
+    # vertical flux can maximally empty/fill 1/x of the top or down storage
+    stab = 1.0 / (kvf + 1.0)
+    flux_limit = np.minimum(
+        s_mean.s_upper, s_mean.s_lower
+    )  # TODO why is this not 'just' the upstream bucket?
+    fz_stable = np.minimum(np.abs(fz), stab * flux_limit)
+
+    # Reinstate the sign
+    return np.sign(fz) * fz_stable
