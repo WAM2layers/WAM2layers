@@ -382,18 +382,19 @@ def mask_around_point(
     
 def mask_around_track(
     centerpoints,
+    times,
     radius,
     reference_file,
     output_file,
     return_plot,
 ):
-    """Mask source region using a center point with a given radius.
+    """Mask source region using a track of center points with a given radius (currently in degrees).
 
     This function builds a square source region based on given coordinates and
     radius and stores it the output file.
 
     Args:
-        centerpoints: Coordinates of the central points, changing over time (latitude, longitude).
+        centerpoints: List of coordinates of the central points, changing over time [(lat1, lon1), ....,lat_final, lon_final)] .
         radius (int): distance from center to edges of square box in degrees.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
@@ -440,6 +441,7 @@ def mask_around_track(
     # set coordinates
     export["longitude"] = ("longitude", longitude_r)
     export["latitude"] = ("latitude", latitude_r)
+    export["time"] = ("time", times)
 
     # save to NetCDF file
     export.to_netcdf(output_file)
