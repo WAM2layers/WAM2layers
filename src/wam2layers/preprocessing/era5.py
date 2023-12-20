@@ -333,11 +333,9 @@ def prep_experiment(config_file):
         # Save preprocessed data
         filename = f"{datetime.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config.preprocessed_data_folder / filename
-        # TODO append is tricky; clear folder before starting?
-        if not output_path.exists():
-            ds.to_netcdf(output_path, unlimited_dims=["time"], mode="a")
+        if is_new_day:
+            ds.to_netcdf(output_path, unlimited_dims=["time"], mode="w")
         else:
-            # TODO: append doesn't overwrite existing but rather adds a duplicate time.
             append_to_netcdf(output_path, ds, unlimited_dims="time")
 
 
