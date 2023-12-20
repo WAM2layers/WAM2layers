@@ -175,7 +175,7 @@ def run_experiment(config_file):
     config, region, output = initialize(config_file)
 
     event_start, event_end = config.event_start_date, config.event_end_date
-    progress_tracker = ProgressTracker(output)
+    progress_tracker = ProgressTracker(output, mode="forwardtrack")
 
     t0, th, t1, dt = initialize_time(config, direction="forward")
 

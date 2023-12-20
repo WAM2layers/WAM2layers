@@ -28,7 +28,7 @@ class Profiler:
 
 
 class ProgressTracker:
-    def __init__(self, output):
+    def __init__(self, output, mode = 'backtrack'):
         """Keep track of tagged and tracked moisture."""
         self.total_tagged_moisture = 0
         self.tracked = 0
@@ -36,6 +36,7 @@ class ProgressTracker:
         self.profile = Profiler()
         self.stability_correction_previous_grid = 0
         self.stability_correction_previous_value = 0
+        self.mode = mode
 
     def store_intermediate_states(self, output):
         """Update moisture totals based on output since previous time step.
@@ -44,18 +45,27 @@ class ProgressTracker:
         don't lose accumulations from previous outputs.
         """
         totals = output.sum()
-        self.tracked += totals["e_track"]
-        self.total_tagged_moisture += totals["tagged_precip"]
+        if self.mode == 'backtrack':
+          self.tracked += totals["e_track"]
+          self.total_tagged_moisture += totals["tagged_precip"]
+        else: # mode is forwardtrack
+          self.tracked += totals["p_track_lower"] + totals["p_track_upper"]
+          self.total_tagged_moisture += totals["tagged_evap"]
+        
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
         totals = output.sum()
-        tracked = self.tracked + totals["e_track"]
-        total_tagged_moisture = self.total_tagged_moisture + totals["tagged_precip"]
+        
+        if self.mode == 'backtrack':
+          tracked = self.tracked + totals["e_track"]
+          total_tagged_moisture = self.total_tagged_moisture + totals["tagged_precip"]
+        else: # mode is forwardtrack
+          tracked = self.tracked + totals["p_track_upper"] + totals["p_track_lower"]
+          total_tagged_moisture = self.total_tagged_moisture + totals["tagged_evap"]
         still_in_atmosphere = (
-            totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
-        )
-
+              totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
+          )  
         total_tracked_moisture = tracked + still_in_atmosphere
         tracked_percentage = tracked / total_tagged_moisture * 100
         lost_percentage = (1 - total_tracked_moisture / total_tagged_moisture) * 100
