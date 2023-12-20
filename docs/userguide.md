@@ -31,12 +31,14 @@ interace (CLI), much like pip, conda, git, cdo, et cetera. It looks like this:
 # Get help
 wam2layers --help
 wam2layers backtrack --help
+wam2layers forwardtrack --help
 
 # Preprocess data (you need to have downloaded the data)
 wam2layers preprocess era5 floodcase_202107.yaml
 
 # Perform tracking
 wam2layers backtrack floodcase_202107.yaml
+wam2layers forwardtrack floodcase_202107.yaml
 
 # Make some basic plots
 wam2layers visualize output floodcase_202107.yaml
@@ -243,7 +245,7 @@ a look at the example config file
 
 ```{tip}
 The actual code that is executed can be found in
-`src/wam2layers/tracking/backtrack.py`. This script reads the configuration,
+`src/wam2layers/tracking/backtrack.py` or `src/wam2layers/tracking/forwardtrack.py`. This script reads the configuration,
 loads the preprocessed data step by step, calculates the proportion of tracked
 moisture in each grid cell, and writes the output to a file. You can configure
 how often output is written.
