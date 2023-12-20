@@ -82,7 +82,7 @@ def _plot_evap(config, ax):
 
     output_files = []
     for date in dates:
-        output_files.append(output_path(date, config))
+        output_files.append(output_path(date, config, mode='backtrack'))
 
     ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
     e_track = ds.e_track.sum("time").compute() * 1000 / a_gridcell[:, None]
