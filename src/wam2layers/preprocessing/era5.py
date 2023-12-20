@@ -237,6 +237,7 @@ def prep_experiment(config_file):
     config = Config.from_yaml(config_file)
 
     for datetime in get_input_dates(config):
+        is_new_day = datetime == datetime.floor("1d")
         logger.info(datetime)
 
         # 4d fields
@@ -265,16 +266,17 @@ def prep_experiment(config_file):
             tcw = load_data("tcw", datetime, config)  # kg/m2
             correction = tcw / cwv.sum(dim="level")
             cw = correction * cwv  # column water (kg/m2)
-            logger.info(
-                f"Total column water correction applied. Mean correction over grid was {correction.mean().item():.4f}"
-            )
+            if is_new_day:
+                logger.info(
+                    f"Total column water correction: mean over grid for this timestep {correction.mean().item():.4f}"
+                )
 
         except FileNotFoundError:
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
             log_once(
                 logger, f"Total column water not available; using water vapour only"
-            )  
+            )
 
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
