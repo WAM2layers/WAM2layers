@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-import click
 import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
@@ -10,65 +9,7 @@ from cmocean import cm
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.io import input_path, output_path
-from wam2layers.utils import load_region, log
-
-###########################################################################
-# The code below makes it possible to run wam2layers from the command line:
-# >>> python visualization.py input path/to/cases/era5_2021.yaml
-# or even:
-# >>> wam2layers visualize output path/to/cases/era5_2021.yaml
-###########################################################################
-
-
-@click.group()
-def cli():
-    """Visualize input or output data of a WAM2layers experiment"""
-    pass
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def input(config_file):
-    """Visualize input data for experiment."""
-    try_import_cartopy()
-    log_path = Config.from_yaml(config_file).output_folder
-    log.setup_logging(log_path)
-    visualize_input_data(config_file)
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def output(config_file):
-    """Visualize output data for experiment."""
-    try_import_cartopy()
-    log_path = Config.from_yaml(config_file).output_folder
-    log.setup_logging(log_path)
-    visualize_output_data(config_file)
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def both(config_file):
-    """Visualize both input and output data for experiment."""
-    try_import_cartopy()
-    log_path = Config.from_yaml(config_file).output_folder
-    log.setup_logging(log_path)
-    visualize_both(config_file)
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def snapshots(config_file):
-    """Visualize input and output snapshots for experiment."""
-    try_import_cartopy()
-    log_path = Config.from_yaml(config_file).output_folder
-    log.setup_logging(log_path)
-    visualize_snapshots(config_file)
-
-
-###########################################################################
-# Code for visualization
-###########################################################################
+from wam2layers.utils import load_region
 
 logger = logging.getLogger(__name__)
 
@@ -288,7 +229,3 @@ def visualize_snapshots(config_file):
         fig.savefig(output_file)
         plt.close()
         logger.info("Generate snapshot figure.")
-
-
-if __name__ == "__main__":
-    cli()

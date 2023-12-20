@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-import click
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -14,43 +13,6 @@ from wam2layers.preprocessing.shared import (
     interpolate,
     sortby_ndarray,
 )
-from wam2layers.utils import log
-
-################################################################################
-# To run this script interactively in e.g. Spyder, uncomment the following line:
-# prep_experiment("../../cases/era5_2021.yaml")
-################################################################################
-
-###########################################################################
-# The code below makes it possible to run wam2layers from the command line:
-# >>> python backtrack.py path/to/cases/era5_2021.yaml
-# or even:
-# >>> wam2layers backtrack path/to/cases/era5_2021.yaml
-###########################################################################
-
-
-@click.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def cli(config_file):
-    """Preprocess ERA5 data for WAM2layers tracking experiments.
-
-    CONFIG_FILE: Path to WAM2layers experiment configuration file.
-
-    Usage examples:
-
-        \b
-        - python path/to/preprocessing/era5.py path/to/cases/era5_2021.yaml
-        - wam2layers preprocess era5 path/to/cases/era5_2021.yaml
-    """
-    log_path = Config.from_yaml(config_file).preprocessed_data_folder
-    log.setup_logging(log_path)
-    prep_experiment(config_file)
-
-
-###########################################################################
-# Code for preprocessing
-###########################################################################
-
 
 logger = logging.getLogger(__name__)
 
@@ -359,7 +321,3 @@ def prep_experiment(config_file):
     # Close the dask cluster when done
     if config.chunks is not None:
         client.shutdown()
-
-
-if __name__ == "__main__":
-    cli()
