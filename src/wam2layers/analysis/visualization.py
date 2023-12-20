@@ -119,7 +119,7 @@ def visualize_input_data(config_file):
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
     fig.savefig(out_dir / "input_event.png", dpi=200)
-    logger.info("Generate figure showing the cumulative moisture inputs.")
+    logger.info("Generated figure showing the cumulative moisture inputs.")
 
 
 def visualize_output_data(config_file):

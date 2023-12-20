@@ -1,4 +1,12 @@
-"""Command-line interface for the WAM2layers model."""
+"""Command-line interface for the WAM2layers model.
+
+This module contains all the functionality that makes it possible to run wam2layers on the command line, like so:
+
+    wam2layers preprocess era5 floodcase.yaml
+    wam2layers backtrack floodcase.yaml
+
+et cetera. It is built with [click](https://click.palletsprojects.com/en/8.1.x/).
+"""
 import logging
 from datetime import datetime
 from pathlib import Path
