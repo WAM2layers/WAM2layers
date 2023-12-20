@@ -114,7 +114,7 @@ def initialize(config_file):
 
     if config.restart:
         # Reload last state from existing output
-        date = config.track_end_date
+        date = config.tracking_end_date
         ds = xr.open_dataset(output_path(date, config))
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
@@ -166,12 +166,11 @@ def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
     config, region, output = initialize(config_file)
 
-    event_start, event_end = config.event_start_date, config.event_end_date
     progress_tracker = ProgressTracker(output)
 
     t0, th, t1, dt = initialize_time(config, direction="backward")
 
-    while t0 >= config.track_start_date:
+    while t0 >= config.tracking_start_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
@@ -188,7 +187,7 @@ def run_experiment(config_file):
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
         # Only track the precipitation at certain timesteps
-        if not event_start <= t1 <= event_end:
+        if not config.tagging_start_date <= t1 <= config.tagging_end_date:
             F["precip"] = 0
 
         backtrack(F, S1, S0, region, output, config)
@@ -197,7 +196,7 @@ def run_experiment(config_file):
         t0 -= dt
 
         # Daily output
-        if t1 == t1.floor(config.output_frequency) or t0 < config.track_start_date:
+        if t1 == t1.floor(config.output_frequency) or t0 < config.tracking_start_date:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
             write_output(output, t1, config)
