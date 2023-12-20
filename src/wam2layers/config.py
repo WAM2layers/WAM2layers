@@ -271,31 +271,6 @@ class Config(BaseModel):
 
     """
 
-    chunks: Optional[Dict[str, int]]
-    """Whether to use dask.
-
-    Using dask can help process large datasets without memory issues, but its
-    performance is quite sensitive to the chunk configuration.
-
-    Some examples:
-
-    .. code-block:: yaml
-
-        # don't use dask:
-        chunks: null
-
-        # process one time step at a time
-        chunks: {time: 1}
-
-        # set chunking for all individual dims
-        chunks:
-            level: -1
-            time: 1  # don't set time to auto, as it will be different for surface and 3d vars
-            latitude: auto
-            longitude: auto
-
-    """
-
     @classmethod
     def from_yaml(cls, config_file):
         """Read settings from a configuration.yaml file.
