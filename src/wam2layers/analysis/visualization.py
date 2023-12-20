@@ -8,8 +8,7 @@ from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.io import input_path, output_path
-from wam2layers.utils import load_region
+from wam2layers.tracking.io import input_path, output_path, load_region
 
 logger = logging.getLogger(__name__)
 

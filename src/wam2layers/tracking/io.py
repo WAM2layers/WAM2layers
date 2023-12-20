@@ -50,7 +50,7 @@ def load_data(t, config, subset="fluxes"):
 
 def load_region(config):
     # TODO: make variable name more generic
-    return xr.open_dataset(config.region).source_region
+    return xr.open_dataset(config.region).tagging_region
 
 
 def write_output(output, t, config):
