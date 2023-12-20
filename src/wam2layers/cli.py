@@ -95,6 +95,8 @@ def era5(config_file):
     """
     log_path = Config.from_yaml(config_file).preprocessed_data_folder
     setup_logging(log_path)
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting preprocessing ERA5 data.")
     prep_experiment(config_file)
 
 
@@ -113,6 +115,8 @@ def input(config_file):
     """Visualize input data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting visualizing input data.")
     visualization.visualize_input_data(config_file)
 
 
@@ -122,6 +126,8 @@ def output(config_file):
     """Visualize output data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting visualizing output data.")
     visualization.visualize_output_data(config_file)
 
 
@@ -131,6 +137,8 @@ def both(config_file):
     """Visualize both input and output data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting visualizing both input and output data.")
     visualization.visualize_both(config_file)
 
 
@@ -140,6 +148,8 @@ def snapshots(config_file):
     """Visualize input and output snapshots for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting visualizing input and output snapshots.")
     visualization.visualize_snapshots(config_file)
 
 
