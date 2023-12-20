@@ -260,6 +260,29 @@ def calculate_humidity(dewpoint, pressure):
     return spec_hum
 
 
+def calculate_relhumidity(temp, pres, qair):
+    """
+    Calculate the specific humidity from (surface) pressure and
+    dew point temperature
+
+    See further details at eq. 7.4 and 7.5 (Page 102) of:
+    https://www.ecmwf.int/en/elibrary/20198-ifs-documentation-cy47r3-part-iv-physical-processes
+    """
+    Rd = 287.0597
+    Rv = 461.5250
+    a1 = 611.21
+    a3 = 17.502
+    a4 = 32.19
+    t0 = 273.15
+
+    es =  6.112 * exp((17.67 * temp)/(temp + 243.5))
+    e = qair * pres / (0.378 * qair + 0.622)
+    rh = e / es
+    #rh[rh > 1] = 1
+    #rh[rh < 0] = 0
+    return rh
+
+
 def accumulation_to_flux(data):
     """Convert precip and evap from accumulations to fluxes.
 
