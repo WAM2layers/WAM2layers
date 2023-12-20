@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import psutil
 
-from wam2layers.utils import load_region
+from wam2layers.tracking.io import load_region
 
 logger = logging.getLogger(__name__)
 
