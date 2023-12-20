@@ -274,7 +274,7 @@ def prep_experiment(config_file):
             cw = cwv
             log_once(
                 logger, f"Total column water not available; using water vapour only"
-            )  # CONTINUE HERE
+            )  
 
         # Determine the fluxes
         fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
