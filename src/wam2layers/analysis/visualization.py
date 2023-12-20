@@ -144,7 +144,7 @@ def visualize_output_data(config_file):
 
 def visualize_both(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
-    # Load config and some usful stuf.
+    # Load config and some useful stuf.
     config = Config.from_yaml(config_file)
 
     # Make figure
