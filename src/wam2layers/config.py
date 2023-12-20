@@ -130,22 +130,22 @@ class Config(BaseModel):
         preprocess_end_date: "2021-07-15T23:00"
     """
 
-    track_start_date: datetime
+    tracking_start_date: datetime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
-    When backward tracking the track_start_date is not given as output date.
+    When backward tracking the tracking_start_date is not given as output date.
 
     For example:
 
     .. code-block:: yaml
 
-        track_start_date: "2021-07-01T00:00"
+        tracking_start_date: "2021-07-01T00:00"
 
     """
 
-    track_end_date: datetime
+    tracking_end_date: datetime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
@@ -155,7 +155,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        track_end_date: "2021-07-15T23:00"
+        tracking_end_date: "2021-07-15T23:00"
     """
 
     tagging_start_date: datetime
@@ -173,7 +173,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_start_date: "2021-07-13T00:00"
+        tagging_start_date: "2021-07-13T00:00"
 
     """
 
@@ -192,7 +192,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_end_date: "2021-07-14T23:00"
+        tagging_end_date: "2021-07-14T23:00"
 
     """
 
@@ -319,11 +319,21 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @field_validator("preprocessed_data_folder", "region", "output_folder")
+    @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
+
+    @field_validator("tagging_region", "tracking_region")
+    @classmethod
+    def validate_region(cls, region):
+        """Check if region is existing path or valid bbox."""
+        if isinstance(region, Path):
+            return region.expanduser()
+        # TODO implement validation for bbox
+        logger.warn("Note: bbox validation not implemented yet.")
+        return region
 
     @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod
@@ -336,10 +346,12 @@ class Config(BaseModel):
 
     @model_validator(mode="after")
     def check_date_order(self):
-        if self.track_start_date > self.track_end_date:
-            raise ValueError("track_end_date should be later than track_start_date")
-        if self.event_start_date > self.event_end_date:
-            raise ValueError("event_end_date should be later than event_start_date")
+        if self.tracking_start_date > self.tracking_end_date:
+            raise ValueError(
+                "tracking_end_date should be later than tracking_start_date"
+            )
+        if self.tagging_start_date > self.tagging_end_date:
+            raise ValueError("tagging_end_date should be later than tagging_start_date")
         if self.preprocess_start_date > self.preprocess_end_date:
             raise ValueError(
                 "preprocess_end_date should be later than preprocess_start_date"
