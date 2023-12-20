@@ -10,10 +10,10 @@ def input_path(date, config):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
-def output_path(date, config):
+def output_path(date, config, mode):
     output_dir = config.output_folder
-    return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
-
+    return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
+    
 
 def read_data_at_date(d, config):
     """Load input data for given date."""
@@ -53,11 +53,8 @@ def load_region(config):
     return xr.open_dataset(config.region).source_region
 
 
-def write_output(output, t, config):
+def write_output(output, t, config, mode):
     # TODO: add back (and cleanup) coordinates and units
-    path = output_path(t, config)
+    path = output_path(t, config, mode)
     logger.info(f"{t} - Writing output to file {path}")
     output.astype("float32").to_netcdf(path)
-
-    # Flush previous outputs
-    output[["e_track", "tagged_precip"]] *= 0

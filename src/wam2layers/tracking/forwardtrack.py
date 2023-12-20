@@ -52,7 +52,6 @@ def forwardtrack(
     s_track_relative_lower = np.minimum(s_track_lower / s_lower, 1.0)
     s_track_relative_upper = np.minimum(s_track_upper / s_upper, 1.0)
 
-    # Actual tracking (note: backtracking, all fluxes change sign)
     bc = config.periodic_boundary  # boundary condition True/False
     # TODO: apply terms in successive steps instead of all at once?
     s_track_lower += (
@@ -212,7 +211,9 @@ def run_experiment(config_file):
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t0, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t0, config)
+            write_output(output, t0, config, mode='forwardtrack')
+            # Flush previous outputs
+            output[["p_track_upper", "p_track_lower", "tagged_evap"]] *= 0
 
     logger.info("Experiment complete.")
 

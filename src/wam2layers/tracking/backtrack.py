@@ -203,7 +203,10 @@ def run_experiment(config_file):
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t1, config)
+            write_output(output, t1, config, mode='backtrack')
+            # Flush previous outputs
+            output[["e_track", "tagged_precip"]] *= 0
+
 
     logger.info("Experiment complete.")
 

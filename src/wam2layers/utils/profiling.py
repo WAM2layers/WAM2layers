@@ -30,13 +30,13 @@ class Profiler:
 class ProgressTracker:
     def __init__(self, output, mode = 'backtrack'):
         """Keep track of tagged and tracked moisture."""
+        self.mode = mode
         self.total_tagged_moisture = 0
         self.tracked = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
         self.stability_correction_previous_grid = 0
         self.stability_correction_previous_value = 0
-        self.mode = mode
 
     def store_intermediate_states(self, output):
         """Update moisture totals based on output since previous time step.
