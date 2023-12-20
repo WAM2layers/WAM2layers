@@ -8,6 +8,7 @@ This module contains all the functionality that makes it possible to run wam2lay
 et cetera. It is built with [click](https://click.palletsprojects.com/en/8.1.x/).
 """
 import logging
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -42,6 +43,11 @@ def setup_logging(log_path):
     )
 
 
+def _copy_config_yaml(yaml_path, target_path):
+    """Copy config file to the output path."""
+    shutil.copy(yaml_path, target_path)
+
+
 @click.group()
 def cli():
     """Command line interface to WAM2layers."""
@@ -66,6 +72,7 @@ def backtrack(config_file):
     """
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting backtrack experiment.")
     run_experiment(config_file)
@@ -95,6 +102,7 @@ def era5(config_file):
     """
     log_path = Config.from_yaml(config_file).preprocessed_data_folder
     setup_logging(log_path)
+    _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting preprocessing ERA5 data.")
     prep_experiment(config_file)
@@ -115,6 +123,7 @@ def input(config_file):
     """Visualize input data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing input data.")
     visualization.visualize_input_data(config_file)
@@ -126,6 +135,7 @@ def output(config_file):
     """Visualize output data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing output data.")
     visualization.visualize_output_data(config_file)
@@ -137,6 +147,7 @@ def both(config_file):
     """Visualize both input and output data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing both input and output data.")
     visualization.visualize_both(config_file)
@@ -148,6 +159,7 @@ def snapshots(config_file):
     """Visualize input and output snapshots for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
+    _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing input and output snapshots.")
     visualization.visualize_snapshots(config_file)
