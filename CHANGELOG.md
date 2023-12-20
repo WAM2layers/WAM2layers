@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 
 - The "analyse output" command now excludes the first timestep when it looks for output files, as it is usually not present in backtrack output ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
 - A long-existing bug in the calculation of vertical fluxes, effectively changing the direction of the vertical flux ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)). Also use the *new* state in the error correction term `S_1 / S_T * err_T`
+- Log files are now saved to the output path, instead of the current working directory ([#291](https://github.com/WAM2layers/WAM2layers/pull/291))
 
 
 ### Changed

@@ -32,6 +32,12 @@ def test_preprocess():
             "`cp tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc tests/test_data/verify_output/2022-08-31_fluxes_storages.nc`"
         ),
     )
+    # check log file
+    log_files = [
+        i for i in Path("tests/tmp/preprocessed_data/").glob("wam2layers_*.log")
+    ]
+
+    assert len(log_files) == 1
 
 
 def test_backtrack():
@@ -56,6 +62,11 @@ def test_backtrack():
         ),
     )
 
+    # check log file
+    log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
+
+    assert len(log_files) == 1
+
 
 def test_visualize():
     runner = CliRunner()
@@ -77,3 +88,8 @@ def test_visualize():
             "you can update the reference figure with the following command: \n"
             "`cp tests/tmp/output_data/figures/cumulative_sources.png tests/test_data/verify_output/cumulative_sources.png`"
         )
+
+    # check log file
+    log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
+
+    assert len(log_files) == 2  # another log for backtrack already exists
