@@ -75,8 +75,12 @@ def backtrack(
     # TODO build in logging for lost moisture
     lower_to_upper = np.maximum(0, s_track_lower - S0["s_lower"])
     upper_to_lower = np.maximum(0, s_track_upper - S0["s_upper"])
-    s_track_lower = np.minimum(s_track_lower - lower_to_upper + upper_to_lower, s_lower)
-    s_track_upper = np.minimum(s_track_upper - upper_to_lower + lower_to_upper, s_upper)
+    s_track_lower = np.minimum(
+        s_track_lower - lower_to_upper + upper_to_lower, S0["s_lower"]
+    )
+    s_track_upper = np.minimum(
+        s_track_upper - upper_to_lower + lower_to_upper, S0["s_upper"]
+    )
 
     # Update output fields
     output["e_track"] += evap * s_track_relative_lower

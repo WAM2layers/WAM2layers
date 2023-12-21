@@ -74,10 +74,14 @@ def forwardtrack(
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
-    lower_to_upper = np.maximum(0, s_track_lower - S1["s_lower"])
-    upper_to_lower = np.maximum(0, s_track_upper - S1["s_upper"])
-    s_track_lower = np.minimum(s_track_lower - lower_to_upper + upper_to_lower, s_lower)
-    s_track_upper = np.minimum(s_track_upper - upper_to_lower + lower_to_upper, s_upper)
+    overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
+    overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
+    s_track_lower = np.minimum(
+        s_track_lower - overshoot_lower + overshoot_upper, S1["s_lower"]
+    )
+    s_track_upper = np.minimum(
+        s_track_upper - overshoot_upper + overshoot_lower, S1["s_upper"]
+    )
 
     # Update output fields
     output["p_track_lower"] += precip_lower * s_track_relative_lower
