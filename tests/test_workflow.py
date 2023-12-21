@@ -39,6 +39,10 @@ def test_preprocess():
 
     assert len(log_files) >= 1  # make sure the test passes when repeating
 
+    # check config yaml
+    config_path = Path("tests/tmp/preprocessed_data/test_config.yaml")
+    assert config_path.exists()
+
 
 def test_backtrack():
     runner = CliRunner()
@@ -67,6 +71,10 @@ def test_backtrack():
 
     assert len(log_files) >= 1  # make sure the test passes when repeating
 
+    # check config yaml
+    config_path = Path("tests/tmp/output_data/test_config.yaml")
+    assert config_path.exists()
+
 
 def test_visualize():
     runner = CliRunner()
@@ -92,4 +100,8 @@ def test_visualize():
     # check log file
     log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
 
-    assert len(log_files) >= 2  # another log for backtrack already exists
+    assert len(log_files) == 2  # another log for backtrack already exists
+
+    # check config yaml
+    config_path = Path("tests/tmp/output_data/test_config.yaml")
+    assert config_path.exists()

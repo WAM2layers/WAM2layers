@@ -1,10 +1,9 @@
 """
-WAM2layers Source Region Designer functions
+WAM2layers Tagging Region Designer functions
 
 @author: Vincent de Feiter | GitHub: vincentdefeiter
 
 """
-
 import logging
 
 # Import
@@ -19,18 +18,18 @@ from cartopy import feature as cfeature
 
 logger = logging.getLogger(__name__)
 
-def mask_with_regionmask(region_source, regions, input_file, output_file, return_plot):
-    """Source region by using a named region from regionmask.
+def mask_with_regionmask(region_source, regions, input_file, output_dir, return_plot):
+    """tagging region by using a named region from regionmask.
 
-    This function builds a source region based on available regions from the Region Mask Python Package.
+    This function builds a tagging region based on available regions from the Region Mask Python Package.
 
     Args:
         region_source (str): indicate here a region source from the Region Mask Python Package (Giorgi, SREX, AR6, PRUDENCE).
         regions (list): single or multiple regions as list.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the created source region.
-        return_plot: if true, return a plot that shows the source region on a map.
+        output_dir: path where to store the created tagging region.
+        return_plot: if true, return a plot that shows the tagging region on a map.
 
     Returns:
         axes on which the region is plotted if `return_plot` is True
@@ -70,13 +69,13 @@ def mask_with_regionmask(region_source, regions, input_file, output_file, return
     if 'srex' in region_source or 'giorgi' in region_source or 'prudence' in region_source:
         region_ids = region_ids-1
     if 'ocean' in region_source or 'land' in region_source:
-        raise KeyError('Entry of ar6 not recognized. Please use the ar6.all options to make the selection. This option will have proper indexing.')
+        raise KeyError('Entry for ar6 not recognized. Please only use the ar6.all options to make the selection. This option ensures proper indexing of the region.')
     
     region_ids = region_ids.tolist()
 
     if type(region_ids) == int:
         raise KeyError(
-            "regions not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
+            "regions not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single tagging region!"
         )
 
     new_masks = mask.isel(region=region_ids).values
@@ -86,13 +85,13 @@ def mask_with_regionmask(region_source, regions, input_file, output_file, return
         new_masks == False, 0, 1 )  # Replace True and False by 1 and 0's
     new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
-    # Export as source region for WAM2layers
+    # Export as tagging region for WAM2layers
 
     # create xarray dataset
     data = new_masks
 
     export = xr.Dataset(
-        {"source_region": (["latitude", "longitude"], data.astype(float))}
+        {"tagging_region": (["latitude", "longitude"], data.astype(float))}
     )
 
     # set coordinates
@@ -100,9 +99,9 @@ def mask_with_regionmask(region_source, regions, input_file, output_file, return
     export["latitude"] = ("latitude", latitude)
 
     # save to NetCDF file
-    export.to_netcdf(output_file)
+    export.to_netcdf(output_dir)
 
-    logger.info(f"Stored source region in {output_file}.")
+    logger.info(f"Stored tagging region in {output_dir}.")
 
     # Plot as a check
     if return_plot:
@@ -126,7 +125,7 @@ def mask_with_regionmask(region_source, regions, input_file, output_file, return
 
         mask_plot = new_masks
 
-        indices = export.where(export.source_region==1,drop=True)
+        indices = export.where(export.tagging_region>0,drop=True)
                         
         ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
         
@@ -140,21 +139,20 @@ def mask_with_regionmask(region_source, regions, input_file, output_file, return
         gl.xlabel_style = {"size": fontsizes}
         gl.ylabel_style = {"size": fontsizes}
 
-    return ax
+        return ax
 
+def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_plot):
+    """Mask tagging region using a shapefile.
 
-def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_plot):
-    """Mask source region using a shapefile.
-
-    This function builds a source region based on an existing shapefile and stores the output file.
+    This function builds a tagging region based on an existing shapefile and stores the output file.
 
     Args:
         shapefile: name of the shapefile. Include: .dbf, .prj, .sbn, .sbx, .shp, .shp.xml and .shx files in the input directory.
         regions: if build up of multiple regions, indicate as list (int), otherwise FALSE.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the created source region.
-        return_plot: if true, return a plot that shows the source region on a map.
+        output_dir: path where to store the created tagging region.
+        return_plot: if true, return a plot that shows the tagging region on a map.
 
     Returns:
         axes on which the region is plotted if 'return_plot' is True.
@@ -179,7 +177,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
 
         if type(region_ids) == int:
             raise KeyError(
-                "regions not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single source region!"
+                "regions not specified correctly, please check whether your input is provided as a list [...,...], even if it is a single tagging region!"
             )
 
         new_masks = mask.isel(region=region_ids).values
@@ -198,13 +196,13 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
         )  # Replace True and False by 1 and 0's
         new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
-    # Export as source region for WAM2layers
+    # Export as tagging region for WAM2layers
 
     # create xarray dataset
     data = new_masks
 
     export = xr.Dataset(
-        {"source_region": (["latitude", "longitude"], data.astype(float))}
+        {"tagging_region": (["latitude", "longitude"], data.astype(float))}
     )
 
     # set coordinates
@@ -213,16 +211,17 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
 
     # save to NetCDF file
 
-    export.to_netcdf(output_file)
+    export.to_netcdf(output_dir)
 
-    logger.info(f"Stored source region in {output_file}.")
-
+    logger.info(f"Stored tagging region in {output_dir}.")
+    
     if return_plot:
         # Visualise all regions available
 
         fontsizes = 10
         pads = 20
 
+        #Zoomed-in
         fig = plt.figure(figsize=(16, 10),dpi=200)
         ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
@@ -243,7 +242,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
         )
         mask_plot = new_masks
 
-        indices = export.where(export.source_region==1,drop=True)
+        indices = export.where(export.tagging_region>0,drop=True)
         lon_indices = indices.longitude
         lon_indices_c = []
         for i in lon_indices:
@@ -252,11 +251,10 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
                 lon_indices_c.append(item)
             else:
                 lon_indices_c.append(i)
-        
-        lat_indices = indices.latitude
                 
         ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
         ax.set_extent([min(lon_indices_c)-1,max(lon_indices_c)+1,indices.latitude.min()-1,indices.latitude.max()+1])
+        ax.set_title('Zoomed-in',fontsize=fontsizes)
             
         # Grid
         gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
@@ -264,19 +262,64 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_file, return_
         gl.right_labels = False
         gl.xlabel_style = {"size": fontsizes*2}
         gl.ylabel_style = {"size": fontsizes*2}
-        return ax
+        
+        
+        #Zoomed-out
+        fig = plt.figure(figsize=(16, 10),dpi=200)
+        ax2 = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
+        # Make figure
+        ax2.add_feature(cfeature.LAND, zorder=1, edgecolor="k", facecolor="w")
+
+        ax2.add_feature(cfeature.COASTLINE, zorder=2, linewidth=0.8)
+        ax2.add_feature(cfeature.BORDERS, zorder=2, linewidth=0.2, alpha=0.5)
+        ax2.add_feature(cfeature.RIVERS, zorder=2, linewidth=3, alpha=0.5)
+        ax2.add_feature(cfeature.STATES, zorder=2, facecolor="w")
+        ax2.add_feature(
+            cfeature.LAKES,
+            zorder=2,
+            linewidth=0.8,
+            edgecolor="k",
+            alpha=0.5,
+            facecolor="w",
+        )
+        mask_plot = new_masks
+
+        indices = export.where(export.tagging_region>0,drop=True)
+        lon_indices = indices.longitude
+        lon_indices_c = []
+        for i in lon_indices:
+            if i <= 180:
+                item = i * -1
+                lon_indices_c.append(item)
+            else:
+                lon_indices_c.append(i)
+                
+        ax2.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
+        ax2.set_extent([min(lon_indices_c)-20,max(lon_indices_c)+20,indices.latitude.min()-20,indices.latitude.max()+20])
+        ax2.set_title('Zoomed-out',fontsize=fontsizes)
+            
+        # Grid
+        gl = ax2.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
+        gl.top_labels = False
+        gl.right_labels = False
+        gl.xlabel_style = {"size": fontsizes*2}
+        gl.ylabel_style = {"size": fontsizes*2}
+        
+        
+        
+        return ax, ax2
 
 def mask_around_point(
     centerpoint,
     radius,
     reference_file,
-    output_file,
+    output_dir,
     return_plot,
 ):
-    """Mask source region using a center point with a given radius.
+    """Mask tagging region using a center point with a given radius.
 
-    This function builds a square source region based on given coordinates and
+    This function builds a square tagging region based on given coordinates and
     radius and stores it the output file.
 
     Args:
@@ -284,8 +327,8 @@ def mask_around_point(
         radius (int): distance from center to edges of square box in degrees.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_file: path where to store the created source region.    
-        return_plot: if true, return a plot that shows the source region on a map.
+        output_dir: path where to store the created tagging region.    
+        return_plot: if true, return a plot that shows the tagging region on a map.
 
     Returns:
         axes on which the region is plotted if `return_plot' is True
@@ -310,13 +353,13 @@ def mask_around_point(
 
     new_masks = np.where(mask == False, 0, 1)  # Replace True and False by 1 and 0's
 
-    # Export as source region for WAM2layers
+    # Export as tagging region for WAM2layers
 
     # create xarray dataset
     data = new_masks
 
     export = xr.Dataset(
-        {"source_region": (["latitude", "longitude"], data.astype(float))}
+        {"tagging_region": (["latitude", "longitude"], data.astype(float))}
     )
 
     # set coordinates
@@ -324,9 +367,9 @@ def mask_around_point(
     export["latitude"] = ("latitude", latitude_r)
 
     # save to NetCDF file
-    export.to_netcdf(output_file)
+    export.to_netcdf(output_dir)
 
-    logger.info(f"Stored source region in {output_file}.")
+    logger.info(f"Stored tagging region in {output_dir}.")
 
     if return_plot:
         # Visualise all regions available
@@ -356,7 +399,7 @@ def mask_around_point(
 
         ax.contourf(longitude_r, latitude_r, mask_plot, levels=[0.1, 1])
         
-        indices = export.where(export.source_region==1,drop=True)               
+        indices = export.where(export.tagging_region>0,drop=True)               
         ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
         ax.set_extent([indices.longitude.min()-10,indices.longitude.max()+10,indices.latitude.min()-10,indices.latitude.max()+10])
 
@@ -378,3 +421,4 @@ def mask_around_point(
         gl.xlabel_style = {"size": fontsizes*2}
         gl.ylabel_style = {"size": fontsizes*2}
         return ax
+

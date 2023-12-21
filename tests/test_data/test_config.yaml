@@ -10,13 +10,13 @@ level_type: model_levels
 levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
 # Tracking
-tracking_region: tests/test_data/source_region.nc
+tracking_region: tests/test_data/test_region.nc
 # tracking_region: [0, 50, 10, 55]  # alternative to mask file
 tracking_start_date: "2022-08-31T00:00"
 tracking_end_date: "2022-08-31T23:00"
 
 # Tagging
-tagging_region: tests/test_data/source_region.nc
+tagging_region: tests/test_data/test_region.nc
 # tagging_region: [0, 50, 10, 55]  # alternative to mask file
 tagging_start_date: "2022-08-31T12:00"
 tagging_end_date: "2022-08-31T23:00"

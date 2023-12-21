@@ -31,12 +31,14 @@ interace (CLI), much like pip, conda, git, cdo, et cetera. It looks like this:
 # Get help
 wam2layers --help
 wam2layers backtrack --help
+wam2layers forwardtrack --help
 
 # Preprocess data (you need to have downloaded the data)
 wam2layers preprocess era5 floodcase_202107.yaml
 
 # Perform tracking
 wam2layers backtrack floodcase_202107.yaml
+wam2layers forwardtrack floodcase_202107.yaml
 
 # Make some basic plots
 wam2layers visualize output floodcase_202107.yaml
@@ -202,10 +204,8 @@ enumerated above. You can use this to get some reassurance (or detect issues).
 
 ### Tracking region
 
-In addition to the time-dependent forcing data, WAM2layers also needs a file
-called `source_region.nc` containing a variable called `source_region`, with
-values between 0 and 1. It must have the same lat/lon coordinates as the other
-input data. This file is used to define the source region from where to track
+In addition to the time-dependent forcing data, WAM2layers also needs a netcdf-file containing a variable called `tagging_region`, with values between 0 and 1. It must have the same lat/lon coordinates as the other
+input data. This file is used to define the tagging region from where to track
 moisture.
 
 ### Example data
@@ -243,7 +243,7 @@ a look at the example config file
 
 ```{tip}
 The actual code that is executed can be found in
-`src/wam2layers/tracking/backtrack.py`. This script reads the configuration,
+`src/wam2layers/tracking/backtrack.py` or `src/wam2layers/tracking/forwardtrack.py`. This script reads the configuration,
 loads the preprocessed data step by step, calculates the proportion of tracked
 moisture in each grid cell, and writes the output to a file. You can configure
 how often output is written.

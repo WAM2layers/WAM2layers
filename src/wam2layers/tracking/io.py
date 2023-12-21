@@ -10,9 +10,9 @@ def input_path(date, config):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
-def output_path(date, config):
+def output_path(date, config, mode):
     output_dir = config.output_folder
-    return f"{output_dir}/backtrack_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
+    return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
 def read_data_at_date(d, config):
@@ -48,16 +48,16 @@ def load_data(t, config, subset="fluxes"):
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
-def load_region(config):
-    # TODO: make variable name more generic
-    return xr.open_dataarray(config.tagging_region)
+def load_region(config, purpose="tagging"):
+    if purpose == "tagging":
+        return xr.open_dataarray(config.tagging_region)
+    if purpose == "tracking":
+        return xr.open_dataarray(config.tracking_region)
+    raise ValueError("Purpose for load_region should be tagging or tracking.")
 
 
-def write_output(output, t, config):
+def write_output(output, t, config, mode):
     # TODO: add back (and cleanup) coordinates and units
-    path = output_path(t, config)
+    path = output_path(t, config, mode)
     logger.info(f"{t} - Writing output to file {path}")
     output.astype("float32").to_netcdf(path)
-
-    # Flush previous outputs
-    output[["e_track", "tagged_precip"]] *= 0
