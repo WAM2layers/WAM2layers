@@ -31,7 +31,6 @@ def test_select_subdomain(ds):
     assert np.array_equal(sub.longitude, [0, 30, 60, 90])
 
 
-@pytest.mark.xfail(reason="not implemented yet")
 def test_rolling_subdomain(ds):
     """Check subdomain that does not fit in [-180, 180] or [0, 360]."""
     bbox = BoundingBox(130, -20, 40, 60)

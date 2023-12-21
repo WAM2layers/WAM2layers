@@ -40,9 +40,13 @@ def select_subdomain(ds, bbox):
         )
     else:
         # Need to roll coordinates to maintain a continuous longitude
-        raise NotImplementedError(
-            "Functionality for rotated subdomain not implemented (yet)."
-        )
+        # Roll the first lon that's NOT in the bbox to the front of the array
+        # That way, all values that ARE in the bbox, must be contiguous.
+        in_bbox = (ds.longitude < bbox.east) | (ds.longitude > bbox.west)
+        n_roll = in_bbox.argmin().item()  # first false value
+        ds_rolled = ds.roll(longitude=-n_roll, roll_coords=True)
+        in_bbox = (ds_rolled.longitude < bbox.east) | (ds_rolled.longitude > bbox.west)
+        return ds_rolled.sel(longitude=in_bbox, latitude=slice(bbox.north, bbox.south))
 
 
 def load_data(t, config, subset="fluxes"):
