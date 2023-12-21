@@ -67,7 +67,7 @@ def forwardtrack(
     if np.any(s_track_negative_lower):
         logger.warn(
             f"""Negative values encountered in s_track_lower. Count, minimum:
-                    {s_track_negative_lower.count(), s_track_negative_lower.minimum()}"""
+                    {np.count(s_track_negative_lower), np.min(s_track_negative_lower)}"""
         )
     s_track_lower = np.maximum(s_track_lower, 0)
 
@@ -84,7 +84,7 @@ def forwardtrack(
     if np.any(s_track_negative_upper):
         logger.warn(
             f"""Negative values encountered in s_track_upper. Count, minimum:
-                    {s_track_negative_upper.count(), s_track_negative_upper.minimum()}"""
+                    {np.count(s_track_negative_upper), np.min(s_track_negative_upper)}"""
         )
     s_track_upper = np.maximum(s_track_upper, 0)
 
