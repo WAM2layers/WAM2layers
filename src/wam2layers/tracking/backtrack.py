@@ -143,11 +143,11 @@ def initialize_time(config, direction="forward"):
 
     if direction == "forward":
         t0 = pd.Timestamp(config.track_start_date)
-        th = t0 + dt / 2
+        th = t0 + dt / 2  # th is "half" time, i.e. between t0 and t1
         t1 = t0 + dt
     elif direction == "backward":
         t1 = pd.Timestamp(config.track_end_date)
-        th = t1 - dt / 2
+        th = t1 - dt / 2  # th is "half" time, i.e. between t0 and t1
         t0 = t1 - dt
     else:
         raise ValueError("Direction should be forward or backward")

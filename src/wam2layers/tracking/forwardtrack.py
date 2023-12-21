@@ -1,6 +1,5 @@
 import logging
 
-import click
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -42,7 +41,7 @@ def forwardtrack(
     f_vert = F["f_vert"].values
     s_upper = S0["s_upper"].values
     s_lower = S0["s_lower"].values
-    
+
     s_track_upper = output["s_track_upper_restart"].values
     s_track_lower = output["s_track_lower_restart"].values
 
@@ -60,7 +59,7 @@ def forwardtrack(
         + vertical_dispersion(
             f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * evap 
+        + region * evap
         - precip_lower * s_track_relative_lower
     )
 
@@ -79,11 +78,11 @@ def forwardtrack(
     upper_to_lower = np.maximum(0, s_track_upper - S1["s_upper"])
     s_track_lower = np.minimum(s_track_lower - lower_to_upper + upper_to_lower, s_lower)
     s_track_upper = np.minimum(s_track_upper - upper_to_lower + lower_to_upper, s_upper)
- 
+
     # Update output fields
     output["p_track_lower"] += precip_lower * s_track_relative_lower
     output["p_track_upper"] += precip_upper * s_track_relative_upper
-    
+
     # Bookkeep boundary losses as "tracked moisture at grid edges"
     output["p_track_lower"][0, :] += s_track_lower[0, :]
     output["p_track_lower"][-1, :] += s_track_lower[-1, :]
@@ -93,7 +92,7 @@ def forwardtrack(
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
-    if config.periodic_boundary is False: # bookkeep west and east losses
+    if config.periodic_boundary is False:  # bookkeep west and east losses
         output["p_track_lower"][:, 0] += s_track_lower[:, 0]
         output["p_track_lower"][:, -1] += s_track_lower[:, -1]
         output["p_track_upper"][:, 0] += s_track_upper[:, 0]
@@ -211,38 +210,8 @@ def run_experiment(config_file):
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t0, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t0, config, mode='forwardtrack')
+            write_output(output, t0, config, mode="forwardtrack")
             # Flush previous outputs
             output[["p_track_upper", "p_track_lower", "tagged_evap"]] *= 0
 
     logger.info("Experiment complete.")
-
-
-###########################################################################
-# The code below makes it possible to run wam2layers from the command line:
-# >>> python forwardtrack.py path/to/cases/era5_2021.yaml
-# or even:
-# >>> wam2layers forwardtrack path/to/cases/era5_2021.yaml
-###########################################################################
-
-
-@click.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def cli(config_file):
-    """Run WAM2layers forwardtrack experiment from the command line.
-
-    CONFIG_FILE: Path to WAM2layers experiment configuration file.
-
-    Usage examples:
-
-        \b
-        - python path/to/forwardtrack.py path/to/cases/era5_2021.yaml
-        - wam2layers forwardtrack path/to/cases/era5_2021.yaml
-    """
-    logger.info("Welcome to WAM2layers.")
-    logger.info("Starting forwardtrack experiment.")
-    run_experiment(config_file)
-
-
-if __name__ == "__main__":
-    cli()
