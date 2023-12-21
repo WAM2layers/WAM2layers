@@ -1,6 +1,6 @@
 # Paths (relative to root of repo)
 filename_template: tests/test_data/era5/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
-region: tests/test_data/source_region.nc
+region: tests/test_data/test_region.nc
 preprocessed_data_folder: tests/tmp/preprocessed_data
 output_folder: tests/tmp/output_data
 

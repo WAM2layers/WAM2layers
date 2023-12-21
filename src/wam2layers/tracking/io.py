@@ -13,7 +13,7 @@ def input_path(date, config):
 def output_path(date, config, mode):
     output_dir = config.output_folder
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
-    
+
 
 def read_data_at_date(d, config):
     """Load input data for given date."""
@@ -50,7 +50,7 @@ def load_data(t, config, subset="fluxes"):
 
 def load_region(config):
     # TODO: make variable name more generic
-    return xr.open_dataset(config.region).source_region
+    return xr.open_dataset(config.region).tagging_region
 
 
 def write_output(output, t, config, mode):

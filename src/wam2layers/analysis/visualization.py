@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-import click
 import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
@@ -9,8 +8,7 @@ from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.io import input_path, output_path
-from wam2layers.utils import load_region
+from wam2layers.tracking.io import input_path, load_region, output_path
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +80,7 @@ def _plot_evap(config, ax):
 
     output_files = []
     for date in dates:
-        output_files.append(output_path(date, config, mode='backtrack'))
+        output_files.append(output_path(date, config, mode="backtrack"))
 
     ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
     e_track = ds.e_track.sum("time").compute() * 1000 / a_gridcell[:, None]
@@ -119,7 +117,9 @@ def visualize_input_data(config_file):
     # Save
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
-    fig.savefig(out_dir / "input_event.png", dpi=200)
+    path_to_fig = out_dir / "input_event.png"
+    fig.savefig(path_to_fig, dpi=200)
+    logger.info(f"Figure of cumulative moisture inputs written to {path_to_fig}.")
 
 
 def visualize_output_data(config_file):
@@ -139,7 +139,9 @@ def visualize_output_data(config_file):
     # Save
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
-    fig.savefig(out_dir / "cumulative_sources.png", dpi=200)
+    path_to_fig = out_dir / "cumulative_sources.png"
+    fig.savefig(path_to_fig, dpi=200)
+    logger.info(f"Figure of cumulative moisture origins written to {path_to_fig}.")
 
 
 def visualize_both(config_file):
@@ -158,7 +160,9 @@ def visualize_both(config_file):
     # Save
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
-    fig.savefig(out_dir / "summary_subplots.png", dpi=200)
+    path_to_fig = out_dir / "summary_subplots.png"
+    fig.savefig(path_to_fig, dpi=200)
+    logger.info(f"Diagnostic figure of input and output data written to {path_to_fig}.")
 
 
 def visualize_snapshots(config_file):
@@ -226,53 +230,4 @@ def visualize_snapshots(config_file):
         output_file = out_dir / f"input_output_{date.strftime('%Y%m%d')}.png"
         fig.savefig(output_file)
         plt.close()
-
-
-###########################################################################
-# The code below makes it possible to run wam2layers from the command line:
-# >>> python visualization.py input path/to/cases/era5_2021.yaml
-# or even:
-# >>> wam2layers visualize output path/to/cases/era5_2021.yaml
-###########################################################################
-
-
-@click.group()
-def cli():
-    """Visualize input or output data of a WAM2layers experiment"""
-    pass
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def input(config_file):
-    """Visualize input data for experiment."""
-    try_import_cartopy()
-    visualize_input_data(config_file)
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def output(config_file):
-    """Visualize output data for experiment."""
-    try_import_cartopy()
-    visualize_output_data(config_file)
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def both(config_file):
-    """Visualize both input and output data for experiment."""
-    try_import_cartopy()
-    visualize_both(config_file)
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def snapshots(config_file):
-    """Visualize input and output snapshots for experiment."""
-    try_import_cartopy()
-    visualize_snapshots(config_file)
-
-
-if __name__ == "__main__":
-    cli()
+        logger.info(f"Snapshot figure written to {output_file}.")

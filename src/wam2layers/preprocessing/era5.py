@@ -2,7 +2,6 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-import click
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -337,36 +336,3 @@ def prep_experiment(config_file):
             ds.to_netcdf(output_path, unlimited_dims=["time"], mode="w")
         else:
             append_to_netcdf(output_path, ds, expanding_dim="time")
-
-
-################################################################################
-# To run this script interactively in e.g. Spyder, uncomment the following line:
-# prep_experiment("../../cases/era5_2021.yaml")
-################################################################################
-
-###########################################################################
-# The code below makes it possible to run wam2layers from the command line:
-# >>> python backtrack.py path/to/cases/era5_2021.yaml
-# or even:
-# >>> wam2layers backtrack path/to/cases/era5_2021.yaml
-###########################################################################
-
-
-@click.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def cli(config_file):
-    """Preprocess ERA5 data for WAM2layers tracking experiments.
-
-    CONFIG_FILE: Path to WAM2layers experiment configuration file.
-
-    Usage examples:
-
-        \b
-        - python path/to/preprocessing/era5.py path/to/cases/era5_2021.yaml
-        - wam2layers preprocess era5 path/to/cases/era5_2021.yaml
-    """
-    prep_experiment(config_file)
-
-
-if __name__ == "__main__":
-    cli()

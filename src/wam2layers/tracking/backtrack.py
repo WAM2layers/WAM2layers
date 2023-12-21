@@ -1,6 +1,5 @@
 import logging
 
-import click
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -89,7 +88,7 @@ def backtrack(
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
-    if config.periodic_boundary is False: # bookkeep west and east losses
+    if config.periodic_boundary is False:  # bookkeep west and east losses
         output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
         output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
         s_track_upper[:, 0] = 0
@@ -203,39 +202,8 @@ def run_experiment(config_file):
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t1, config, mode='backtrack')
+            write_output(output, t1, config, mode="backtrack")
             # Flush previous outputs
             output[["e_track", "tagged_precip"]] *= 0
 
-
     logger.info("Experiment complete.")
-
-
-###########################################################################
-# The code below makes it possible to run wam2layers from the command line:
-# >>> python backtrack.py path/to/cases/era5_2021.yaml
-# or even:
-# >>> wam2layers backtrack path/to/cases/era5_2021.yaml
-###########################################################################
-
-
-@click.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def cli(config_file):
-    """Run WAM2layers backtrack experiment from the command line.
-
-    CONFIG_FILE: Path to WAM2layers experiment configuration file.
-
-    Usage examples:
-
-        \b
-        - python path/to/backtrack.py path/to/cases/era5_2021.yaml
-        - wam2layers backtrack path/to/cases/era5_2021.yaml
-    """
-    logger.info("Welcome to WAM2layers.")
-    logger.info("Starting backtrack experiment.")
-    run_experiment(config_file)
-
-
-if __name__ == "__main__":
-    cli()
