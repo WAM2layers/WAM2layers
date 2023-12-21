@@ -63,7 +63,7 @@ def forwardtrack(
         - precip_lower * s_track_relative_lower
     )
     # TODO: find better way to deal with negative values
-    s_track_negative_lower = s_track_lower[s_track_lower < 0] / S1["s_lower"]
+    s_track_negative_lower = (s_track_lower / S1["s_lower"]).values[s_track_lower < 0]
     if np.any(s_track_negative_lower):
         logger.warn(
             f"""Negative values encountered in s_track_lower. Count, minimum:
@@ -80,7 +80,7 @@ def forwardtrack(
         - precip_upper * s_track_relative_upper
     )
     # TODO: find better way to deal with negative values
-    s_track_negative_upper = s_track_upper[s_track_upper < 0] / S1["s_upper"]
+    s_track_negative_upper = (s_track_upper / S1["s_upper"]).values[s_track_upper < 0]
     if np.any(s_track_negative_upper):
         logger.warn(
             f"""Negative values encountered in s_track_upper. Count, minimum:
