@@ -69,7 +69,7 @@ def forwardtrack(
             f"""Negative values encountered in s_track_lower. Count, minimum:
                     {s_track_negative_lower.count(), s_track_negative_lower.minimum()}"""
         )
-    s_track_lower = np.minimum(s_track_lower, 0)
+    s_track_lower = np.maximum(s_track_lower, 0)
 
     s_track_upper += (
         horizontal_advection(s_track_relative_upper, fx_upper, fy_upper, bc)
@@ -86,7 +86,7 @@ def forwardtrack(
             f"""Negative values encountered in s_track_upper. Count, minimum:
                     {s_track_negative_upper.count(), s_track_negative_upper.minimum()}"""
         )
-    s_track_upper = np.minimum(s_track_upper, 0)
+    s_track_upper = np.maximum(s_track_upper, 0)
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
