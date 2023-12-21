@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Add `pre-commit` to check and fix code with `black` and `isort` formatter ([#273](https://github.com/WAM2layers/WAM2layers/pull/273)).
 - Add additional documentation and doctest for vertical advection terms ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
 - Copy config yaml file to output path ([#249](https://github.com/WAM2layers/WAM2layers/pull/249)).
+- Add forward tracking ([#289](https://github.com/WAM2layers/WAM2layers/pull/289))
 
 ### Removed
 
