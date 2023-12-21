@@ -260,7 +260,7 @@ def calculate_humidity(dewpoint, pressure):
     return spec_hum
 
 
-def accumulation_to_flux(data):
+def accumulation_to_flux(data, input_frequency):
     """Convert precip and evap from accumulations to fluxes.
 
     Incoming data should have units of "m"
@@ -269,7 +269,7 @@ def accumulation_to_flux(data):
     that the times should be shifted. A good fix for this is welcome.
     """
     density = 1000  # [kg/m3]
-    timestep = pd.Timedelta(data.time.diff("time")[0].values)
+    timestep = pd.Timedelta(input_frequency)
     nseconds = timestep.total_seconds()
 
     fluxdata = (density * data / nseconds).assign_attrs(units="kg m-2 s-1")
