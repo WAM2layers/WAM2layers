@@ -61,6 +61,14 @@ def backtrack(
         + region * precip * s_lower / (s_upper + s_lower)
         - evap * s_track_relative_lower
     )
+    # TODO: find better way to deal with negative values
+    s_track_negative_lower = (s_track_lower / S1["s_lower"]).values[s_track_lower < 0]
+    if np.any(s_track_negative_lower):
+        logger.warn(
+            f"""Negative values encountered in s_track_lower. Count, minimum:
+                    {np.count_nonzero(s_track_negative_lower), np.min(s_track_negative_lower)}"""
+        )
+    s_track_lower = np.maximum(s_track_lower, 0)
 
     s_track_upper += (
         +horizontal_advection(s_track_relative_upper, -fx_upper, -fy_upper, bc)
@@ -70,18 +78,26 @@ def backtrack(
         )
         + region * precip * s_upper / (s_upper + s_lower)
     )
+    # TODO: find better way to deal with negative values
+    s_track_negative_upper = (s_track_upper / S1["s_upper"]).values[s_track_upper < 0]
+    if np.any(s_track_negative_upper):
+        logger.warn(
+            f"""Negative values encountered in s_track_upper. Count, minimum:
+                    {np.count_nonzero(s_track_negative_upper), np.min(s_track_negative_upper)}"""
+        )
+    s_track_upper = np.maximum(s_track_upper, 0)
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
-    lower_to_upper = np.maximum(0, s_track_lower - S0["s_lower"])
-    upper_to_lower = np.maximum(0, s_track_upper - S0["s_upper"])
+    overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
+    overshoot_upper = np.maximum(0, s_track_upper - S0["s_upper"])
     s_track_lower = np.minimum(
-        s_track_lower - lower_to_upper + upper_to_lower, S0["s_lower"]
+        s_track_lower - overshoot_lower + overshoot_upper, S0["s_lower"]
     )
     s_track_upper = np.minimum(
-        s_track_upper - upper_to_lower + lower_to_upper, S0["s_upper"]
+        s_track_upper - overshoot_upper + overshoot_lower, S0["s_upper"]
     )
-
+    
     # Update output fields
     output["e_track"] += evap * s_track_relative_lower
 
