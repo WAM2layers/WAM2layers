@@ -8,7 +8,7 @@ from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.io import input_path, output_path, load_region
+from wam2layers.tracking.io import input_path, load_region, output_path
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def _plot_evap(config, ax):
 
     output_files = []
     for date in dates:
-        output_files.append(output_path(date, config))
+        output_files.append(output_path(date, config, mode="backtrack"))
 
     ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
     e_track = ds.e_track.sum("time").compute() * 1000 / a_gridcell[:, None]
@@ -94,7 +94,7 @@ def _plot_evap(config, ax):
         cbar_kwargs=dict(fraction=0.05, shrink=0.5),
     )
     e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=["lightgrey", "grey"])
-    ax.set_title("Moisture source of extreme precip [mm]", loc="left")
+    ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
     # Add source region outline
     region.plot.contour(ax=ax, levels=[1], colors="k")
@@ -127,7 +127,7 @@ def visualize_output_data(config_file):
 
     TODO: make figure creation independent of case.
     """
-    # Load config and some usful stuf.
+    # Load config and some useful stuf.
     config = Config.from_yaml(config_file)
 
     # Make figure
@@ -146,7 +146,7 @@ def visualize_output_data(config_file):
 
 def visualize_both(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
-    # Load config and some usful stuf.
+    # Load config and some useful stuf.
     config = Config.from_yaml(config_file)
 
     # Make figure
@@ -190,12 +190,12 @@ def visualize_snapshots(config_file):
             2, 2, subplot_kw=dict(projection=crs.PlateCarree()), figsize=(14, 8)
         )
 
-        ax1.set_title("Tracked precipitation" + date.strftime("%Y%m%d"))
+        ax1.set_title("Tagged moisture" + date.strftime("%Y%m%d"))
         precip = ds_in.precip.sum("time") * region / a_gridcell[:, None] * 1000
         precip.plot(ax=ax1, cmap="Blues")
         polish(ax1, region)
 
-        ax2.set_title("Moisture source")
+        ax2.set_title("Tracked moisture")
         e_track = ds_out.e_track / a_gridcell[:, None] * 1000
         e_track.plot(ax=ax2, cmap="GnBu")
         polish(ax2, region)

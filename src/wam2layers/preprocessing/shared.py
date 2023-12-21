@@ -337,35 +337,36 @@ def change_units(data, target_freq):
         data[variable] = data[variable].assign_attrs(units="m**3")
 
 
-def stabilize_fluxes(current, previous, progress_tracker, config, t):
+def stabilize_fluxes(F, S, progress_tracker, config, t):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
     """
     for level in ["upper", "lower"]:
-        fx = current["fx_" + level]
-        fy = current["fy_" + level]
-        s = previous["s_" + level]
+        fx = F["fx_" + level]
+        fy = F["fy_" + level]
+        s = S["s_" + level]
 
         fx_abs = np.abs(fx)
         fy_abs = np.abs(fy)
         ft_abs = fx_abs + fy_abs
 
-        fx_corrected = 1 / 2 * fx_abs / ft_abs * s.values
-        fx_stable = np.minimum(fx_abs, fx_corrected)
+        # TODO: make 1/2 configurable?
+        fx_limit = 1 / 2 * fx_abs / ft_abs * s.values
+        fx_stable = np.minimum(fx_abs, fx_limit)
 
-        fy_corrected = 1 / 2 * fy_abs / ft_abs * s.values
-        fy_stable = np.minimum(fy_abs, fy_corrected)
+        fy_limit = 1 / 2 * fy_abs / ft_abs * s.values
+        fy_stable = np.minimum(fy_abs, fy_limit)
 
-        progress_tracker.track_stability_correction(fy_corrected, fy_abs, config, t)
+        progress_tracker.track_stability_correction(fy_limit, fy_abs, config, t)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
         fy_stable.fillna(0)
 
         # Re-instate the sign
-        current["fx_" + level] = np.sign(fx) * fx_stable
-        current["fy_" + level] = np.sign(fy) * fy_stable
+        F["fx_" + level] = np.sign(fx) * fx_stable
+        F["fy_" + level] = np.sign(fy) * fy_stable
 
 
 def convergence(fx, fy):
