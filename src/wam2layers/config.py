@@ -4,16 +4,40 @@ from pathlib import Path
 from typing import Dict, List, Literal, NamedTuple, Optional, Union
 
 import yaml
-from pydantic import BaseModel, ConfigDict, FilePath, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    field_validator,
+    model_validator,
+)
+from typing_extensions import Annotated
 
 logger = logging.getLogger(__name__)
 
 
 class BoundingBox(NamedTuple):
-    west: float
-    south: float
-    east: float
-    north: float
+    west: Annotated[float, Field(ge=-180, le=180)]
+    south: Annotated[float, Field(ge=-80, le=80)]
+    east: Annotated[float, Field(ge=-180, le=180)]
+    north: Annotated[float, Field(ge=-80, le=80)]
+
+
+def validate_region(region):
+    """Check if region is existing path or valid bbox."""
+    if isinstance(region, Path):
+        return region.expanduser()
+
+    assert -180 <= region.west <= 180, "longitude should be between -180 and 180"
+    assert -180 <= region.east <= 180, "longitude should be between -180 and 180"
+    assert -80 <= region.north <= 80, "latitude should be between -80 and 80"
+    assert -80 <= region.south <= 80, "latitude should be between -80 and 80"
+    assert region.south < region.north, "south should be smaller than north"
+    if region.west > region.east:
+        logger.info("west > east, coordinates will be rolled around antimeridian")
+    return region
 
 
 class Config(BaseModel):
@@ -56,7 +80,9 @@ class Config(BaseModel):
 
     """
 
-    tagging_region: Union[FilePath, BoundingBox]
+    tagging_region: Annotated[
+        Union[FilePath, BoundingBox], AfterValidator(validate_region)
+    ]
     """Subdomain delimiting the source/sink regions for tagged moisture.
 
     You can either specify a path that contains a
@@ -324,16 +350,6 @@ class Config(BaseModel):
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
         return path.expanduser()
-
-    @field_validator("tagging_region", "tracking_region")
-    @classmethod
-    def validate_region(cls, region):
-        """Check if region is existing path or valid bbox."""
-        if isinstance(region, Path):
-            return region.expanduser()
-        # TODO implement validation for bbox
-        logger.warn("Note: bbox validation not implemented yet.")
-        return region
 
     @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod
