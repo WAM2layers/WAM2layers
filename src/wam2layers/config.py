@@ -28,7 +28,7 @@ class BoundingBox(NamedTuple):
 def validate_region(region):
     """Check if region is existing path or valid bbox."""
     if isinstance(region, Path):
-        return region.expanduser()
+        return region.absolute()
 
     assert -180 <= region.west <= 180, "longitude should be between -180 and 180"
     assert -180 <= region.east <= 180, "longitude should be between -180 and 180"
@@ -85,8 +85,11 @@ class Config(BaseModel):
     ]
     """Subdomain delimiting the source/sink regions for tagged moisture.
 
-    You can either specify a path that contains a
-    netcdf file, or a bounding box of the form [west, south, east, north].
+    You can either specify a path that contains a netcdf file, or a bounding box
+    of the form [west, south, east, north].
+
+    The bounding box should be inside -180, -80, 180, 80; if west > south, the
+    coordinates will be rolled to retain a continous longitude.
 
     The file should exist.
 
@@ -98,7 +101,9 @@ class Config(BaseModel):
         region: [0, 50, 10, 55]
     """
 
-    tracking_region: Union[FilePath, BoundingBox]
+    tracking_region: Annotated[
+        Union[FilePath, BoundingBox], AfterValidator(validate_region)
+    ]
     """Subdomain delimiting the region considered during tracking.
 
     This is useful when you have global pre-processed data but you don't need
@@ -106,6 +111,9 @@ class Config(BaseModel):
 
     You can either specify a path that contains a
     netcdf file, or a bounding box of the form [west, south, east, north].
+
+    The bounding box should be inside -180, -80, 180, 80; if west > south, the
+    coordinates will be rolled to retain a continous longitude.
 
     The file should exist.
 
@@ -349,7 +357,7 @@ class Config(BaseModel):
     @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
-        return path.expanduser()
+        return path.absolute()
 
     @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod

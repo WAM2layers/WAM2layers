@@ -47,8 +47,21 @@ def test_check_date_order_invalid_preprocess():
         config.preprocess_end_date = datetime(2022, 7, 31)
 
 
-class test_validate_bbox:
-    def test_valid_bbox(self):
+class TestValidateRegion:
+    def test_path_expanded(self):
+        """Check path is expanded."""
+        config = Config.from_yaml(TEST_CONFIG)
+        assert config.tagging_region.is_absolute()
+        config.tagging_region = "tests/test_data/test_region.nc"
+        assert config.tagging_region.is_absolute()
+
+    def test_invalid_path(self):
+        """Raise error for invalid path."""
+        config = Config.from_yaml(TEST_CONFIG)
+        with pytest.raises(Exception, match="does not point to a file"):
+            config.tagging_region = "weird/path.exe"
+
+    def test_valid_bbox_ok(self):
         """Check that we can set region to a bbox"""
         config = Config.from_yaml(TEST_CONFIG)
         config.tagging_region = BoundingBox(0, 50, 10, 55)
