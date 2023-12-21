@@ -92,31 +92,30 @@ def forwardtrack(
     # TODO build in logging for lost moisture
     overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
     overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
-    s_track_lower = np.minimum(
-        s_track_lower - overshoot_lower + overshoot_upper, S1["s_lower"]
-    )
-    s_track_upper = np.minimum(
-        s_track_upper - overshoot_upper + overshoot_lower, S1["s_upper"]
-    )
+    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper, S1["s_lower"]
+    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower, S1["s_upper"]
+    # at this point any of the storages could still be overfull, thus stabilize and assigns losses:
+    losses_lower = np.maximum( 0, s_track_lower - S1["s_lower"] )
+    losses_upper = np.maximum( 0, s_track_upper - S1["s_upper"] )
+    losses = losses_lower + losses_upper
+    s_track_lower = np.minimum(s_track_lower, S1["s_lower"])
+    s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
 
     # Update output fields
     output["p_track_lower"] += precip_lower * s_track_relative_lower
     output["p_track_upper"] += precip_upper * s_track_relative_upper
+    output["losses"] += losses
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
-    output["p_track_lower"][0, :] += s_track_lower[0, :]
-    output["p_track_lower"][-1, :] += s_track_lower[-1, :]
-    output["p_track_upper"][0, :] += s_track_upper[0, :]
-    output["p_track_upper"][-1, :] += s_track_upper[-1, :]
+    output["losses"][0, :] += s_track_lower[0, :] + s_track_upper[0, :]
+    output["losses"][-1, :] += s_track_lower[-1, :] + s_track_upper[-1, :]
     s_track_upper[0, :] = 0
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
     if config.periodic_boundary is False:  # bookkeep west and east losses
-        output["p_track_lower"][:, 0] += s_track_lower[:, 0]
-        output["p_track_lower"][:, -1] += s_track_lower[:, -1]
-        output["p_track_upper"][:, 0] += s_track_upper[:, 0]
-        output["p_track_upper"][:, -1] += s_track_upper[:, -1]
+        output["losses"][:, 0] += s_track_lower[:, 0] + s_track_upper[:, 0]
+        output["losses"][:, -1] += s_track_lower[:, -1] + s_track_upper[:, -1]
         s_track_upper[:, 0] = 0
         s_track_upper[:, -1] = 0
         s_track_lower[:, 0] = 0
