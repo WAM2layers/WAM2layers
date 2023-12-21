@@ -88,7 +88,11 @@ def forwardtrack(
         )
     s_track_upper = np.maximum(s_track_upper, 0)
 
-    # down and top: redistribute unaccounted water that is otherwise lost from the sytem
+    # account for negative storages that are set to zero: "numerically gained water"
+    gains = np.abs(s_track_negative_lower - s_track_negative_upper)
+
+
+    # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
     overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
     overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
@@ -105,6 +109,7 @@ def forwardtrack(
     output["p_track_lower"] += precip_lower * s_track_relative_lower
     output["p_track_upper"] += precip_upper * s_track_relative_upper
     output["losses"] += losses
+    output["gains"] += gains
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
     output["losses"][0, :] += s_track_lower[0, :] + s_track_upper[0, :]
@@ -159,6 +164,8 @@ def initialize_outputs(region):
             "p_track_upper": xr.zeros_like(proto),
             "p_track_lower": xr.zeros_like(proto),
             "tagged_evap": xr.zeros_like(proto),
+            "losses": xr.zeros_like(proto),
+            "gains": xr.zeros_like(proto),
         }
     )
     return output
@@ -231,6 +238,6 @@ def run_experiment(config_file):
             progress_tracker.store_intermediate_states(output)
             write_output(output, t0, config, mode="forwardtrack")
             # Flush previous outputs
-            output[["p_track_upper", "p_track_lower", "tagged_evap"]] *= 0
+            output[["p_track_upper", "p_track_lower", "tagged_evap", "losses", "gains"]] *= 0
 
     logger.info("Experiment complete.")
