@@ -1,24 +1,24 @@
 # General
 log_level: info
-preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
-output_folder: ~/floodcase_202107/output_data
+preprocessed_data_folder: tests/tmp/preprocessed_data
+output_folder: tests/tmp/output_data
 chunks: null
 
 # Preprocessing
-filename_template: /ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+filename_template: tests/test_data/era5/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
 preprocess_start_date: "2021-07-01T00:00"
 preprocess_end_date: "2021-07-15T00:00"
 level_type: model_levels
 levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
 # Tracking
-tracking_region: /home/pkalverla/wam2layers/source_region.nc
+tracking_region: tests/test_data/source_region.nc
 # tracking_region: [0, 50, 10, 55]  # alternative to mask file
 tracking_start_date: "2021-07-01T00:00"
 tracking_end_date: "2021-07-15T00:00"
 
 # Tagging
-tagging_region: /home/pkalverla/wam2layers/source_region.nc
+tagging_region: tests/test_data/source_region.nc
 # tagging_region: [0, 50, 10, 55]  # alternative to mask file
 tagging_start_date: "2021-07-13T00:00"
 tagging_end_date: "2021-07-15T00:00"

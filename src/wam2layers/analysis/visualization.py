@@ -8,8 +8,7 @@ from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.io import input_path, output_path
-from wam2layers.utils import load_region
+from wam2layers.tracking.io import input_path, load_region, output_path
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +54,8 @@ def _plot_precip(config, ax):
 
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
     # TODO: make region time-dependent
-    start = config.event_start_date
-    end = config.event_end_date
+    start = config.tagging_start_date
+    end = config.tagging_end_date
     subset = ds.precip.sel(time=slice(start, end))
     precip = (subset * region * 3600).sum("time").compute()
 
@@ -73,8 +72,8 @@ def _plot_evap(config, ax):
 
     # Load data
     dates = pd.date_range(
-        start=config.track_start_date,
-        end=config.track_end_date,
+        start=config.tracking_start_date,
+        end=config.tracking_end_date,
         freq=config.output_frequency,
         inclusive="left",
     )[1:]

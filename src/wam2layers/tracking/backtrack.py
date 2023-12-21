@@ -142,11 +142,11 @@ def initialize_time(config, direction="forward"):
     dt = pd.Timedelta(config.target_frequency)
 
     if direction == "forward":
-        t0 = pd.Timestamp(config.track_start_date)
+        t0 = pd.Timestamp(config.tracking_start_date)
         th = t0 + dt / 2
         t1 = t0 + dt
     elif direction == "backward":
-        t1 = pd.Timestamp(config.track_end_date)
+        t1 = pd.Timestamp(config.tracking_end_date)
         th = t1 - dt / 2
         t0 = t1 - dt
     else:
