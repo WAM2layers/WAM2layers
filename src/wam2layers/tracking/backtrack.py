@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,7 +18,13 @@ from wam2layers.tracking.core import (
     vertical_advection,
     vertical_dispersion,
 )
-from wam2layers.tracking.io import load_data, load_region, output_path, write_output
+from wam2layers.tracking.io import (
+    load_data,
+    load_region,
+    load_tagging_region,
+    output_path,
+    write_output,
+)
 from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
@@ -110,10 +117,20 @@ def initialize(config_file):
     logger.info(f"Initializing experiment with config file {config_file}")
 
     config = Config.from_yaml(config_file)
-    region = load_region(config)
 
-    output = initialize_outputs(region)
-    region = region.values
+    # Initialize outputs as empty fields based on the input coords
+    sample_ds = load_data(config.tracking_end_date, config, "states")
+    field_coords = sample_ds.isel(time=0, drop=True).coords
+    empty_field = xr.DataArray(0, coords=field_coords)
+    output = xr.Dataset(
+        {
+            # Keep last state for a restart
+            "s_track_upper_restart": empty_field,
+            "s_track_lower_restart": empty_field,
+            "e_track": empty_field,
+            "tagged_precip": empty_field,
+        }
+    )
 
     if config.restart:
         # Reload last state from existing output
@@ -123,23 +140,7 @@ def initialize(config_file):
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
     logger.info(f"Output will be written to {config.output_folder.absolute()}.")
-    return config, region, output
-
-
-def initialize_outputs(region):
-    """Allocate output arrays."""
-
-    proto = region
-    output = xr.Dataset(
-        {
-            # Keep last state for a restart
-            "s_track_upper_restart": xr.zeros_like(proto),
-            "s_track_lower_restart": xr.zeros_like(proto),
-            "e_track": xr.zeros_like(proto),
-            "tagged_precip": xr.zeros_like(proto),
-        }
-    )
-    return output
+    return config, output
 
 
 def initialize_time(config, direction="forward"):
@@ -167,7 +168,7 @@ def initialize_time(config, direction="forward"):
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
-    config, region, output = initialize(config_file)
+    config, output = initialize(config_file)
 
     progress_tracker = ProgressTracker(output, mode="backtrack")
 
@@ -177,6 +178,34 @@ def run_experiment(config_file):
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
+
+        if isinstance(config.tagging_region, Path):
+            region = load_tagging_region(config, t=t0).values
+        else:
+            # TODO make it clearer.
+            bbox = config.tagging_region
+            region = xr.where(
+                cond=(
+                    (bbox.south <= S0.latitude <= bbox.north)
+                    & (
+                        (bbox.west <= S0.longitude <= bbox.east)
+                        | (
+                            (bbox.west > bbox.east)
+                            & (
+                                (bbox.west <= S0.longitude)
+                                | (S0.longitude <= bbox.east)
+                            )
+                        )
+                    )
+                ),
+                x=1,
+                y=0,
+            ).values
+
+        # Only tag the precipitation at certain timesteps
+        if not config.tagging_start_date <= t1 <= config.tagging_end_date:
+            # TODO don't do this if region is 3d
+            region.fill(0)
 
         # Convert data to volumes
         change_units(S0, config.target_frequency)
@@ -188,10 +217,6 @@ def run_experiment(config_file):
 
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
-
-        # Only track the precipitation at certain timesteps
-        if not config.tagging_start_date <= t1 <= config.tagging_end_date:
-            F["precip"] = 0
 
         # Inside backtrack the "output" dictionary is updated
         backtrack(F, S1, S0, region, output, config)

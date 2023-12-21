@@ -212,9 +212,9 @@ def run_experiment(config_file):
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
-        # Only track the precipitation at certain timesteps
+        # Only tag the evaporation at certain timesteps
         if not config.tagging_start_date <= t0 <= config.tagging_end_date:
-            F["evap"] = 0
+            region.fill(0)
 
         # TODO: consider changing signature to F, S0, S1
         # Inside forwardtrack the "output" dictionary is updated

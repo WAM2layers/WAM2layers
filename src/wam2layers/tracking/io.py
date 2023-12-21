@@ -1,4 +1,6 @@
 import logging
+from functools import lru_cache
+from pathlib import Path
 
 import xarray as xr
 
@@ -70,11 +72,22 @@ def load_data(t, config, subset="fluxes"):
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
+def load_tagging_region(config, t=None):
+    if isinstance(config.tagging_region, Path):
+        region = load_region(config)
+        if "time" in region.coords:
+            return region.sel(time=t, method="nearest")
+        return region
+
+    raise ValueError("Handling of bbox not implemented yet for tagging_region")
+
+
+@lru_cache(1)
 def load_region(config):
-    da = xr.open_dataarray(config.tagging_region)
+    tagging_region = xr.open_dataarray(config.tagging_region)
     if config.tracking_region is not None:
-        return select_subdomain(da, config.tracking_region)
-    return da
+        return select_subdomain(tagging_region, config.tracking_region)
+    return tagging_region
 
 
 def write_output(output, t, config, mode):
