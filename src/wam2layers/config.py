@@ -97,32 +97,26 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        region: /data/volume_2/era5_2021/tagging_region_global.nc
-        region: [0, 50, 10, 55]
+        tagging_region: /data/volume_2/era5_2021/tagging_region_global.nc
+        tagging_region: [0, 50, 10, 55]
     """
 
-    tracking_region: Annotated[
-        Union[FilePath, BoundingBox], AfterValidator(validate_region)
-    ]
+    tracking_region: Annotated[BoundingBox, AfterValidator(validate_region)]
     """Subdomain delimiting the region considered during tracking.
 
     This is useful when you have global pre-processed data but you don't need
     global tracking.
 
-    You can either specify a path that contains a
-    netcdf file, or a bounding box of the form [west, south, east, north].
+    You can specify a bounding box of the form [west, south, east, north].
 
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
-
-    The file should exist.
 
     For example:
 
     .. code-block:: yaml
 
-        region: /data/volume_2/era5_2021/tracking_region_global.nc
-        region: [0, 50, 10, 55]
+        tracking_region: [0, 50, 10, 55]
 
     """
 
