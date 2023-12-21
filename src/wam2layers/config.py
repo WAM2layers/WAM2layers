@@ -36,7 +36,7 @@ def validate_region(region):
     assert -80 <= region.south <= 80, "latitude should be between -80 and 80"
     assert region.south < region.north, "south should be smaller than north"
     if region.west > region.east:
-        logger.info("west > east, coordinates will be rolled around antimeridian")
+        logger.info("west > east, coordinates will be rolled around meridian")
     return region
 
 
