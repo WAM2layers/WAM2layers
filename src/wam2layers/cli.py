@@ -18,7 +18,9 @@ from wam2layers.analysis import visualization
 from wam2layers.config import Config
 from wam2layers.preprocessing.era5 import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
-from wam2layers.tracking.backtrack import run_experiment as run_forwardtrack_experiment
+from wam2layers.tracking.forwardtrack import (
+    run_experiment as run_forwardtrack_experiment,
+)
 
 logger = logging.getLogger(__name__)
 
