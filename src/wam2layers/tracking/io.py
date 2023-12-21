@@ -18,13 +18,31 @@ def output_path(date, config, mode):
 def read_data_at_date(d, config):
     """Load input data for given date."""
     file = input_path(d, config)
-    return xr.open_dataset(file, cache=False)
+    ds = xr.open_dataset(file, cache=False)
+    if config.tracking_region is not None:
+        return select_subdomain(ds, config.tracking_region)
+    return ds
 
 
 def read_data_at_time(t, config):
     """Get a single time slice from input data at time t."""
     ds = read_data_at_date(t, config)
     return ds.sel(time=t, drop=True)
+
+
+def select_subdomain(ds, bbox):
+    """Limit the data to a subdomain."""
+    if bbox.west < bbox.east:
+        return ds.sel(
+            longitude=slice(bbox.west, bbox.east),  # -180 to 180
+            latitude=slice(bbox.north, bbox.south),  # 90 - -90 (decreasing)
+            drop=True,
+        )
+    else:
+        # Need to roll coordinates to maintain a continuous longitude
+        raise NotImplementedError(
+            "Functionality for rotated subdomain not implemented (yet)."
+        )
 
 
 def load_data(t, config, subset="fluxes"):
@@ -48,12 +66,11 @@ def load_data(t, config, subset="fluxes"):
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
-def load_region(config, purpose="tagging"):
-    if purpose == "tagging":
-        return xr.open_dataarray(config.tagging_region)
-    if purpose == "tracking":
-        return xr.open_dataarray(config.tracking_region)
-    raise ValueError("Purpose for load_region should be tagging or tracking.")
+def load_region(config):
+    da = xr.open_dataarray(config.tagging_region)
+    if config.tracking_region is not None:
+        return select_subdomain(da, config.tracking_region)
+    return da
 
 
 def write_output(output, t, config, mode):

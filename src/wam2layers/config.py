@@ -101,7 +101,9 @@ class Config(BaseModel):
         tagging_region: [0, 50, 10, 55]
     """
 
-    tracking_region: Annotated[BoundingBox, AfterValidator(validate_region)]
+    tracking_region: Optional[
+        Annotated[BoundingBox, AfterValidator(validate_region)]
+    ] = None
     """Subdomain delimiting the region considered during tracking.
 
     This is useful when you have global pre-processed data but you don't need
