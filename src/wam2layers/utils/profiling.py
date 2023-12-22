@@ -51,6 +51,8 @@ class ProgressTracker:
         else:  # mode is forwardtrack
             self.tracked += totals["p_track_lower"] + totals["p_track_upper"]
             self.total_tagged_moisture += totals["tagged_evap"]
+        self.gained_water += totals["gains"]
+        self.lost_water += totals["losses"]
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
