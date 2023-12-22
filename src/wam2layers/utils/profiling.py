@@ -66,7 +66,7 @@ class ProgressTracker:
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
         lost_water = totals["losses"]
-        gained_water = totals["gained"]
+        gained_water = totals["gains"]
 
         tracked_percentage = tracked / total_tagged_moisture * 100
         in_atmos_percentage = still_in_atmosphere / total_tagged_moisture * 100
