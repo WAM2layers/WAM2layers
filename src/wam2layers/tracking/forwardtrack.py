@@ -64,10 +64,9 @@ def forwardtrack(
     )
     # TODO: find better way to deal with negative values
     s_track_negative_lower =np.where(s_track_lower < 0, s_track_lower / S1["s_lower"], 0)
-    if np.any(s_track_negative_lower):
+    if np.any(s_track_negative_lower < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_lower. Count of grid cells: {np.count_nonzero(s_track_negative_lower)}, minimum:
-                    {np.min(s_track_negative_lower)}"""
+            f"""Negative values encountered in s_track_lower. . Check the gains output variable for details."""
         )
     s_track_lower = np.maximum(s_track_lower, 0)
 
@@ -81,10 +80,9 @@ def forwardtrack(
     )
     # TODO: find better way to deal with negative values
     s_track_negative_upper =np.where(s_track_upper < 0, s_track_upper / S1["s_upper"], 0)
-    if np.any(s_track_negative_upper):
+    if np.any(s_track_negative_upper < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_upper. Count of grid cells: {np.count_nonzero(s_track_negative_upper)}, minimum:
-                    {np.min(s_track_negative_upper)}"""
+            f"""Negative values encountered in s_track_upper. Check the gains output variable for details."""
         )
     s_track_upper = np.maximum(s_track_upper, 0)
 
