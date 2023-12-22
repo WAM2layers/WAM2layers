@@ -432,7 +432,7 @@ def mask_around_track(
     output_file,
     return_plot,
 ):
-    """Mask source region using a track of center points with a given radius (currently in degrees).
+    """Mask tagging region using a track of center points with a given radius (currently in degrees).
 
     This function builds a square source region based on given coordinates and
     radius and stores it the output file.
