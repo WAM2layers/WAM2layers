@@ -383,4 +383,9 @@ class Config(BaseModel):
                 "preprocess_end_date should be later than preprocess_start_date"
             )
 
+        if self.tracking_domain is not None and self.periodic_boundary:
+            logger.warning(
+                "Periodic boundary set to true while using a subdomain. Are you sure?"
+            )
+
         return self
