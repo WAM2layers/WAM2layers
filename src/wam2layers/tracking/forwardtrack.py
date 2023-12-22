@@ -200,7 +200,7 @@ def run_experiment(config_file):
                 tagging_mask *= 0
         else:
             tagging_mask = load_tagging_region(config, t=t0)
-
+       
         # Convert data to volumes
         change_units(S0, config.target_frequency)
         change_units(F, config.target_frequency)
