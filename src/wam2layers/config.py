@@ -114,7 +114,7 @@ class Config(BaseModel):
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
 
-If it is set to `null`, then it will use full domain of preprocessed data.
+    If it is set to `null`, then it will use full domain of preprocessed data.
 
     For example:
 
