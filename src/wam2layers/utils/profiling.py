@@ -4,8 +4,9 @@ from datetime import datetime
 
 import numpy as np
 import psutil
+import xarray as xr
 
-from wam2layers.tracking.io import load_region
+from wam2layers.tracking.io import load_tagging_region
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,8 @@ class ProgressTracker:
         self.mode = mode
         self.total_tagged_moisture = 0
         self.tracked = 0
+        self.lost_water = 0
+        self.gained_water = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
         self.stability_correction_previous_grid = 0
@@ -51,6 +54,8 @@ class ProgressTracker:
         else:  # mode is forwardtrack
             self.tracked += totals["p_track_lower"] + totals["p_track_upper"]
             self.total_tagged_moisture += totals["tagged_evap"]
+        self.gained_water += totals["gains"]
+        self.lost_water += totals["losses"]
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
@@ -65,24 +70,34 @@ class ProgressTracker:
         still_in_atmosphere = (
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
-        # total_tracked_moisture = tracked + still_in_atmosphere
-        # tracked_percentage = tracked / total_tagged_moisture * 100
-        # lost_percentage = (1 - total_tracked_moisture / total_tagged_moisture) * 100
+        lost_water = self.lost_water + totals["losses"]
+        gained_water = self.gained_water + totals["gains"]
+
         tracked_percentage = tracked / total_tagged_moisture * 100
         in_atmos_percentage = still_in_atmosphere / total_tagged_moisture * 100
-        lost_percentage = 100 - tracked_percentage - in_atmos_percentage
+        lost_percentage = lost_water / total_tagged_moisture * 100
+        gained_percentage = gained_water / total_tagged_moisture * 100
+        closure_check_percentage = (
+            tracked_percentage
+            + in_atmos_percentage
+            + lost_percentage
+            - gained_percentage
+        )
 
         time, memory = self.profile()
 
+        # TODO: print boundary losses and internal losses separately
         logger.info(
             f"{t} - "
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "
-            f"Moisture in atmosphere: {in_atmos_percentage.item():.2f}%. "
+            f"Tagged in atmosphere: {in_atmos_percentage.item():.2f}%. "
             f"Lost moisture: {lost_percentage.item():.2f}%. "
+            f"Gained moisture: {gained_percentage.item():.2f}%. "
+            f"Tagging closure: {closure_check_percentage.item():.2f}%. "
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 
-    def track_stability_correction(self, fy_corrected, fy_abs, config, t):
+    def track_stability_correction(self, fy_corrected, fy_abs, config, coords, t):
         """Issue warning if correction exceeds criterion.
 
         Warning advises to reduce the timestep.
@@ -114,8 +129,7 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = load_region(config).rename("correction")
-        ncfile.values = correction
+        ncfile = xr.DataArray(correction, coords=coords, name="correction")
         ncfile.to_netcdf(filename)
 
         logger.warn(

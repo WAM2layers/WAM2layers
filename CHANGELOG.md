@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Add information about losses to profiling and screen messages | losses and gains as output data ([#305](https://github.com/WAM2layers/WAM2layers/pull/305)).
 - Add forward tracking possibility including small bugfix in backtrack ([#289](https://github.com/WAM2layers/WAM2layers/pull/289)).
 - Add tests for preprocess and backtrack workflow ([#265](https://github.com/WAM2layers/WAM2layers/pull/265)).
 - Add tests for visualize workflow ([#271](https://github.com/WAM2layers/WAM2layers/pull/271)).
@@ -13,10 +14,14 @@ All notable changes to this project will be documented in this file.
 - Add additional documentation and doctest for vertical advection terms ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
 - Copy config yaml file to output path ([#249](https://github.com/WAM2layers/WAM2layers/pull/249)).
 - Add forward tracking ([#289](https://github.com/WAM2layers/WAM2layers/pull/289))
+- Support for time-dependent tagging region ([#297](https://github.com/WAM2layers/WAM2layers/pull/297))
+- tagging_region can be specified as a bounding box ([#297](https://github.com/WAM2layers/WAM2layers/pull/297))
+- tracking_domain can now be used to subselect preprocessed data ([#297](https://github.com/WAM2layers/WAM2layers/pull/297))
 
 ### Removed
 
 - Remove example test floodcase from CI ([#265](https://github.com/WAM2layers/WAM2layers/pull/265)).
+- Chunks argument in config ([#290](https://github.com/WAM2layers/WAM2layers/pull/290))
 
 ### Fixed
 
@@ -30,6 +35,7 @@ All notable changes to this project will be documented in this file.
 - There's now a dedicated function to compute the advection term. This makes it easier to apply different solvers. Padding is added to the edges of the domain, and boundary losses are added to e-track at the edges of the domain ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
 - Seperated the vertical advection and dispersion terms: dispersion is modelled as `kvf * abs(Fv) * dS/dz` ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
 - Splitted the backtracking module, moving functions to separate io, core, and preprocessing.shared modules ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)).
+- `region` renamed to `tagging_region`; `track_start_date` to `tracking_start_date`; `track_end_date` to `tracking_end_date` ([#297](https://github.com/WAM2layers/WAM2layers/pull/297))
 
 ## Release v3.0.0-beta.5 (2023-07-21)
 
