@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,7 +18,13 @@ from wam2layers.tracking.core import (
     vertical_advection,
     vertical_dispersion,
 )
-from wam2layers.tracking.io import load_data, load_region, output_path, write_output
+from wam2layers.tracking.io import (
+    load_data,
+    load_tagging_region,
+    output_path,
+    write_output,
+)
+from wam2layers.tracking.shared import initialize_tagging_region, initialize_time
 from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
@@ -27,7 +34,7 @@ def backtrack(
     F,
     S1,
     S0,
-    region,
+    tagging_mask,
     output,
     config,
 ):
@@ -58,7 +65,7 @@ def backtrack(
         + vertical_dispersion(
             -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * precip * s_lower / (s_upper + s_lower)
+        + tagging_mask * precip * s_lower / (s_upper + s_lower)
         - evap * s_track_relative_lower
     )
     s_track_negative_lower = np.where(
@@ -76,7 +83,7 @@ def backtrack(
         - vertical_dispersion(
             -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * precip * s_upper / (s_upper + s_lower)
+        + tagging_mask * precip * s_upper / (s_upper + s_lower)
     )
     s_track_negative_upper = np.where(
         s_track_upper < 0, s_track_upper / S1["s_upper"], 0
@@ -125,7 +132,7 @@ def backtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
-    output["tagged_precip"] += region * precip
+    output["tagged_precip"] += tagging_mask * precip
 
 
 def initialize(config_file):
@@ -133,56 +140,31 @@ def initialize(config_file):
     logger.info(f"Initializing experiment with config file {config_file}")
 
     config = Config.from_yaml(config_file)
-    region = load_region(config)
 
-    output = initialize_outputs(region)
-    region = region.values
+    # Initialize outputs as empty fields based on the input coords
+    t = pd.Timestamp(config.tracking_end_date)
+    grid = load_data(t, config, "states").coords
+    output = xr.Dataset(
+        {
+            # Keep last state for a restart
+            "s_track_upper_restart": xr.DataArray(0, coords=grid).astype("float32"),
+            "s_track_lower_restart": xr.DataArray(0, coords=grid).astype("float32"),
+            "e_track": xr.DataArray(0, coords=grid).astype("float32"),
+            "tagged_precip": xr.DataArray(0, coords=grid).astype("float32"),
+            "losses": xr.DataArray(0, coords=grid).astype("float32"),
+            "gains": xr.DataArray(0, coords=grid).astype("float32"),
+        }
+    )
 
     if config.restart:
         # Reload last state from existing output
-        date = config.track_end_date
+        date = config.tracking_end_date
         ds = xr.open_dataset(output_path(date, config, mode="backtrack"))
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
     logger.info(f"Output will be written to {config.output_folder.absolute()}.")
-    return config, region, output
-
-
-def initialize_outputs(region):
-    """Allocate output arrays."""
-
-    proto = region
-    output = xr.Dataset(
-        {
-            # Keep last state for a restart
-            "s_track_upper_restart": xr.zeros_like(proto),
-            "s_track_lower_restart": xr.zeros_like(proto),
-            "e_track": xr.zeros_like(proto),
-            "tagged_precip": xr.zeros_like(proto),
-            "losses": xr.zeros_like(proto),
-            "gains": xr.zeros_like(proto),
-        }
-    )
-    return output
-
-
-# TODO: remove unused direction OR merge forwardtrack and backtrack
-def initialize_time(config, direction="forward"):
-    dt = pd.Timedelta(config.target_frequency)
-
-    if direction == "forward":
-        t0 = pd.Timestamp(config.track_start_date)
-        th = t0 + dt / 2  # th is "half" time, i.e. between t0 and t1
-        t1 = t0 + dt
-    elif direction == "backward":
-        t1 = pd.Timestamp(config.track_end_date)
-        th = t1 - dt / 2  # th is "half" time, i.e. between t0 and t1
-        t0 = t1 - dt
-    else:
-        raise ValueError("Direction should be forward or backward")
-
-    return t0, th, t1, dt
+    return config, output, grid
 
 
 #############################################################################
@@ -193,17 +175,33 @@ def initialize_time(config, direction="forward"):
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
-    config, region, output = initialize(config_file)
+    config, output, grid = initialize(config_file)
 
-    event_start, event_end = config.event_start_date, config.event_end_date
     progress_tracker = ProgressTracker(output, mode="backtrack")
 
     t0, th, t1, dt = initialize_time(config, direction="backward")
 
-    while t0 >= config.track_start_date:
+    if isinstance(config.tagging_region, Path):
+        tagging_region = load_tagging_region(config)
+        tagging_region_stationary = tagging_region.ndim == 2
+    else:
+        lat, lon = grid["latitude"], grid["longitude"]
+        bbox = config.tagging_region
+        tagging_region = initialize_tagging_region(bbox, lat, lon)
+        tagging_region_stationary = True
+
+    while t0 >= config.tracking_start_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
+
+        # Load/update tagging mask
+        tagging_mask = 0
+        if config.tagging_start_date <= t1 <= config.tagging_end_date:
+            if tagging_region_stationary:
+                tagging_mask = tagging_region
+            else:
+                tagging_mask = load_tagging_region(config, t=t1)
 
         # Convert data to volumes
         change_units(S0, config.target_frequency)
@@ -216,19 +214,15 @@ def run_experiment(config_file):
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
-        # Only track the precipitation at certain timesteps
-        if not event_start <= t1 <= event_end:
-            F["precip"] = 0
-
         # Inside backtrack the "output" dictionary is updated
-        backtrack(F, S1, S0, region, output, config)
+        backtrack(F, S1, S0, tagging_mask, output, config)
         t1 -= dt
         th -= dt
         t0 -= dt
 
         # Daily output
         is_output_time = t1 == t1.floor(config.output_frequency)
-        is_final_step = t0 < config.track_start_date
+        is_final_step = t0 < config.tracking_start_date
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t1, output)
             progress_tracker.store_intermediate_states(output)
