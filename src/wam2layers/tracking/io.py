@@ -73,20 +73,13 @@ def load_data(t, config, subset="fluxes"):
 
 
 def load_tagging_region(config, t=None):
-    if isinstance(config.tagging_region, Path):
-        region = load_region(config)
-        if "time" in region.coords:
-            return region.sel(time=t, method="nearest")
-        return region
-
-    raise ValueError("Handling of bbox not implemented yet for tagging_region")
-
-
-@lru_cache(1)
-def load_region(config):
     tagging_region = xr.open_dataarray(config.tagging_region)
+
     if config.tracking_region is not None:
-        return select_subdomain(tagging_region, config.tracking_region)
+        tagging_region = select_subdomain(tagging_region, config.tracking_region)
+
+    if t is not None:
+        return tagging_region.sel(time=t, method="nearest")
     return tagging_region
 
 

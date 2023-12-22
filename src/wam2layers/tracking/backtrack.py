@@ -20,7 +20,6 @@ from wam2layers.tracking.core import (
 )
 from wam2layers.tracking.io import (
     load_data,
-    load_region,
     load_tagging_region,
     output_path,
     write_output,
@@ -34,7 +33,7 @@ def backtrack(
     F,
     S1,
     S0,
-    region,
+    tagging_mask,
     output,
     config,
 ):
@@ -65,7 +64,7 @@ def backtrack(
         + vertical_dispersion(
             -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * precip * s_lower / (s_upper + s_lower)
+        + tagging_mask * precip * s_lower / (s_upper + s_lower)
         - evap * s_track_relative_lower
     )
 
@@ -75,7 +74,7 @@ def backtrack(
         - vertical_dispersion(
             -f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
         )
-        + region * precip * s_upper / (s_upper + s_lower)
+        + tagging_mask * precip * s_upper / (s_upper + s_lower)
     )
 
     # down and top: redistribute unaccounted water that is otherwise lost from the sytem
@@ -109,7 +108,7 @@ def backtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
-    output["tagged_precip"] += region * precip
+    output["tagged_precip"] += tagging_mask * precip
 
 
 def initialize(config_file):
@@ -119,16 +118,16 @@ def initialize(config_file):
     config = Config.from_yaml(config_file)
 
     # Initialize outputs as empty fields based on the input coords
-    sample_ds = load_data(config.tracking_end_date, config, "states")
-    field_coords = sample_ds.isel(time=0, drop=True).coords
-    empty_field = xr.DataArray(0, coords=field_coords)
+    t = pd.Timestamp(config.tracking_start_date)
+    coords = load_data(t, config, "states").coords
+    empty_field = xr.DataArray(0, coords=coords).astype("float32")
     output = xr.Dataset(
         {
             # Keep last state for a restart
-            "s_track_upper_restart": empty_field,
-            "s_track_lower_restart": empty_field,
-            "e_track": empty_field,
-            "tagged_precip": empty_field,
+            "s_track_upper_restart": empty_field.copy(),
+            "s_track_lower_restart": empty_field.copy(),
+            "e_track": empty_field.copy(),
+            "tagged_precip": empty_field.copy(),
         }
     )
 
@@ -140,7 +139,7 @@ def initialize(config_file):
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
     logger.info(f"Output will be written to {config.output_folder.absolute()}.")
-    return config, output
+    return config, output, empty_field
 
 
 def initialize_time(config, direction="forward"):
@@ -160,6 +159,17 @@ def initialize_time(config, direction="forward"):
     return t0, th, t1, dt
 
 
+def initialize_tagging_region(bbox, lat, lon):
+    """Build a new xr.DataArray with ones inside and zeros outside bbox."""
+    lat_in_bbox = bbox.south <= lat <= bbox.north
+    unrolled_lon_in_bbox = bbox.west <= lon <= bbox.east
+    rolled_lon_in_bbox = (bbox.west <= lon) | (lon <= bbox.east)
+    rolled_domain = bbox.west > bbox.east
+    lon_in_bbox = rolled_lon_in_bbox if rolled_domain else unrolled_lon_in_bbox
+    tagging_region = xr.where((lat_in_bbox & lon_in_bbox), 1, 0).values
+    return tagging_region
+
+
 #############################################################################
 # With the correct import statements, the code in the function below could
 # alternatively be be used as a script in a separate python file or notebook.
@@ -168,44 +178,32 @@ def initialize_time(config, direction="forward"):
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
-    config, output = initialize(config_file)
+    config, output, empty_field = initialize(config_file)
 
     progress_tracker = ProgressTracker(output, mode="backtrack")
 
     t0, th, t1, dt = initialize_time(config, direction="backward")
+
+    if isinstance(config.tagging_region, Path):
+        tagging_region = load_tagging_region(config)
+        tagging_region_stationary = tagging_region.ndim == 2
+    else:
+        lat, lon = empty_field.latitude, empty_field.longitude
+        bbox = config.tagging_region
+        tagging_region = initialize_tagging_region(bbox, lat, lon)
+        tagging_region_stationary = True
 
     while t0 >= config.tracking_start_date:
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
 
-        if isinstance(config.tagging_region, Path):
-            region = load_tagging_region(config, t=t0).values
+        if tagging_region_stationary:
+            tagging_mask = tagging_region.copy()
+            if not config.tagging_start_date <= t1 <= config.tagging_end_date:
+                tagging_mask *= 0
         else:
-            # TODO make it clearer.
-            bbox = config.tagging_region
-            region = xr.where(
-                cond=(
-                    (bbox.south <= S0.latitude <= bbox.north)
-                    & (
-                        (bbox.west <= S0.longitude <= bbox.east)
-                        | (
-                            (bbox.west > bbox.east)
-                            & (
-                                (bbox.west <= S0.longitude)
-                                | (S0.longitude <= bbox.east)
-                            )
-                        )
-                    )
-                ),
-                x=1,
-                y=0,
-            ).values
-
-        # Only tag the precipitation at certain timesteps
-        if not config.tagging_start_date <= t1 <= config.tagging_end_date:
-            # TODO don't do this if region is 3d
-            region.fill(0)
+            tagging_mask = load_tagging_region(config, t=t1)
 
         # Convert data to volumes
         change_units(S0, config.target_frequency)
@@ -219,7 +217,7 @@ def run_experiment(config_file):
         F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
 
         # Inside backtrack the "output" dictionary is updated
-        backtrack(F, S1, S0, region, output, config)
+        backtrack(F, S1, S0, tagging_mask, output, config)
         t1 -= dt
         th -= dt
         t0 -= dt

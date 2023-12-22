@@ -17,7 +17,12 @@ from wam2layers.tracking.core import (
     vertical_advection,
     vertical_dispersion,
 )
-from wam2layers.tracking.io import load_data, load_region, output_path, write_output
+from wam2layers.tracking.io import (
+    load_data,
+    load_tagging_region,
+    output_path,
+    write_output,
+)
 from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
@@ -132,7 +137,7 @@ def initialize(config_file):
     logger.info(f"Initializing experiment with config file {config_file}")
 
     config = Config.from_yaml(config_file)
-    region = load_region(config)
+    region = load_tagging_region(config)
 
     output = initialize_outputs(region)
     region = region.values

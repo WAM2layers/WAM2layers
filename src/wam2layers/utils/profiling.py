@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import psutil
 
-from wam2layers.tracking.io import load_region
+from wam2layers.tracking.io import load_tagging_region
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = load_region(config).rename("correction")
+        ncfile = load_tagging_region(config).rename("correction")
         ncfile.values = correction
         ncfile.to_netcdf(filename)
 

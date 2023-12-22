@@ -8,7 +8,7 @@ from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.io import input_path, load_region, output_path
+from wam2layers.tracking.io import input_path, load_tagging_region, output_path
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def polish(ax, region):
 def _plot_precip(config, ax):
     """Return subplot with precip."""
     # Load config and some usful stuf.
-    region = load_region(config)
+    region = load_tagging_region(config)
 
     # Load data
     dates = pd.date_range(
@@ -67,7 +67,7 @@ def _plot_precip(config, ax):
 
 def _plot_evap(config, ax):
     """Return subplot with tracked evaporation."""
-    region = load_region(config)
+    region = load_tagging_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
 
     # Load data
