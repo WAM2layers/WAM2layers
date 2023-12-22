@@ -21,8 +21,8 @@ def initialize_time(config, direction="forward"):
 
 def initialize_tagging_region(bbox, lat, lon):
     """Build a new xr.DataArray with ones inside and zeros outside bbox."""
-    lat_in_bbox = bbox.south <= lat <= bbox.north
-    unrolled_lon_in_bbox = bbox.west <= lon <= bbox.east
+    lat_in_bbox = (bbox.south <= lat) & (lat <= bbox.north)
+    unrolled_lon_in_bbox = (bbox.west <= lon) & (lon <= bbox.east)
     rolled_lon_in_bbox = (bbox.west <= lon) | (lon <= bbox.east)
     rolled_domain = bbox.west > bbox.east
     lon_in_bbox = rolled_lon_in_bbox if rolled_domain else unrolled_lon_in_bbox
