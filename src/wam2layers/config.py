@@ -101,7 +101,7 @@ class Config(BaseModel):
         tagging_region: [0, 50, 10, 55]
     """
 
-    tracking_region: Optional[
+    tracking_domain: Optional[
         Annotated[BoundingBox, AfterValidator(validate_region)]
     ] = None
     """Subdomain delimiting the region considered during tracking.
@@ -120,7 +120,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        tracking_region: [0, 50, 10, 55]
+        tracking_domain: [0, 50, 10, 55]
 
     """
 

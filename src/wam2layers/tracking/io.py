@@ -21,8 +21,8 @@ def read_data_at_date(d, config):
     """Load input data for given date."""
     file = input_path(d, config)
     ds = xr.open_dataset(file, cache=False)
-    if config.tracking_region is not None:
-        return select_subdomain(ds, config.tracking_region)
+    if config.tracking_domain is not None:
+        return select_subdomain(ds, config.tracking_domain)
     return ds
 
 
@@ -75,8 +75,8 @@ def load_data(t, config, subset="fluxes"):
 def load_tagging_region(config, t=None):
     tagging_region = xr.open_dataarray(config.tagging_region)
 
-    if config.tracking_region is not None:
-        tagging_region = select_subdomain(tagging_region, config.tracking_region)
+    if config.tracking_domain is not None:
+        tagging_region = select_subdomain(tagging_region, config.tracking_domain)
 
     if t is not None:
         return tagging_region.sel(time=t, method="nearest")
