@@ -18,6 +18,7 @@ from cartopy import feature as cfeature
 
 logger = logging.getLogger(__name__)
 
+
 def mask_with_regionmask(region_source, regions, input_file, output_dir, return_plot):
     """tagging region by using a named region from regionmask.
 
@@ -64,13 +65,19 @@ def mask_with_regionmask(region_source, regions, input_file, output_dir, return_
     mask = getattr(available_regions, "mask_3D")(longitude, latitude)
 
     # Specify region ID - what to store
-    region_ids = np.array(regions) 
-    
-    if 'srex' in region_source or 'giorgi' in region_source or 'prudence' in region_source:
-        region_ids = region_ids-1
-    if 'ocean' in region_source or 'land' in region_source:
-        raise KeyError('Entry for ar6 not recognized. Please only use the ar6.all options to make the selection. This option ensures proper indexing of the region.')
-    
+    region_ids = np.array(regions)
+
+    if (
+        "srex" in region_source
+        or "giorgi" in region_source
+        or "prudence" in region_source
+    ):
+        region_ids = region_ids - 1
+    if "ocean" in region_source or "land" in region_source:
+        raise KeyError(
+            "Entry for ar6 not recognized. Please only use the ar6.all options to make the selection. This option ensures proper indexing of the region."
+        )
+
     region_ids = region_ids.tolist()
 
     if type(region_ids) == int:
@@ -82,7 +89,8 @@ def mask_with_regionmask(region_source, regions, input_file, output_dir, return_
 
     # Make WAM2layers fitting
     new_masks = np.where(
-        new_masks == False, 0, 1 )  # Replace True and False by 1 and 0's
+        new_masks == False, 0, 1
+    )  # Replace True and False by 1 and 0's
     new_masks = np.nanmean(new_masks, axis=0)  # Multiple masks into 1D array
 
     # Export as tagging region for WAM2layers
@@ -116,21 +124,23 @@ def mask_with_regionmask(region_source, regions, input_file, output_dir, return_
             color="#67000d",
             fontsize=8,
         )
-        
+
         ax = available_regions.plot(
             projection=ccrs.PlateCarree(), add_ocean=True, text_kws=text_kws
         )
-        
-        plt.rcParams['figure.dpi'] = 200  # Set the DPI to 300 (adjust as needed)
+
+        plt.rcParams["figure.dpi"] = 200  # Set the DPI to 300 (adjust as needed)
 
         mask_plot = new_masks
 
-        indices = export.where(export.tagging_region>0,drop=True)
-                        
-        ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
-        
-        if 'prudence' in region_source:
-            ax.set_extent([-20,40,30,70])
+        indices = export.where(export.tagging_region > 0, drop=True)
+
+        ax.contourf(
+            longitude, latitude, mask_plot, levels=[0.1, 1], zorder=5, alpha=0.8
+        )
+
+        if "prudence" in region_source:
+            ax.set_extent([-20, 40, 30, 70])
 
         # Grid
         gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
@@ -140,6 +150,7 @@ def mask_with_regionmask(region_source, regions, input_file, output_dir, return_
         gl.ylabel_style = {"size": fontsizes}
 
         return ax
+
 
 def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_plot):
     """Mask tagging region using a shapefile.
@@ -166,7 +177,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_p
 
     # Read shapefile
     ds = gpd.read_file(shapefile)  # load shape file
-    
+
     # Generate mask
     mask = regionmask.mask_3D_geopandas(ds, longitude, latitude)
 
@@ -214,15 +225,15 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_p
     export.to_netcdf(output_dir)
 
     logger.info(f"Stored tagging region in {output_dir}.")
-    
+
     if return_plot:
         # Visualise all regions available
 
         fontsizes = 10
         pads = 20
 
-        #Zoomed-in
-        fig = plt.figure(figsize=(16, 10),dpi=200)
+        # Zoomed-in
+        fig = plt.figure(figsize=(16, 10), dpi=200)
         ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
         # Make figure
@@ -242,7 +253,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_p
         )
         mask_plot = new_masks
 
-        indices = export.where(export.tagging_region>0,drop=True)
+        indices = export.where(export.tagging_region > 0, drop=True)
         lon_indices = indices.longitude
         lon_indices_c = []
         for i in lon_indices:
@@ -251,21 +262,29 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_p
                 lon_indices_c.append(item)
             else:
                 lon_indices_c.append(i)
-                
-        ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
-        ax.set_extent([min(lon_indices_c)-1,max(lon_indices_c)+1,indices.latitude.min()-1,indices.latitude.max()+1])
-        ax.set_title('Zoomed-in',fontsize=fontsizes)
-            
+
+        ax.contourf(
+            longitude, latitude, mask_plot, levels=[0.1, 1], zorder=5, alpha=0.8
+        )
+        ax.set_extent(
+            [
+                min(lon_indices_c) - 1,
+                max(lon_indices_c) + 1,
+                indices.latitude.min() - 1,
+                indices.latitude.max() + 1,
+            ]
+        )
+        ax.set_title("Zoomed-in", fontsize=fontsizes)
+
         # Grid
         gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
         gl.top_labels = False
         gl.right_labels = False
-        gl.xlabel_style = {"size": fontsizes*2}
-        gl.ylabel_style = {"size": fontsizes*2}
-        
-        
-        #Zoomed-out
-        fig = plt.figure(figsize=(16, 10),dpi=200)
+        gl.xlabel_style = {"size": fontsizes * 2}
+        gl.ylabel_style = {"size": fontsizes * 2}
+
+        # Zoomed-out
+        fig = plt.figure(figsize=(16, 10), dpi=200)
         ax2 = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
         # Make figure
@@ -285,7 +304,7 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_p
         )
         mask_plot = new_masks
 
-        indices = export.where(export.tagging_region>0,drop=True)
+        indices = export.where(export.tagging_region > 0, drop=True)
         lon_indices = indices.longitude
         lon_indices_c = []
         for i in lon_indices:
@@ -294,21 +313,29 @@ def mask_with_shapefile(shapefile, regions, reference_file, output_dir, return_p
                 lon_indices_c.append(item)
             else:
                 lon_indices_c.append(i)
-                
-        ax2.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
-        ax2.set_extent([min(lon_indices_c)-20,max(lon_indices_c)+20,indices.latitude.min()-20,indices.latitude.max()+20])
-        ax2.set_title('Zoomed-out',fontsize=fontsizes)
-            
+
+        ax2.contourf(
+            longitude, latitude, mask_plot, levels=[0.1, 1], zorder=5, alpha=0.8
+        )
+        ax2.set_extent(
+            [
+                min(lon_indices_c) - 20,
+                max(lon_indices_c) + 20,
+                indices.latitude.min() - 20,
+                indices.latitude.max() + 20,
+            ]
+        )
+        ax2.set_title("Zoomed-out", fontsize=fontsizes)
+
         # Grid
         gl = ax2.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
         gl.top_labels = False
         gl.right_labels = False
-        gl.xlabel_style = {"size": fontsizes*2}
-        gl.ylabel_style = {"size": fontsizes*2}
-        
-        
-        
+        gl.xlabel_style = {"size": fontsizes * 2}
+        gl.ylabel_style = {"size": fontsizes * 2}
+
         return ax, ax2
+
 
 def mask_around_point(
     centerpoint,
@@ -327,7 +354,7 @@ def mask_around_point(
         radius (int): distance from center to edges of square box in degrees.
         reference_file: a reference file of the preprocessing which is used to
             extract the dimensions of the data used.
-        output_dir: path where to store the created tagging region.    
+        output_dir: path where to store the created tagging region.
         return_plot: if true, return a plot that shows the tagging region on a map.
 
     Returns:
@@ -377,7 +404,7 @@ def mask_around_point(
         fontsizes = 10
         pads = 20
 
-        fig = plt.figure(figsize=(16, 10),dpi=200)
+        fig = plt.figure(figsize=(16, 10), dpi=200)
         ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
 
         # Make figure
@@ -398,10 +425,19 @@ def mask_around_point(
         mask_plot = new_masks
 
         ax.contourf(longitude_r, latitude_r, mask_plot, levels=[0.1, 1])
-        
-        indices = export.where(export.tagging_region>0,drop=True)               
-        ax.contourf(longitude, latitude, mask_plot, levels=[0.1, 1],zorder=5,alpha=0.8)
-        ax.set_extent([indices.longitude.min()-10,indices.longitude.max()+10,indices.latitude.min()-10,indices.latitude.max()+10])
+
+        indices = export.where(export.tagging_region > 0, drop=True)
+        ax.contourf(
+            longitude, latitude, mask_plot, levels=[0.1, 1], zorder=5, alpha=0.8
+        )
+        ax.set_extent(
+            [
+                indices.longitude.min() - 10,
+                indices.longitude.max() + 10,
+                indices.latitude.min() - 10,
+                indices.latitude.max() + 10,
+            ]
+        )
 
         ax.plot(
             center_lon,
@@ -411,14 +447,13 @@ def mask_around_point(
             markeredgecolor="k",
             linestyle="None",
             markersize=radius * 0.5,
-            zorder = 6,
+            zorder=6,
         )
 
         # Grid
         gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
         gl.top_labels = False
         gl.right_labels = False
-        gl.xlabel_style = {"size": fontsizes*2}
-        gl.ylabel_style = {"size": fontsizes*2}
+        gl.xlabel_style = {"size": fontsizes * 2}
+        gl.ylabel_style = {"size": fontsizes * 2}
         return ax
-

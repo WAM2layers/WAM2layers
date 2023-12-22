@@ -62,7 +62,9 @@ def backtrack(
         - evap * s_track_relative_lower
     )
     # TODO: find better way to deal with negative values
-    s_track_negative_lower =np.where(s_track_lower < 0, s_track_lower / S1["s_lower"], 0)
+    s_track_negative_lower = np.where(
+        s_track_lower < 0, s_track_lower / S1["s_lower"], 0
+    )
     if np.any(s_track_negative_lower < -1e-5):
         logger.warn(
             f"""Negative values encountered in s_track_lower. . Check the gains output variable for details."""
@@ -78,7 +80,9 @@ def backtrack(
         + region * precip * s_upper / (s_upper + s_lower)
     )
     # TODO: find better way to deal with negative values
-    s_track_negative_upper =np.where(s_track_upper < 0, s_track_upper / S1["s_upper"], 0)
+    s_track_negative_upper = np.where(
+        s_track_upper < 0, s_track_upper / S1["s_upper"], 0
+    )
     if np.any(s_track_negative_upper < -1e-5):
         logger.warn(
             f"""Negative values encountered in s_track_upper. Check the gains output variable for details."""
@@ -88,7 +92,6 @@ def backtrack(
     # account for negative storages that are set to zero: "numerically gained water"
     gains = np.abs(s_track_negative_lower + s_track_negative_upper)
 
-
     # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
     overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
@@ -96,12 +99,12 @@ def backtrack(
     s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
     s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
     # at this point any of the storages could still be overfull, thus stabilize and assigns losses:
-    losses_lower = np.maximum( 0, s_track_lower - S1["s_lower"] )
-    losses_upper = np.maximum( 0, s_track_upper - S1["s_upper"] )
+    losses_lower = np.maximum(0, s_track_lower - S1["s_lower"])
+    losses_upper = np.maximum(0, s_track_upper - S1["s_upper"])
     losses = losses_lower + losses_upper
     s_track_lower = np.minimum(s_track_lower, S1["s_lower"])
     s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
-    
+
     # Update output fields
     output["e_track"] += evap * s_track_relative_lower
     output["losses"] += losses
@@ -164,6 +167,7 @@ def initialize_outputs(region):
         }
     )
     return output
+
 
 # TODO: remove unused direction OR merge forwardtrack and backtrack
 def initialize_time(config, direction="forward"):

@@ -76,12 +76,16 @@ class ProgressTracker:
         in_atmos_percentage = still_in_atmosphere / total_tagged_moisture * 100
         lost_percentage = lost_water / total_tagged_moisture * 100
         gained_percentage = gained_water / total_tagged_moisture * 100
-        closure_check_percentage = tracked_percentage + in_atmos_percentage + lost_percentage - gained_percentage
-
+        closure_check_percentage = (
+            tracked_percentage
+            + in_atmos_percentage
+            + lost_percentage
+            - gained_percentage
+        )
 
         time, memory = self.profile()
 
-        #TODO: print boundary losses and internal losses separately
+        # TODO: print boundary losses and internal losses separately
         logger.info(
             f"{t} - "
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "
