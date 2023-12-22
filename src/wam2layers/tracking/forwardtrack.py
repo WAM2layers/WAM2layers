@@ -68,7 +68,8 @@ def forwardtrack(
     )
     if np.any(s_track_negative_lower < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_lower. . Check the gains output variable for details."""
+            """Negative values encountered in s_track_lower.
+            Check the gains output variable for details."""
         )
     s_track_lower = np.maximum(s_track_lower, 0)
 
@@ -86,7 +87,8 @@ def forwardtrack(
     )
     if np.any(s_track_negative_upper < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_upper. Check the gains output variable for details."""
+            """Negative values encountered in s_track_upper.
+            Check the gains output variable for details."""
         )
     s_track_upper = np.maximum(s_track_upper, 0)
 
@@ -145,7 +147,7 @@ def initialize(config_file):
     if config.restart:
         # Reload last state from existing output
         date = config.track_end_date
-        ds = xr.open_dataset(output_path(date, config))
+        ds = xr.open_dataset(output_path(date, config, mode="forwardtrack"))
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
