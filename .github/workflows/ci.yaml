@@ -39,5 +39,5 @@ jobs:
           wam2layers --help
         shell: bash -el {0}
       - name: Run pytest
-        run: pytest tests/test_workflow.py
+        run: pytest
         shell: micromamba-shell {0}
