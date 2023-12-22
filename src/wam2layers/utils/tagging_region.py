@@ -3,6 +3,8 @@ WAM2layers Tagging Region Designer functions
 
 @author: Vincent de Feiter | GitHub: vincentdefeiter
 
+Adapted by Chris Weijenborg
+
 """
 import logging
 
@@ -427,6 +429,137 @@ def mask_around_point(
         ax.contourf(longitude_r, latitude_r, mask_plot, levels=[0.1, 1])
 
         indices = export.where(export.tagging_region > 0, drop=True)
+        ax.contourf(
+            longitude, latitude, mask_plot, levels=[0.1, 1], zorder=5, alpha=0.8
+        )
+        ax.set_extent(
+            [
+                indices.longitude.min() - 10,
+                indices.longitude.max() + 10,
+                indices.latitude.min() - 10,
+                indices.latitude.max() + 10,
+            ]
+        )
+
+        ax.plot(
+            center_lon,
+            center_lat,
+            marker="o",
+            markerfacecolor="r",
+            markeredgecolor="k",
+            linestyle="None",
+            markersize=radius * 0.5,
+            zorder=6,
+        )
+
+        # Grid
+        gl = ax.gridlines(draw_labels=True, alpha=0.5, linestyle=":", color="k")
+        gl.top_labels = False
+        gl.right_labels = False
+        gl.xlabel_style = {"size": fontsizes * 2}
+        gl.ylabel_style = {"size": fontsizes * 2}
+        return ax
+
+
+def mask_around_track(
+    centerpoints,
+    times,
+    radius,
+    reference_file,
+    output_file,
+    return_plot,
+):
+    """Mask tagging region using a track of center points with a given radius (currently in degrees).
+
+    This function builds a square source region based on given coordinates and
+    radius and stores it the output file.
+
+    Args:
+        centerpoints: List of coordinates of the central points, changing over time [(lat1, lon1), ....,lat_final, lon_final)] .
+        radius (int): distance from center to edges of square box in degrees.
+        reference_file: a reference file of the preprocessing which is used to
+            extract the dimensions of the data used.
+        output_file: path where to store the created source region.
+        return_plot: if true, return a plot that shows the source region on a map.
+
+    Returns:
+        axes on which the region is plotted if `return_plot' is True
+    """
+
+    # Retrieve file dimensions
+    file = xr.open_dataset(reference_file)
+
+    longitude_r = np.array(file.longitude)
+    latitude_r = np.array(file.latitude)
+
+    # Create a grid of latitudes and longitudes
+    longitude, latitude = np.meshgrid(longitude_r, latitude_r)
+
+    # Initiate result array
+    new_masks = np.zeros((len(centerpoints), len(latitude_r), len(longitude_r)))
+
+    # loop over times
+    for t in range(len(centerpoints)):
+        centerpoint = centerpoints[t]
+        # retrieve latitude and longitude from ceterpoint
+        center_lat, center_lon = centerpoint
+
+        # Set the square region of value 1 in the mask
+        mask = (np.abs(latitude - center_lat) <= radius) & (
+            np.abs(longitude - center_lon) <= radius
+        )
+
+        new_masks[t, ::] = np.where(
+            mask == False, 0, 1
+        )  # Replace True and False by 1 and 0's
+
+    # Export as source region for WAM2layers
+    # create xarray dataset
+    data = new_masks
+
+    export = xr.Dataset(
+        {"source_region": (["time", "latitude", "longitude"], data.astype(float))}
+    )
+
+    # set coordinates
+    export["longitude"] = ("longitude", longitude_r)
+    export["latitude"] = ("latitude", latitude_r)
+    export["time"] = ("time", times)
+
+    # save to NetCDF file
+    export.to_netcdf(output_file)
+
+    logger.info(f"Stored source region in {output_file}.")
+
+    if return_plot:
+        # Visualise all regions available
+
+        fontsizes = 10
+        pads = 20
+
+        fig = plt.figure(figsize=(16, 10), dpi=200)
+        ax = fig.add_subplot(111, projection=ccrs.PlateCarree())
+
+        # Make figure
+        ax.add_feature(cfeature.LAND, zorder=1, edgecolor="k", facecolor="w")
+
+        ax.add_feature(cfeature.COASTLINE, zorder=2, linewidth=0.8)
+        ax.add_feature(cfeature.BORDERS, zorder=2, linewidth=0.2, alpha=0.5)
+        ax.add_feature(cfeature.RIVERS, zorder=2, linewidth=3, alpha=0.5)
+        ax.add_feature(cfeature.STATES, zorder=2, facecolor="w")
+        ax.add_feature(
+            cfeature.LAKES,
+            zorder=2,
+            linewidth=0.8,
+            edgecolor="k",
+            alpha=0.5,
+            facecolor="w",
+        )
+        mask_plot = new_masks
+
+        ax.contourf(longitude_r, latitude_r, mask_plot, levels=[0.1, 1])
+
+        indices = export.where(export.source_region == 1, drop=True)
         ax.contourf(
             longitude, latitude, mask_plot, levels=[0.1, 1], zorder=5, alpha=0.8
         )
