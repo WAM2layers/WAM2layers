@@ -20,7 +20,6 @@ This code is currently developed by a core team:
 Ruud van der Ent (Delft University of Technology)
 Imme Benedict (Wageningen University)
 Chris Weijenborg (Wageningen University)
-Vincent de Feiter (Wageningen University)
 Peter Kalverla (Netherlands eScienceCenter)
 
 # How to use
@@ -32,18 +31,19 @@ See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more
 # Other versions
 
 This is the official codebase for the WAM-2layers moisture tracking model as of
-18/03/2022, but there are still several other older versions around:
+18/03/2022, but there are still several other (older) versions around:
 
 - [Original Python code for ERA-Interim by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython)
 - [Adapted version for EC-Earth by Imme Benedict](https://github.com/Imme1992/moisture_tracking_mississippi)
 - [Adapted version for MERRA2 by Pat Keys](https://github.com/pkeys/WAM2layersPythonMerra2)
 - [Adapted version for ERA5 pressure levels by Mingzhong Xiao](https://zenodo.org/record/4796962#.Y25d1-TMIVA)
+- [Adapted version for ERA5 by Theo Carr](https://github.com/ktcarr/WAM2layers_ERA5)
 
 # Reuse and acknowledgement
 
 We are actively developing the code at the moment, so it may be subject to
-change. We encourage anyone who is interested in re-using the code to get in
-touch. We may be able to help.
+change. We aim for backward compatability from v3.0.0 onward. We encourage anyone who is interested in re-using the code to get in
+touch on the discussion pages. We may be able to help and you may be able to help us getting rid off bugs.
 
 If you use the code for a publication, please cite it using the [DOI of the
 appropriate release](https://doi.org/10.5281/zenodo.7010594) and the
