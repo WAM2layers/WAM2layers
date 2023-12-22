@@ -108,15 +108,15 @@ def backtrack(
     output["gains"] += gains
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
-    output["e_track"][0, :] += (s_track_upper + s_track_lower)[0, :]
-    output["e_track"][-1, :] += (s_track_upper + s_track_lower)[-1, :]
+    output["losses"][0, :] += (s_track_upper + s_track_lower)[0, :]
+    output["losses"][-1, :] += (s_track_upper + s_track_lower)[-1, :]
     s_track_upper[0, :] = 0
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
     if config.periodic_boundary is False:  # bookkeep west and east losses
-        output["e_track"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
-        output["e_track"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
+        output["losses"][:, 0] += (s_track_upper + s_track_lower)[:, 0]
+        output["losses"][:, -1] += (s_track_upper + s_track_lower)[:, -1]
         s_track_upper[:, 0] = 0
         s_track_upper[:, -1] = 0
         s_track_lower[:, 0] = 0
