@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 import xarray as xr
+from pathlib import Path
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
@@ -147,8 +148,9 @@ def initialize(config_file):
             # Keep last state for a restart
             "s_track_upper_restart": xr.DataArray(0, coords=grid).astype("float32"),
             "s_track_lower_restart": xr.DataArray(0, coords=grid).astype("float32"),
-            "e_track": xr.DataArray(0, coords=grid).astype("float32"),
-            "tagged_precip": xr.DataArray(0, coords=grid).astype("float32"),
+            "p_track_upper": xr.DataArray(0, coords=grid).astype("float32"),
+            "p_track_lower": xr.DataArray(0, coords=grid).astype("float32"),
+            "tagged_evap": xr.DataArray(0, coords=grid).astype("float32"),
         }
     )
 
@@ -161,23 +163,6 @@ def initialize(config_file):
 
     logger.info(f"Output will be written to {config.output_folder.absolute()}.")
     return config, output, grid
-
-
-def initialize_outputs(region):
-    """Allocate output arrays."""
-
-    proto = region
-    output = xr.Dataset(
-        {
-            # Keep last state for a restart
-            "s_track_upper_restart": xr.zeros_like(proto),
-            "s_track_lower_restart": xr.zeros_like(proto),
-            "p_track_upper": xr.zeros_like(proto),
-            "p_track_lower": xr.zeros_like(proto),
-            "tagged_evap": xr.zeros_like(proto),
-        }
-    )
-    return output
 
 
 #############################################################################
