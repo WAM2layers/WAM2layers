@@ -69,12 +69,13 @@ def forwardtrack(
         + region * evap
         - precip_lower * s_track_relative_lower
     )
-    # TODO: find better way to deal with negative values
-    s_track_negative_lower = (s_track_lower / S1["s_lower"]).values[s_track_lower < 0]
-    if np.any(s_track_negative_lower):
+    s_track_negative_lower = np.where(
+        s_track_lower < 0, s_track_lower / S1["s_lower"], 0
+    )
+    if np.any(s_track_negative_lower < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_lower. Count, minimum:
-                    {np.count_nonzero(s_track_negative_lower), np.min(s_track_negative_lower)}"""
+            """Negative values encountered in s_track_lower.
+            Check the gains output variable for details."""
         )
     s_track_lower = np.maximum(s_track_lower, 0)
 
@@ -86,44 +87,48 @@ def forwardtrack(
         )
         - precip_upper * s_track_relative_upper
     )
-    # TODO: find better way to deal with negative values
-    s_track_negative_upper = (s_track_upper / S1["s_upper"]).values[s_track_upper < 0]
-    if np.any(s_track_negative_upper):
+    s_track_negative_upper = np.where(
+        s_track_upper < 0, s_track_upper / S1["s_upper"], 0
+    )
+    if np.any(s_track_negative_upper < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_upper. Count, minimum:
-                    {np.count_nonzero(s_track_negative_upper), np.min(s_track_negative_upper)}"""
+            """Negative values encountered in s_track_upper.
+            Check the gains output variable for details."""
         )
     s_track_upper = np.maximum(s_track_upper, 0)
 
-    # down and top: redistribute unaccounted water that is otherwise lost from the sytem
+    # account for negative storages that are set to zero: "numerically gained water"
+    gains = np.abs(s_track_negative_lower + s_track_negative_upper)
+
+    # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
     overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
     overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
-    s_track_lower = np.minimum(
-        s_track_lower - overshoot_lower + overshoot_upper, S1["s_lower"]
-    )
-    s_track_upper = np.minimum(
-        s_track_upper - overshoot_upper + overshoot_lower, S1["s_upper"]
-    )
+    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
+    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
+    # at this point any of the storages could still be overfull, thus stabilize and assigns losses:
+    losses_lower = np.maximum(0, s_track_lower - S1["s_lower"])
+    losses_upper = np.maximum(0, s_track_upper - S1["s_upper"])
+    losses = losses_lower + losses_upper
+    s_track_lower = np.minimum(s_track_lower, S1["s_lower"])
+    s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
 
     # Update output fields
     output["p_track_lower"] += precip_lower * s_track_relative_lower
     output["p_track_upper"] += precip_upper * s_track_relative_upper
+    output["losses"] += losses
+    output["gains"] += gains
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
-    output["p_track_lower"][0, :] += s_track_lower[0, :]
-    output["p_track_lower"][-1, :] += s_track_lower[-1, :]
-    output["p_track_upper"][0, :] += s_track_upper[0, :]
-    output["p_track_upper"][-1, :] += s_track_upper[-1, :]
+    output["losses"][0, :] += s_track_lower[0, :] + s_track_upper[0, :]
+    output["losses"][-1, :] += s_track_lower[-1, :] + s_track_upper[-1, :]
     s_track_upper[0, :] = 0
     s_track_upper[-1, :] = 0
     s_track_lower[0, :] = 0
     s_track_lower[-1, :] = 0
     if config.periodic_boundary is False:  # bookkeep west and east losses
-        output["p_track_lower"][:, 0] += s_track_lower[:, 0]
-        output["p_track_lower"][:, -1] += s_track_lower[:, -1]
-        output["p_track_upper"][:, 0] += s_track_upper[:, 0]
-        output["p_track_upper"][:, -1] += s_track_upper[:, -1]
+        output["losses"][:, 0] += s_track_lower[:, 0] + s_track_upper[:, 0]
+        output["losses"][:, -1] += s_track_lower[:, -1] + s_track_upper[:, -1]
         s_track_upper[:, 0] = 0
         s_track_upper[:, -1] = 0
         s_track_lower[:, 0] = 0
@@ -151,6 +156,8 @@ def initialize(config_file):
             "p_track_upper": xr.DataArray(0, coords=grid).astype("float32"),
             "p_track_lower": xr.DataArray(0, coords=grid).astype("float32"),
             "tagged_evap": xr.DataArray(0, coords=grid).astype("float32"),
+            "losses": xr.DataArray(0, coords=grid).astype("float32"),
+            "gains": xr.DataArray(0, coords=grid).astype("float32"),
         }
     )
 
@@ -227,6 +234,8 @@ def run_experiment(config_file):
             progress_tracker.store_intermediate_states(output)
             write_output(output, t0, config, mode="forwardtrack")
             # Flush previous outputs
-            output[["p_track_upper", "p_track_lower", "tagged_evap"]] *= 0
+            output[
+                ["p_track_upper", "p_track_lower", "tagged_evap", "losses", "gains"]
+            ] *= 0
 
     logger.info("Experiment complete.")
