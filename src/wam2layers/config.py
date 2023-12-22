@@ -1,12 +1,43 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, NamedTuple, Optional, Union
 
 import yaml
-from pydantic import BaseModel, ConfigDict, FilePath, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    FilePath,
+    field_validator,
+    model_validator,
+)
+from typing_extensions import Annotated
 
 logger = logging.getLogger(__name__)
+
+
+class BoundingBox(NamedTuple):
+    west: Annotated[float, Field(ge=-180, le=180)]
+    south: Annotated[float, Field(ge=-80, le=80)]
+    east: Annotated[float, Field(ge=-180, le=180)]
+    north: Annotated[float, Field(ge=-80, le=80)]
+
+
+def validate_region(region):
+    """Check if region is existing path or valid bbox."""
+    if isinstance(region, Path):
+        return region.absolute()
+
+    assert -180 <= region.west <= 180, "longitude should be between -180 and 180"
+    assert -180 <= region.east <= 180, "longitude should be between -180 and 180"
+    assert -80 <= region.north <= 80, "latitude should be between -80 and 80"
+    assert -80 <= region.south <= 80, "latitude should be between -80 and 80"
+    assert region.south < region.north, "south should be smaller than north"
+    if region.west > region.east:
+        logger.info("west > east, coordinates will be rolled around meridian")
+    return region
 
 
 class Config(BaseModel):
@@ -49,16 +80,51 @@ class Config(BaseModel):
 
     """
 
-    region: FilePath
-    """Location where the region mask is stored.
+    tagging_region: Annotated[
+        Union[FilePath, BoundingBox], AfterValidator(validate_region)
+    ]
+    """Subdomain delimiting the source/sink regions for tagged moisture.
 
-    The file should exist.
+    You can either specify a path that contains a netcdf file, or a bounding box
+    of the form [west, south, east, north].
+
+    The bounding box should be inside -180, -80, 180, 80; if west > south, the
+    coordinates will be rolled to retain a continous longitude.
+
+    The file should exist. If it has a time dimension, the nearest field will be
+    used as tagging region, and the time should still be between
+    tagging_start_date and tagging_end_date
 
     For example:
 
     .. code-block:: yaml
 
-        region: /data/volume_2/era5_2021/source_region_global.nc
+        tagging_region: /data/volume_2/era5_2021/tagging_region_global.nc
+        tagging_region: [0, 50, 10, 55]
+    """
+
+    tracking_domain: Optional[
+        Annotated[BoundingBox, AfterValidator(validate_region)]
+    ] = None
+    """Subdomain delimiting the region considered during tracking.
+
+    This is useful when you have global pre-processed data but you don't need
+    global tracking.
+
+    You can specify a bounding box of the form [west, south, east, north].
+
+    The bounding box should be inside -180, -80, 180, 80; if west > south, the
+    coordinates will be rolled to retain a continous longitude.
+
+    If it is set to `null`, then it will use full domain of preprocessed data.
+
+    Note that you should always set period to False if you use a subdomain.
+
+    For example:
+
+    .. code-block:: yaml
+
+        tracking_domain: [0, 50, 10, 55]
 
     """
 
@@ -100,22 +166,22 @@ class Config(BaseModel):
         preprocess_end_date: "2021-07-15T23:00"
     """
 
-    track_start_date: datetime
+    tracking_start_date: datetime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
-    When backward tracking the track_start_date is not given as output date.
+    When backward tracking the tracking_start_date is not given as output date.
 
     For example:
 
     .. code-block:: yaml
 
-        track_start_date: "2021-07-01T00:00"
+        tracking_start_date: "2021-07-01T00:00"
 
     """
 
-    track_end_date: datetime
+    tracking_end_date: datetime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
@@ -125,16 +191,16 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        track_end_date: "2021-07-15T23:00"
+        tracking_end_date: "2021-07-15T23:00"
     """
 
-    event_start_date: datetime
-    """Start date for event.
+    tagging_start_date: datetime
+    """Start date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
-    start and end date of the event to something different than the total
-    tracking start and end date, you can also indicate the hours that you want to track.
-    The event_start_date is included in the event tracking.
+    start and end date to something different than the total tracking start and
+    end date, you can also indicate the hours that you want to track. The
+    start date is included.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
@@ -143,17 +209,17 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_start_date: "2021-07-13T00:00"
+        tagging_start_date: "2021-07-13T00:00"
 
     """
 
-    event_end_date: datetime
-    """Start date for event.
+    tagging_end_date: datetime
+    """End date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
-    start and end date of the event to something different than the total
-    tracking start and end date, you can also indicate the hours that you want to track.
-    The event_end_date is included in the event tracking.
+    start and end date to something different than the total tracking start and
+    end date, you can also indicate the hours that you want to track. The
+    end date is included.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
     backtracking.
@@ -162,7 +228,7 @@ class Config(BaseModel):
 
     .. code-block:: yaml
 
-        event_end_date: "2021-07-14T23:00"
+        tagging_end_date: "2021-07-14T23:00"
 
     """
 
@@ -289,11 +355,11 @@ class Config(BaseModel):
 
         return cls(**settings)
 
-    @field_validator("preprocessed_data_folder", "region", "output_folder")
+    @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
-        return path.expanduser()
+        return path.absolute()
 
     @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod
@@ -306,13 +372,20 @@ class Config(BaseModel):
 
     @model_validator(mode="after")
     def check_date_order(self):
-        if self.track_start_date > self.track_end_date:
-            raise ValueError("track_end_date should be later than track_start_date")
-        if self.event_start_date > self.event_end_date:
-            raise ValueError("event_end_date should be later than event_start_date")
+        if self.tracking_start_date > self.tracking_end_date:
+            raise ValueError(
+                "tracking_end_date should be later than tracking_start_date"
+            )
+        if self.tagging_start_date > self.tagging_end_date:
+            raise ValueError("tagging_end_date should be later than tagging_start_date")
         if self.preprocess_start_date > self.preprocess_end_date:
             raise ValueError(
                 "preprocess_end_date should be later than preprocess_start_date"
+            )
+
+        if self.tracking_domain is not None and self.periodic_boundary:
+            logger.warning(
+                "Periodic boundary set to true while using a subdomain. Are you sure?"
             )
 
         return self

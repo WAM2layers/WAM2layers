@@ -1,11 +1,12 @@
 import logging
 import time
 from datetime import datetime
+import xarray as xr
 
 import numpy as np
 import psutil
 
-from wam2layers.tracking.io import load_region
+from wam2layers.tracking.io import load_tagging_region
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class ProgressTracker:
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 
-    def track_stability_correction(self, fy_corrected, fy_abs, config, t):
+    def track_stability_correction(self, fy_corrected, fy_abs, config, coords, t):
         """Issue warning if correction exceeds criterion.
 
         Warning advises to reduce the timestep.
@@ -114,8 +115,7 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = load_region(config).rename("correction")
-        ncfile.values = correction
+        ncfile = xr.DataArray(correction, coords=coords, name="correction")
         ncfile.to_netcdf(filename)
 
         logger.warn(

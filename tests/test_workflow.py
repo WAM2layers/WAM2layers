@@ -37,7 +37,7 @@ def test_preprocess():
         i for i in Path("tests/tmp/preprocessed_data/").glob("wam2layers_*.log")
     ]
 
-    assert len(log_files) == 1
+    assert len(log_files) >= 1  # make sure the test passes when repeating
 
     # check config yaml
     config_path = Path("tests/tmp/preprocessed_data/test_config.yaml")
@@ -69,7 +69,7 @@ def test_backtrack():
     # check log file
     log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
 
-    assert len(log_files) == 1
+    assert len(log_files) >= 1  # make sure the test passes when repeating
 
     # check config yaml
     config_path = Path("tests/tmp/output_data/test_config.yaml")
