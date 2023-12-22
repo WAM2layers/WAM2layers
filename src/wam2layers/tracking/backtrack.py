@@ -171,12 +171,12 @@ def run_experiment(config_file):
         S1 = load_data(t1, config, "states")
 
         # Load/update tagging mask
-        if tagging_region_stationary:
-            tagging_mask = tagging_region.copy()
-            if not config.tagging_start_date <= t1 <= config.tagging_end_date:
-                tagging_mask *= 0
-        else:
-            tagging_mask = load_tagging_region(config, t=t1)
+        tagging_mask = 0
+        if config.tagging_start_date <= t1 <= config.tagging_end_date:
+            if tagging_region_stationary:
+                tagging_mask = tagging_region
+            else:
+                tagging_mask = load_tagging_region(config, t=t1)
 
         # Convert data to volumes
         change_units(S0, config.target_frequency)

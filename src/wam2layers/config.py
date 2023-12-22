@@ -91,7 +91,9 @@ class Config(BaseModel):
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
 
-    The file should exist.
+    The file should exist. If it has a time dimension, the nearest field will be
+    used as tagging region, and the time should still be between
+    tagging_start_date and tagging_end_date
 
     For example:
 

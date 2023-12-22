@@ -1,9 +1,9 @@
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pathlib import Path
 
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
@@ -194,13 +194,13 @@ def run_experiment(config_file):
         S1 = load_data(t1, config, "states")
 
         # Load/update tagging mask
-        if tagging_region_stationary:
-            tagging_mask = tagging_region.copy()
-            if not config.tagging_start_date <= t0 <= config.tagging_end_date:
-                tagging_mask *= 0
-        else:
-            tagging_mask = load_tagging_region(config, t=t0)
-       
+        tagging_mask = 0
+        if config.tagging_start_date <= t0 <= config.tagging_end_date:
+            if tagging_region_stationary:
+                tagging_mask = tagging_region
+            else:
+                tagging_mask = load_tagging_region(config, t=t0)
+
         # Convert data to volumes
         change_units(S0, config.target_frequency)
         change_units(F, config.target_frequency)
