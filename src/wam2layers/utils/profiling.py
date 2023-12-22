@@ -82,7 +82,7 @@ class ProgressTracker:
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 
-    def track_stability_correction(self, fy_corrected, fy_abs, config, t):
+    def track_stability_correction(self, fy_corrected, fy_abs, config, coords, t):
         """Issue warning if correction exceeds criterion.
 
         Warning advises to reduce the timestep.
@@ -114,10 +114,7 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = load_tagging_region(config).rename("correction")
-        if "time" in ncfile.coords:
-            ncfile = ncfile.isel(time=0, drop=True)
-        ncfile.values = correction
+        ncfile = xr.DataArray(correction, coords=coords, name="correction")
         ncfile.to_netcdf(filename)
 
         logger.warn(
