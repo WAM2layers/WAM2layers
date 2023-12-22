@@ -115,6 +115,8 @@ class ProgressTracker:
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
         ncfile = load_tagging_region(config).rename("correction")
+        if "time" in ncfile.coords:
+            ncfile = ncfile.isel(time=0, drop=True)
         ncfile.values = correction
         ncfile.to_netcdf(filename)
 
