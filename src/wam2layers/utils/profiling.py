@@ -65,17 +65,25 @@ class ProgressTracker:
         still_in_atmosphere = (
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
+        lost_water = totals["losses"]
+        gained_water = totals["gained"]
+
         tracked_percentage = tracked / total_tagged_moisture * 100
         in_atmos_percentage = still_in_atmosphere / total_tagged_moisture * 100
-        lost_percentage = 100 - tracked_percentage - in_atmos_percentage
+        lost_percentage = lost_water / total_tagged_moisture * 100
+        gained_percentage = gained_water / total_tagged_moisture * 100
+        closure_check_percentage = tracked_percentage + in_atmos_percentage + lost_percentage - gained_percentage
+
 
         time, memory = self.profile()
 
         logger.info(
             f"{t} - "
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "
-            f"Moisture in atmosphere: {in_atmos_percentage.item():.2f}%. "
+            f"Tagged in atmosphere: {in_atmos_percentage.item():.2f}%. "
             f"Lost moisture: {lost_percentage.item():.2f}%. "
+            f"Gained moisture: {gained_percentage.item():.2f}%. "
+            f"Tagging closure: {closure_check_percentage.item():.2f}%. "
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 

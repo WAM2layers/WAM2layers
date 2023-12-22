@@ -96,8 +96,8 @@ def forwardtrack(
     # TODO build in logging for lost moisture
     overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
     overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
-    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper, S1["s_lower"]
-    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower, S1["s_upper"]
+    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
+    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
     # at this point any of the storages could still be overfull, thus stabilize and assigns losses:
     losses_lower = np.maximum( 0, s_track_lower - S1["s_lower"] )
     losses_upper = np.maximum( 0, s_track_upper - S1["s_upper"] )
