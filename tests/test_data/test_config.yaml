@@ -31,4 +31,3 @@ log_level: info
 restart: False
 periodic_boundary: false
 kvf: 3
-chunks: null

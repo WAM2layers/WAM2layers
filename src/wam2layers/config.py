@@ -116,6 +116,8 @@ class Config(BaseModel):
 
     If it is set to `null`, then it will use full domain of preprocessed data.
 
+    Note that you should always set period to False if you use a subdomain.
+
     For example:
 
     .. code-block:: yaml
