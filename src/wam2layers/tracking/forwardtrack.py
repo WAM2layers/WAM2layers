@@ -62,7 +62,6 @@ def forwardtrack(
         + region * evap
         - precip_lower * s_track_relative_lower
     )
-    # TODO: find better way to deal with negative values
     s_track_negative_lower = np.where(
         s_track_lower < 0, s_track_lower / S1["s_lower"], 0
     )
@@ -81,7 +80,6 @@ def forwardtrack(
         )
         - precip_upper * s_track_relative_upper
     )
-    # TODO: find better way to deal with negative values
     s_track_negative_upper = np.where(
         s_track_upper < 0, s_track_upper / S1["s_upper"], 0
     )
