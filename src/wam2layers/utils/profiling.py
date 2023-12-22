@@ -81,6 +81,7 @@ class ProgressTracker:
 
         time, memory = self.profile()
 
+        #TODO: print boundary losses and internal losses separately
         logger.info(
             f"{t} - "
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "

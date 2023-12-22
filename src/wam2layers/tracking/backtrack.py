@@ -63,10 +63,9 @@ def backtrack(
     )
     # TODO: find better way to deal with negative values
     s_track_negative_lower = (s_track_lower / S1["s_lower"]).values[s_track_lower < 0]
-    if np.any(s_track_negative_lower):
+    if np.any(s_track_negative_lower < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_lower. Count, minimum:
-                    {np.count_nonzero(s_track_negative_lower), np.min(s_track_negative_lower)}"""
+            f"""Negative values encountered in s_track_lower. . Check the gains output variable for details."""
         )
     s_track_lower = np.maximum(s_track_lower, 0)
 
@@ -80,26 +79,33 @@ def backtrack(
     )
     # TODO: find better way to deal with negative values
     s_track_negative_upper = (s_track_upper / S1["s_upper"]).values[s_track_upper < 0]
-    if np.any(s_track_negative_upper):
+    if np.any(s_track_negative_upper < -1e-5):
         logger.warn(
-            f"""Negative values encountered in s_track_upper. Count, minimum:
-                    {np.count_nonzero(s_track_negative_upper), np.min(s_track_negative_upper)}"""
+            f"""Negative values encountered in s_track_upper. Check the gains output variable for details."""
         )
     s_track_upper = np.maximum(s_track_upper, 0)
 
-    # down and top: redistribute unaccounted water that is otherwise lost from the sytem
+    # account for negative storages that are set to zero: "numerically gained water"
+    gains = np.abs(s_track_negative_lower + s_track_negative_upper)
+
+
+    # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     # TODO build in logging for lost moisture
-    overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
-    overshoot_upper = np.maximum(0, s_track_upper - S0["s_upper"])
-    s_track_lower = np.minimum(
-        s_track_lower - overshoot_lower + overshoot_upper, S0["s_lower"]
-    )
-    s_track_upper = np.minimum(
-        s_track_upper - overshoot_upper + overshoot_lower, S0["s_upper"]
-    )
+    overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
+    overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
+    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
+    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
+    # at this point any of the storages could still be overfull, thus stabilize and assigns losses:
+    losses_lower = np.maximum( 0, s_track_lower - S1["s_lower"] )
+    losses_upper = np.maximum( 0, s_track_upper - S1["s_upper"] )
+    losses = losses_lower + losses_upper
+    s_track_lower = np.minimum(s_track_lower, S1["s_lower"])
+    s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
     
     # Update output fields
     output["e_track"] += evap * s_track_relative_lower
+    output["losses"] += losses
+    output["gains"] += gains
 
     # Bookkeep boundary losses as "tracked moisture at grid edges"
     output["e_track"][0, :] += (s_track_upper + s_track_lower)[0, :]
@@ -153,11 +159,13 @@ def initialize_outputs(region):
             "s_track_lower_restart": xr.zeros_like(proto),
             "e_track": xr.zeros_like(proto),
             "tagged_precip": xr.zeros_like(proto),
+            "losses": xr.zeros_like(proto),
+            "gains": xr.zeros_like(proto),
         }
     )
     return output
 
-
+# TODO: remove unused direction OR merge forwardtrack and backtrack
 def initialize_time(config, direction="forward"):
     dt = pd.Timedelta(config.target_frequency)
 
@@ -224,6 +232,6 @@ def run_experiment(config_file):
             progress_tracker.store_intermediate_states(output)
             write_output(output, t1, config, mode="backtrack")
             # Flush previous outputs
-            output[["e_track", "tagged_precip"]] *= 0
+            output[["e_track", "tagged_precip", "losses", "gains"]] *= 0
 
     logger.info("Experiment complete.")

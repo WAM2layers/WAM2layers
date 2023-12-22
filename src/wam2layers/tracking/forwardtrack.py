@@ -168,7 +168,7 @@ def initialize_outputs(region):
     )
     return output
 
-
+# TODO: remove unused direction OR merge forwardtrack and backtrack
 def initialize_time(config, direction="forward"):
     dt = pd.Timedelta(config.target_frequency)
 
