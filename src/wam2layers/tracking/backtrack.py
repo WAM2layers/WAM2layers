@@ -24,6 +24,7 @@ from wam2layers.tracking.io import (
     output_path,
     write_output,
 )
+from wam2layers.tracking.shared import initialize_tagging_region, initialize_time
 from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
@@ -118,16 +119,15 @@ def initialize(config_file):
     config = Config.from_yaml(config_file)
 
     # Initialize outputs as empty fields based on the input coords
-    t = pd.Timestamp(config.tracking_start_date)
-    coords = load_data(t, config, "states").coords
-    empty_field = xr.DataArray(0, coords=coords).astype("float32")
+    t = pd.Timestamp(config.tracking_end_date)
+    grid = load_data(t, config, "states").coords
     output = xr.Dataset(
         {
             # Keep last state for a restart
-            "s_track_upper_restart": empty_field.copy(),
-            "s_track_lower_restart": empty_field.copy(),
-            "e_track": empty_field.copy(),
-            "tagged_precip": empty_field.copy(),
+            "s_track_upper_restart": xr.DataArray(0, coords=grid).astype("float32"),
+            "s_track_lower_restart": xr.DataArray(0, coords=grid).astype("float32"),
+            "e_track": xr.DataArray(0, coords=grid).astype("float32"),
+            "tagged_precip": xr.DataArray(0, coords=grid).astype("float32"),
         }
     )
 
@@ -139,35 +139,7 @@ def initialize(config_file):
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 
     logger.info(f"Output will be written to {config.output_folder.absolute()}.")
-    return config, output, empty_field
-
-
-def initialize_time(config, direction="forward"):
-    dt = pd.Timedelta(config.target_frequency)
-
-    if direction == "forward":
-        t0 = pd.Timestamp(config.tracking_start_date)
-        th = t0 + dt / 2  # th is "half" time, i.e. between t0 and t1
-        t1 = t0 + dt
-    elif direction == "backward":
-        t1 = pd.Timestamp(config.tracking_end_date)
-        th = t1 - dt / 2  # th is "half" time, i.e. between t0 and t1
-        t0 = t1 - dt
-    else:
-        raise ValueError("Direction should be forward or backward")
-
-    return t0, th, t1, dt
-
-
-def initialize_tagging_region(bbox, lat, lon):
-    """Build a new xr.DataArray with ones inside and zeros outside bbox."""
-    lat_in_bbox = bbox.south <= lat <= bbox.north
-    unrolled_lon_in_bbox = bbox.west <= lon <= bbox.east
-    rolled_lon_in_bbox = (bbox.west <= lon) | (lon <= bbox.east)
-    rolled_domain = bbox.west > bbox.east
-    lon_in_bbox = rolled_lon_in_bbox if rolled_domain else unrolled_lon_in_bbox
-    tagging_region = xr.where((lat_in_bbox & lon_in_bbox), 1, 0).values
-    return tagging_region
+    return config, output, grid
 
 
 #############################################################################
@@ -178,7 +150,7 @@ def initialize_tagging_region(bbox, lat, lon):
 
 def run_experiment(config_file):
     """Run a backtracking experiment from start to finish."""
-    config, output, empty_field = initialize(config_file)
+    config, output, grid = initialize(config_file)
 
     progress_tracker = ProgressTracker(output, mode="backtrack")
 
@@ -188,7 +160,7 @@ def run_experiment(config_file):
         tagging_region = load_tagging_region(config)
         tagging_region_stationary = tagging_region.ndim == 2
     else:
-        lat, lon = empty_field.latitude, empty_field.longitude
+        lat, lon = grid["latitude"], grid["longitude"]
         bbox = config.tagging_region
         tagging_region = initialize_tagging_region(bbox, lat, lon)
         tagging_region_stationary = True
@@ -198,6 +170,7 @@ def run_experiment(config_file):
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
 
+        # Load/update tagging mask
         if tagging_region_stationary:
             tagging_mask = tagging_region.copy()
             if not config.tagging_start_date <= t1 <= config.tagging_end_date:
