@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 
-## Release v3.0.0-beta.5 (2023-12-22)
+## Release v3.0.0-beta.6 (2023-12-22)
 
 ### Added
 
