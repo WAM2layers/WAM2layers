@@ -33,6 +33,8 @@ class ProgressTracker:
         self.mode = mode
         self.total_tagged_moisture = 0
         self.tracked = 0
+        self.lost_water = 0
+        self.gained_water = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
         self.stability_correction_previous_grid = 0
