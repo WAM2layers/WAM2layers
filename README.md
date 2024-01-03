@@ -23,8 +23,10 @@ Chris Weijenborg (Wageningen University)
 Peter Kalverla (Netherlands eScienceCenter)
 
 # How to use
-See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description. Still questions? Follow the flowchart below.
+See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description. 
+Are you relatively new to setting up Python environments, command line interfaces etc.? Try this [video](https://youtu.be/QudlILlZnOg)
 
+Still questions? Follow the flowchart below.
 ![FlowChart GitHub](https://github.com/WAM2layers/WAM2layers/assets/123247866/f5cbcf8f-a45f-4e73-b304-00956b4e2ee5)
 
 
