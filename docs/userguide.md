@@ -239,7 +239,7 @@ this file should have settings on the date range for which you want to run
 track, and also about the location where the preprocessed data are stored and
 where the output will be stored. For more information, see [](./config) or have
 a look at the example config file
-[here](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
+[here](https://github.com/WAM2layers/WAM2layers/blob/main/example_config.yaml).
 
 ```{tip}
 The actual code that is executed can be found in
