@@ -129,7 +129,9 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = xr.DataArray(correction, coords=coords, name="correction")
+        ncfile = xr.DataArray(correction, coords=None, name="correction")
+        # TODO: fix back to something like below, but without the error
+        # ncfile = xr.DataArray(correction, coords=None, name="correction")
         ncfile.to_netcdf(filename)
 
         logger.warn(
