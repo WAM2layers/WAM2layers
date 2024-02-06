@@ -1,0 +1,30 @@
+# Paths (relative to root of repo)
+preprocessed_data_folder: tests/test_data/verify_output/preprocessed_data
+output_folder: tests/tmp/output_data
+
+# Preprocessing
+filename_template: tests/test_data/era5/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+preprocess_start_date: "1979-07-01T00:00"
+preprocess_end_date: "1979-07-01T23:50"
+level_type: model_levels
+levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
+
+# Tracking
+tagging_region: tests/test_data/region_lake_volta.nc
+tracking_start_date: "1979-07-01T00:00"
+tracking_end_date: "1979-07-01T23:00"
+
+# Tagging
+tagging_start_date: "1979-07-01T00:00"
+tagging_end_date: "1979-07-01T12:00"
+
+# Time
+input_frequency: "1h"
+target_frequency: "10min"
+output_frequency: "1d"
+
+# Model settings
+log_level: info
+restart: False
+periodic_boundary: false
+kvf: 3

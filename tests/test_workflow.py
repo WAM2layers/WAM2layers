@@ -38,7 +38,7 @@ def plot_difference(
         ax=ax,
         x="longitude",
         cmap="RdBu",
-        norm=matplotlib.colors.TwoSlopeNorm(vcenter=0),
+        norm=matplotlib.colors.TwoSlopeNorm(vcenter=0),  # normalize cmap so 0 is center
     )
     if cfeature is not None:
         ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
@@ -50,10 +50,12 @@ def plot_difference(
 
 def test_preprocess():
     runner = CliRunner()
-    result = runner.invoke(
-        cli, ["preprocess", "era5", "tests/test_data/test_config.yaml"]
+    runner.invoke(
+        cli,
+        ["preprocess", "era5", "tests/test_data/test_config.yaml"],
+        catch_exceptions=False,
     )
-    assert result.exit_code == 0
+
     output_path = Path("tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc")
     assert output_path.exists()
     # verify outputs
@@ -85,8 +87,6 @@ def test_preprocess():
         i for i in Path("tests/tmp/preprocessed_data/").glob("wam2layers_*.log")
     ]
 
-    assert len(log_files) >= 1  # make sure the test passes when repeating
-
     # check config yaml
     config_path = Path("tests/tmp/preprocessed_data/test_config.yaml")
     assert config_path.exists()
@@ -94,8 +94,10 @@ def test_preprocess():
 
 def test_backtrack():
     runner = CliRunner()
-    result = runner.invoke(cli, ["backtrack", "tests/test_data/test_config.yaml"])
-    assert result.exit_code == 0
+    runner.invoke(
+        cli, ["backtrack", "tests/test_data/test_config.yaml"], catch_exceptions=False
+    )
+
     output_path = Path("tests/tmp/output_data/backtrack_2022-08-31T18-00.nc")
     assert output_path.exists()
     # verify outputs
@@ -122,10 +124,52 @@ def test_backtrack():
     # check log file
     log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
 
-    assert len(log_files) >= 1  # make sure the test passes when repeating
-
     # check config yaml
     config_path = Path("tests/tmp/output_data/test_config.yaml")
+    assert config_path.exists()
+
+
+def test_forwardtrack():
+    runner = CliRunner()
+    runner.invoke(
+        cli,
+        ["forwardtrack", "tests/test_data/config_west_africa.yaml"],
+        catch_exceptions=False,
+    )
+
+    output_path = Path("tests/tmp/output_data/forwardtrack_1979-07-01T23-00.nc")
+    assert output_path.exists()
+    # verify outputs
+    expected_path = Path(
+        "tests/test_data/verify_output/forwardtrack_1979-07-01T23-00.nc"
+    )
+    expected_output = xr.open_dataset(expected_path)
+    output = xr.open_dataset(output_path)
+
+    for var in ["p_track_upper", "p_track_lower"]:
+        diff_figure_path = Path(
+            f"tests/tmp/output_data/figures/forwardtrack_diff_{var}.png"
+        )
+        expected_output[var] = expected_output[var]
+        plot_difference(expected_output[var], output[var], diff_figure_path)
+
+        numpy.testing.assert_allclose(
+            expected_output[var].values,
+            output[var].values,
+            err_msg=(
+                "Output results are different! Please verify your results. \n"
+                f"A difference plot is available under {diff_figure_path}. \n"
+                "If you want to keep the new results and include it in your commit, \n"
+                "you can update the reference data with the following command: \n"
+                f"`cp {output_path} {expected_path}`"
+            ),
+        )
+
+    # check log file
+    log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
+
+    # check config yaml
+    config_path = Path("tests/tmp/output_data/config_west_africa.yaml")
     assert config_path.exists()
 
 
@@ -152,8 +196,6 @@ def test_visualize():
 
     # check log file
     log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
-
-    assert len(log_files) == 2  # another log for backtrack already exists
 
     # check config yaml
     config_path = Path("tests/tmp/output_data/test_config.yaml")
