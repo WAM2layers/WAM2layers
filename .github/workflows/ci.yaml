@@ -41,3 +41,9 @@ jobs:
       - name: Run pytest
         run: pytest
         shell: micromamba-shell {0}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diff-plots_py${{ matrix.python-version }}-${{ matrix.os }}
+          path: tests/tmp/output_data/figures/*.png
+          if-no-files-found: error
+          retention-days: 14
