@@ -1,14 +1,17 @@
 """Tests for entire workflows."""
+
 from pathlib import Path
 
 import matplotlib.colors
 import matplotlib.testing.compare
 import numpy
+import pytest
 import xarray as xr
 from click.testing import CliRunner
 from matplotlib import pyplot as plt
 
 from wam2layers.cli import cli
+from wam2layers.config import Config
 
 try:  # Use cartopy if it's available
     import cartopy.feature as cfeature
@@ -16,6 +19,97 @@ try:  # Use cartopy if it's available
 except ImportError:
     crs = None
     cfeature = None
+
+
+CFG_FILE_BACKWARD = Path("tests/test_data/test_config.yaml")
+CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
+
+
+## First we define fixtures to help us write the tests more concisely
+# Temporary directories that are consistent between tests:
+@pytest.fixture(scope="session")
+def temp_directory(tmp_path_factory) -> Path:
+    return tmp_path_factory.mktemp("data")
+
+
+@pytest.fixture(scope="session")
+def output_dir(temp_directory: Path) -> Path:
+    output_dir = temp_directory / "output"
+    output_dir.mkdir()
+    return output_dir
+
+
+@pytest.fixture(scope="session")
+def preprocessed_dir(temp_directory: Path) -> Path:
+    return temp_directory / "preprocessed"
+
+
+@pytest.fixture(scope="session")
+def figures_directory(output_dir: Path) -> Path:
+    fig_dir = output_dir / "figures"
+    fig_dir.mkdir()
+    return fig_dir
+
+
+@pytest.fixture(scope="session")
+def test_config_backward(
+    temp_directory: Path, preprocessed_dir: Path, output_dir: Path
+) -> str:
+    """Return the path to the config for the preprocess, forward, and visualize tests.
+
+    The processed and output data folders of this config are modified to use temporary
+    directories.
+    """
+    cfg = Config.from_yaml(CFG_FILE_BACKWARD)
+    cfg.preprocessed_data_folder = preprocessed_dir
+    cfg.output_folder = output_dir
+    tmp_config = temp_directory / "test_config.yaml"
+    cfg.to_file(tmp_config)
+    return str(tmp_config)
+
+
+@pytest.fixture(scope="session")
+def test_config_forward(
+    temp_directory: Path, preprocessed_dir: Path, output_dir: Path
+) -> str:
+    """Return the path to the config for the forward tracking test(s).
+
+    The output data folder of this config is modified to use a temporary directory.
+    """
+    cfg = Config.from_yaml(CFG_FILE_FORWARD)
+    cfg.output_folder = output_dir
+    tmp_config = temp_directory / "config_west_africa.yaml"
+    cfg.to_file(tmp_config)
+    return str(tmp_config)
+
+
+# CLI runs. Session scope means that these fixtures will only run a single time
+@pytest.fixture(scope="session")
+def preprocess(test_config_backward: str) -> None:
+    runner = CliRunner()
+    runner.invoke(
+        cli, ["preprocess", "era5", test_config_backward], catch_exceptions=False
+    )
+
+
+@pytest.fixture(scope="session")
+def backtrack(test_config_backward: str, preprocess) -> None:
+    runner = CliRunner()
+    runner.invoke(cli, ["backtrack", test_config_backward], catch_exceptions=False)
+
+
+@pytest.fixture(scope="session")
+def visualize(test_config_backward: str, backtrack) -> None:
+    runner = CliRunner()
+    runner.invoke(
+        cli, ["visualize", "output", test_config_backward], catch_exceptions=False
+    )
+
+
+@pytest.fixture(scope="session")
+def forwardtrack(test_config_forward: str) -> None:
+    runner = CliRunner()
+    runner.invoke(cli, ["forwardtrack", test_config_forward], catch_exceptions=False)
 
 
 def plot_difference(
@@ -48,23 +142,16 @@ def plot_difference(
     fig.savefig(fpath, dpi=200)
 
 
-def test_preprocess():
-    runner = CliRunner()
-    runner.invoke(
-        cli,
-        ["preprocess", "era5", "tests/test_data/test_config.yaml"],
-        catch_exceptions=False,
-    )
-
-    output_path = Path("tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc")
+# Tests start now
+def test_preprocess(preprocess, preprocessed_dir: Path, figures_directory: Path):
+    output_path = preprocessed_dir / "2022-08-31_fluxes_storages.nc"
     assert output_path.exists()
     # verify outputs
-    expected_output = xr.open_dataset(
-        "tests/test_data/verify_output/2022-08-31_fluxes_storages.nc"
-    )
+    expected_path = Path("tests/test_data/verify_output/2022-08-31_fluxes_storages.nc")
+    expected_output = xr.open_dataset(expected_path)
     output = xr.open_dataset(output_path)
 
-    diff_figure_path = Path("tests/tmp/output_data/figures/preprocess_precip_diff.png")
+    diff_figure_path = figures_directory / "preprocess_precip_diff.png"
     plot_difference(
         expected_output["precip"].sum("time"),
         output["precip"].sum("time"),
@@ -79,34 +166,28 @@ def test_preprocess():
             f"A difference plot is available under {diff_figure_path}. \n"
             "If you want to keep the new results and include it in your commit, \n"
             "you can update the reference data with the following command: \n"
-            "`cp tests/tmp/preprocessed_data/2022-08-31_fluxes_storages.nc tests/test_data/verify_output/2022-08-31_fluxes_storages.nc`"
+            f"`cp {output_path} {expected_path}`"
         ),
     )
     # check log file
-    log_files = [
-        i for i in Path("tests/tmp/preprocessed_data/").glob("wam2layers_*.log")
-    ]
+    log_files = [i for i in preprocessed_dir.glob("wam2layers_*.log")]
+    assert len(log_files) >= 1
 
     # check config yaml
-    config_path = Path("tests/tmp/preprocessed_data/test_config.yaml")
+    config_path = preprocessed_dir / "test_config.yaml"
     assert config_path.exists()
 
 
-def test_backtrack():
-    runner = CliRunner()
-    runner.invoke(
-        cli, ["backtrack", "tests/test_data/test_config.yaml"], catch_exceptions=False
-    )
-
-    output_path = Path("tests/tmp/output_data/backtrack_2022-08-31T18-00.nc")
+def test_backtrack(backtrack, output_dir: Path, figures_directory: Path):
+    output_path = output_dir / "backtrack_2022-08-31T18-00.nc"
     assert output_path.exists()
+
     # verify outputs
-    expected_output = xr.open_dataset(
-        "tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc"
-    )
+    expected_path = Path("tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc")
+    expected_output = xr.open_dataset(expected_path)
     output = xr.open_dataset(output_path)
 
-    diff_figure_path = Path("tests/tmp/output_data/figures/backtrack_diff.png")
+    diff_figure_path = figures_directory / "backtrack_diff.png"
     plot_difference(expected_output["e_track"], output["e_track"], diff_figure_path)
 
     numpy.testing.assert_allclose(
@@ -117,27 +198,21 @@ def test_backtrack():
             f"A difference plot is available under {diff_figure_path}. \n"
             "If you want to keep the new results and include it in your commit, \n"
             "you can update the reference data with the following command: \n"
-            "`cp tests/tmp/output_data/backtrack_2022-08-31T18-00.nc tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc`"
+            f"`cp {output_path} {expected_path}`"
         ),
     )
 
     # check log file
-    log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
+    log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+    len(log_files) >= 1
 
     # check config yaml
-    config_path = Path("tests/tmp/output_data/test_config.yaml")
+    config_path = output_dir / "test_config.yaml"
     assert config_path.exists()
 
 
-def test_forwardtrack():
-    runner = CliRunner()
-    runner.invoke(
-        cli,
-        ["forwardtrack", "tests/test_data/config_west_africa.yaml"],
-        catch_exceptions=False,
-    )
-
-    output_path = Path("tests/tmp/output_data/forwardtrack_1979-07-01T23-00.nc")
+def test_forwardtrack(forwardtrack, output_dir: Path, figures_directory: Path):
+    output_path = output_dir / "forwardtrack_1979-07-01T23-00.nc"
     assert output_path.exists()
     # verify outputs
     expected_path = Path(
@@ -147,9 +222,7 @@ def test_forwardtrack():
     output = xr.open_dataset(output_path)
 
     for var in ["p_track_upper", "p_track_lower"]:
-        diff_figure_path = Path(
-            f"tests/tmp/output_data/figures/forwardtrack_diff_{var}.png"
-        )
+        diff_figure_path = figures_directory / f"forwardtrack_diff_{var}.png"
         expected_output[var] = expected_output[var]
         plot_difference(expected_output[var], output[var], diff_figure_path)
 
@@ -166,20 +239,16 @@ def test_forwardtrack():
         )
 
     # check log file
-    log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
+    log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+    assert len(log_files) >= 1
 
     # check config yaml
-    config_path = Path("tests/tmp/output_data/config_west_africa.yaml")
+    config_path = output_dir / "config_west_africa.yaml"
     assert config_path.exists()
 
 
-def test_visualize():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["visualize", "output", "tests/test_data/test_config.yaml"]
-    )
-    assert result.exit_code == 0
-    output_path = Path("tests/tmp/output_data/figures/cumulative_sources.png")
+def test_visualize(visualize, output_dir: Path, figures_directory: Path):
+    output_path = figures_directory / "cumulative_sources.png"
     assert output_path.exists()
     expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
     stdout = matplotlib.testing.compare.compare_images(
@@ -191,12 +260,13 @@ def test_visualize():
             " `cumulative_sources-failed-diff.png` figure and verify your results. \n"
             "If you want to keep the new results and include it in your commit, \n"
             "you can update the reference figure with the following command: \n"
-            "`cp tests/tmp/output_data/figures/cumulative_sources.png tests/test_data/verify_output/cumulative_sources.png`"
+            f"`cp {output_path} {expected_output}`"
         )
 
     # check log file
-    log_files = [i for i in Path("tests/tmp/output_data/").glob("wam2layers_*.log")]
+    log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+    assert len(log_files) >= 2
 
     # check config yaml
-    config_path = Path("tests/tmp/output_data/test_config.yaml")
+    config_path = output_dir / "test_config.yaml"
     assert config_path.exists()
