@@ -39,13 +39,13 @@ jobs:
           wam2layers --help
         shell: bash -el {0}
       - name: Run pytest
-        run: pytest
+        run: pytest --basetemp=tmp/
         shell: micromamba-shell {0}
       - name: Upload test figures
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: diff-plots_py${{ matrix.python-version }}-${{ matrix.os }}
-          path: tests/tmp/output_data/figures/*.png
+          path: tmp/data*/output/figures/*.png
           if-no-files-found: error
           retention-days: 14
