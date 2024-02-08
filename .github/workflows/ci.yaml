@@ -46,6 +46,6 @@ jobs:
         if: always()
         with:
           name: diff-plots_py${{ matrix.python-version }}-${{ matrix.os }}
-          path: tmp/data*/output/figures/*.png
+          path: tmp/data[0-9]/output/figures/*.png
           if-no-files-found: error
           retention-days: 14
