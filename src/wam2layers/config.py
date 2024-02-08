@@ -390,7 +390,7 @@ class Config(BaseModel):
 
         return self
 
-    def to_file(self, fname: str | Path) -> None:
+    def to_file(self, fname: Union[str, Path]) -> None:
         """Export the configuration to a file.
 
         Note that any comments and formatting from an original yaml file is lost.
