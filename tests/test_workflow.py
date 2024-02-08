@@ -142,131 +142,150 @@ def plot_difference(
     fig.savefig(fpath, dpi=200)
 
 
+def different_output_message(fig_path, output_path, expected_path):
+    return (
+        "Output results are different! Please verify your results. \n"
+        f"A difference plot is available under {fig_path}. \n"
+        "If you want to keep the new results and include it in your commit, \n"
+        "you can update the reference data with the following command: \n"
+        f"`cp {output_path} {expected_path}`"
+    )
+
+
 # Tests start now
-def test_preprocess(preprocess, preprocessed_dir: Path, figures_directory: Path):
-    output_path = preprocessed_dir / "2022-08-31_fluxes_storages.nc"
-    assert output_path.exists()
-    # verify outputs
-    expected_path = Path("tests/test_data/verify_output/2022-08-31_fluxes_storages.nc")
-    expected_output = xr.open_dataset(expected_path)
-    output = xr.open_dataset(output_path)
+class TestPreprocess:
+    @pytest.fixture(autouse=True)
+    def run_preprocess(self, preprocess):
+        pass
 
-    diff_figure_path = figures_directory / "preprocess_precip_diff.png"
-    plot_difference(
-        expected_output["precip"].sum("time"),
-        output["precip"].sum("time"),
-        diff_figure_path,
-    )
+    def test_preprocess(self, preprocessed_dir: Path, figures_directory: Path):
+        output_path = preprocessed_dir / "2022-08-31_fluxes_storages.nc"
+        assert output_path.exists()
+        # verify outputs
+        expected_path = Path(
+            "tests/test_data/verify_output/2022-08-31_fluxes_storages.nc"
+        )
+        expected_output = xr.open_dataset(expected_path)
+        output = xr.open_dataset(output_path)
 
-    numpy.testing.assert_allclose(
-        expected_output["precip"].values,
-        output["precip"].values,
-        err_msg=(
-            "Output results are different! Please verify your results. \n"
-            f"A difference plot is available under {diff_figure_path}. \n"
-            "If you want to keep the new results and include it in your commit, \n"
-            "you can update the reference data with the following command: \n"
-            f"`cp {output_path} {expected_path}`"
-        ),
-    )
-    # check log file
-    log_files = [i for i in preprocessed_dir.glob("wam2layers_*.log")]
-    assert len(log_files) >= 1
-
-    # check config yaml
-    config_path = preprocessed_dir / "test_config.yaml"
-    assert config_path.exists()
-
-
-def test_backtrack(backtrack, output_dir: Path, figures_directory: Path):
-    output_path = output_dir / "backtrack_2022-08-31T18-00.nc"
-    assert output_path.exists()
-
-    # verify outputs
-    expected_path = Path("tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc")
-    expected_output = xr.open_dataset(expected_path)
-    output = xr.open_dataset(output_path)
-
-    diff_figure_path = figures_directory / "backtrack_diff.png"
-    plot_difference(expected_output["e_track"], output["e_track"], diff_figure_path)
-
-    numpy.testing.assert_allclose(
-        expected_output["e_track"].values,
-        output["e_track"].values,
-        err_msg=(
-            "Output results are different! Please verify your results. \n"
-            f"A difference plot is available under {diff_figure_path}. \n"
-            "If you want to keep the new results and include it in your commit, \n"
-            "you can update the reference data with the following command: \n"
-            f"`cp {output_path} {expected_path}`"
-        ),
-    )
-
-    # check log file
-    log_files = [i for i in output_dir.glob("wam2layers_*.log")]
-    len(log_files) >= 1
-
-    # check config yaml
-    config_path = output_dir / "test_config.yaml"
-    assert config_path.exists()
-
-
-def test_forwardtrack(forwardtrack, output_dir: Path, figures_directory: Path):
-    output_path = output_dir / "forwardtrack_1979-07-01T23-00.nc"
-    assert output_path.exists()
-    # verify outputs
-    expected_path = Path(
-        "tests/test_data/verify_output/forwardtrack_1979-07-01T23-00.nc"
-    )
-    expected_output = xr.open_dataset(expected_path)
-    output = xr.open_dataset(output_path)
-
-    for var in ["p_track_upper", "p_track_lower"]:
-        diff_figure_path = figures_directory / f"forwardtrack_diff_{var}.png"
-        expected_output[var] = expected_output[var]
-        plot_difference(expected_output[var], output[var], diff_figure_path)
+        diff_figure = figures_directory / "preprocess_precip_diff.png"
+        plot_difference(
+            expected_output["precip"].sum("time"),
+            output["precip"].sum("time"),
+            diff_figure,
+        )
 
         numpy.testing.assert_allclose(
-            expected_output[var].values,
-            output[var].values,
-            err_msg=(
-                "Output results are different! Please verify your results. \n"
-                f"A difference plot is available under {diff_figure_path}. \n"
+            expected_output["precip"].values,
+            output["precip"].values,
+            err_msg=different_output_message(diff_figure, output_path, expected_path),
+        )
+
+    def test_log_file(self, preprocessed_dir):
+        log_files = [i for i in preprocessed_dir.glob("wam2layers_*.log")]
+        assert len(log_files) >= 1
+
+    def test_config(self, preprocessed_dir):
+        config_path = preprocessed_dir / "test_config.yaml"
+        assert config_path.exists()
+
+
+class TestBacktrack:
+    @pytest.fixture(autouse=True)
+    def run_backtrack(self, backtrack):
+        pass
+
+    def test_backtrack(self, output_dir: Path, figures_directory: Path):
+        output_path = output_dir / "backtrack_2022-08-31T18-00.nc"
+        assert output_path.exists()
+
+        # verify outputs
+        expected_path = Path(
+            "tests/test_data/verify_output/backtrack_2022-08-31T18-00.nc"
+        )
+        expected_output = xr.open_dataset(expected_path)
+        output = xr.open_dataset(output_path)
+
+        diff_figure = figures_directory / "backtrack_diff.png"
+        plot_difference(expected_output["e_track"], output["e_track"], diff_figure)
+
+        numpy.testing.assert_allclose(
+            expected_output["e_track"].values,
+            output["e_track"].values,
+            err_msg=different_output_message(diff_figure, output_path, expected_path),
+        )
+
+    def test_log_file(self, output_dir):
+        log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+        len(log_files) >= 1
+
+    def test_config(self, output_dir):
+        config_path = output_dir / "test_config.yaml"
+        assert config_path.exists()
+
+
+class TestForwardtrack:
+    @pytest.fixture(autouse=True)
+    def run_forwardtrack(self, forwardtrack):
+        pass
+
+    def test_forwardtrack(self, output_dir: Path, figures_directory: Path):
+        output_path = output_dir / "forwardtrack_1979-07-01T23-00.nc"
+        assert output_path.exists()
+        # verify outputs
+        expected_path = Path(
+            "tests/test_data/verify_output/forwardtrack_1979-07-01T23-00.nc"
+        )
+        expected_output = xr.open_dataset(expected_path)
+        output = xr.open_dataset(output_path)
+
+        for var in ["p_track_upper", "p_track_lower"]:
+            diff_figure = figures_directory / f"forwardtrack_diff_{var}.png"
+            expected_output[var] = expected_output[var]
+            plot_difference(expected_output[var], output[var], diff_figure)
+
+            numpy.testing.assert_allclose(
+                expected_output[var].values,
+                output[var].values,
+                err_msg=different_output_message(
+                    diff_figure, output_path, expected_path
+                ),
+            )
+
+    def test_log_file(self, output_dir):
+        log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+        assert len(log_files) >= 1
+
+    def test_config(self, output_dir):
+        config_path = output_dir / "config_west_africa.yaml"
+        assert config_path.exists()
+
+
+class TestVisualize:
+    @pytest.fixture(autouse=True)
+    def run_visualize(self, visualize):
+        pass
+
+    def test_visualize(self, output_dir: Path, figures_directory: Path):
+        output_path = figures_directory / "cumulative_sources.png"
+        assert output_path.exists()
+        expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
+        stdout = matplotlib.testing.compare.compare_images(
+            expected_output, output_path, tol=5
+        )
+        if stdout:
+            raise ValueError(
+                "Output figures are different! Please check the difference in the produced \n"
+                " `cumulative_sources-failed-diff.png` figure and verify your results. \n"
                 "If you want to keep the new results and include it in your commit, \n"
-                "you can update the reference data with the following command: \n"
-                f"`cp {output_path} {expected_path}`"
-            ),
-        )
+                "you can update the reference figure with the following command: \n"
+                f"`cp {output_path} {expected_output}`"
+            )
 
-    # check log file
-    log_files = [i for i in output_dir.glob("wam2layers_*.log")]
-    assert len(log_files) >= 1
+    def test_log_file(self, output_dir):
+        log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+        assert len(log_files) >= 2
 
-    # check config yaml
-    config_path = output_dir / "config_west_africa.yaml"
-    assert config_path.exists()
-
-
-def test_visualize(visualize, output_dir: Path, figures_directory: Path):
-    output_path = figures_directory / "cumulative_sources.png"
-    assert output_path.exists()
-    expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
-    stdout = matplotlib.testing.compare.compare_images(
-        expected_output, output_path, tol=5
-    )
-    if stdout:
-        raise ValueError(
-            "Output figures are different! Please check the difference in the produced \n"
-            " `cumulative_sources-failed-diff.png` figure and verify your results. \n"
-            "If you want to keep the new results and include it in your commit, \n"
-            "you can update the reference figure with the following command: \n"
-            f"`cp {output_path} {expected_output}`"
-        )
-
-    # check log file
-    log_files = [i for i in output_dir.glob("wam2layers_*.log")]
-    assert len(log_files) >= 2
-
-    # check config yaml
-    config_path = output_dir / "test_config.yaml"
-    assert config_path.exists()
+    def test_config(self, output_dir):
+        config_path = output_dir / "test_config.yaml"
+        assert config_path.exists()
