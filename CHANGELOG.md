@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Add difference plots to the regression tests (`test_workflow.py`). The plots are uploaded as "artifacts" on Github Actions for easy inspection ([#319](https://github.com/WAM2layers/WAM2layers/pull/319)).
+- Added an export to file method for the configuration object (`wam2layers.config.Config`) to allow for easier testing of the command line interface.
 
 ### Removed
 
