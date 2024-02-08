@@ -389,3 +389,12 @@ class Config(BaseModel):
             )
 
         return self
+
+    def to_file(self, fname: str | Path) -> None:
+        """Export the configuration to a file.
+
+        Note that any comments and formatting from an original yaml file is lost.
+        """
+        fpath = Path(fname)
+        with fpath.open("w") as f:
+            yaml.dump(self.model_dump(mode="json"), f)
