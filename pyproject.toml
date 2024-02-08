@@ -70,3 +70,6 @@ wam2layers = "wam2layers.cli:cli"
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+python_version = "3.8"
