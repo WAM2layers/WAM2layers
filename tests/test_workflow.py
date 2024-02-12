@@ -21,7 +21,7 @@ except ImportError:
     cfeature = None
 
 
-CFG_FILE_BACKWARD = Path("tests/test_data/test_config.yaml")
+CFG_FILE_BACKWARD = Path("tests/test_data/config_rhine.yaml")
 CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
 
 
@@ -63,7 +63,7 @@ def test_config_backward(
     cfg = Config.from_yaml(CFG_FILE_BACKWARD)
     cfg.preprocessed_data_folder = preprocessed_dir
     cfg.output_folder = output_dir
-    tmp_config = temp_directory / "test_config.yaml"
+    tmp_config = temp_directory / "config_rhine.yaml"
     cfg.to_file(tmp_config)
     return str(tmp_config)
 
@@ -186,7 +186,7 @@ class TestPreprocess:
         assert len(log_files) >= 1
 
     def test_config(self, preprocessed_dir):
-        config_path = preprocessed_dir / "test_config.yaml"
+        config_path = preprocessed_dir / "config_rhine.yaml"
         assert config_path.exists()
 
 
@@ -220,7 +220,7 @@ class TestBacktrack:
         len(log_files) >= 1
 
     def test_config(self, output_dir):
-        config_path = output_dir / "test_config.yaml"
+        config_path = output_dir / "config_rhine.yaml"
         assert config_path.exists()
 
 
@@ -287,5 +287,5 @@ class TestVisualize:
         assert len(log_files) >= 2
 
     def test_config(self, output_dir):
-        config_path = output_dir / "test_config.yaml"
+        config_path = output_dir / "config_rhine.yaml"
         assert config_path.exists()

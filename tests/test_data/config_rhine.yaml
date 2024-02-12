@@ -16,7 +16,7 @@ tracking_start_date: "2022-08-31T00:00"
 tracking_end_date: "2022-08-31T23:00"
 
 # Tagging
-tagging_region: tests/test_data/test_region.nc
+tagging_region: tests/test_data/region_rhine.nc
 # tagging_region: [0, 50, 10, 55]  # alternative to mask file
 tagging_start_date: "2022-08-31T12:00"
 tagging_end_date: "2022-08-31T23:00"
