@@ -6,7 +6,7 @@ import pytest
 from wam2layers.config import BoundingBox, Config
 
 EXAMPLE_CONFIG = "example_config.yaml"
-TEST_CONFIG = "tests/test_data/test_config.yaml"
+TEST_CONFIG = "tests/test_data/config_rhine.yaml"
 
 
 def test_load_example_config():
@@ -62,7 +62,7 @@ class TestValidateRegion:
         """Check path is expanded."""
         config = Config.from_yaml(TEST_CONFIG)
         assert config.tagging_region.is_absolute()
-        config.tagging_region = "tests/test_data/test_region.nc"
+        config.tagging_region = "tests/test_data/region_rhine.nc"
         assert config.tagging_region.is_absolute()
 
     def test_invalid_path(self):
