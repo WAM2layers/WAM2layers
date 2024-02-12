@@ -55,7 +55,7 @@ def figures_directory(output_dir: Path) -> Path:
 def test_config_backward(
     temp_directory: Path, preprocessed_dir: Path, output_dir: Path
 ) -> str:
-    """Return the path to the config for the preprocess, forward, and visualize tests.
+    """Return the path to the config for the preprocess, backward, and visualize tests.
 
     The processed and output data folders of this config are modified to use temporary
     directories.
@@ -163,7 +163,7 @@ class TestPreprocess:
         assert output_path.exists()
         # verify outputs
         expected_path = Path(
-            "tests/test_data/verify_output/2022-08-31_fluxes_storages.nc"
+            "tests/test_data/verify_output/preprocessed_data/2022-08-31_fluxes_storages.nc"
         )
         expected_output = xr.open_dataset(expected_path)
         output = xr.open_dataset(output_path)
