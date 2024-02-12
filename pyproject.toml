@@ -56,6 +56,7 @@ develop = [
     "flake8",
     "build",
     "twine",
+    "mypy",
 ]
 
 [project.urls]
@@ -72,4 +73,4 @@ wam2layers = "wam2layers.cli:cli"
 profile = "black"
 
 [tool.mypy]
-python_version = "3.8"
+ignore_missing_imports = true

@@ -452,3 +452,33 @@ pytest tests/
 ```
 
 For more information, please have a look at the documentation of pytest.
+
+## Typing
+
+Since Python 3.5 type hints can be added to Python code.
+These denote what the types of objects and function arguments should be.
+A simple example:
+
+```py
+def add(a: int, b: int) -> float:
+   return float(a+b)
+```
+The `add` function requires two arguments of the integer type, and will return a 
+floating point number.
+Adding types to code can help in detecting issues early, document what the function 
+inputs should be, as well as make it easier for a developer's IDE to give useful 
+suggestions.
+More info on typing can be found [here](https://docs.python.org/3/library/typing.html).
+
+To check if types are defined correctly, we use ["mypy"](https://mypy-lang.org/).
+Mypy will go through all the source files, as well as imported packages, and check for
+errors.
+To run mypy do:
+
+```sh
+mypy src/ --install-types --ignore-missing-imports
+```
+
+`install-types` only needs to be run the first time, afterwards this is not needed.
+
+If you are unsure about adding types, it is not required so you can leave them out.
