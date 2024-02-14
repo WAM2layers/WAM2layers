@@ -1,12 +1,11 @@
 import logging
 import time
-from datetime import datetime
 
-import numpy as np
+import pandas as pd
 import psutil
 import xarray as xr
 
-from wam2layers.tracking.io import load_tagging_region
+from wam2layers.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +96,14 @@ class ProgressTracker:
             f"Time since start: {time}s, RAM: {memory:.2f} MB"
         )
 
-    def track_stability_correction(self, fy_corrected, fy_abs, config, coords, t):
+    def track_stability_correction(
+        self,
+        fy_corrected: xr.DataArray,
+        fy_abs: xr.DataArray,
+        config: Config,
+        coords: xr.Coordinates,
+        t: pd.Timestamp,
+    ) -> None:
         """Issue warning if correction exceeds criterion.
 
         Warning advises to reduce the timestep.
@@ -109,7 +115,7 @@ class ProgressTracker:
         """
         corrected = fy_corrected < fy_abs
         corrected_percent = corrected.sum() / corrected.count() * 100
-        correction = np.where(corrected, fy_abs - fy_corrected, 0)
+        correction = xr.where(corrected, fy_abs - fy_corrected, 0)
         correction_max = correction.max()
 
         # Reversed conditions lead to cleaner code
@@ -129,12 +135,12 @@ class ProgressTracker:
         timestamp = t.strftime("%Y%m%d-%H%M%S")
         filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        ncfile = xr.DataArray(correction, coords=coords, name="correction")
-        ncfile.to_netcdf(filename)
+        correction.name = "correction"
+        correction.to_netcdf(filename)
 
         logger.warn(
             f"Stability correction applied to {corrected_percent:.1f}% of "
             f"grid. Average correction was {correction.mean():.1f}, "
-            f"maximum correction was {correction.max()}. The total "
+            f"maximum correction was {correction.max():.1f}. The total "
             f"correction field is written to {filename}."
         )
