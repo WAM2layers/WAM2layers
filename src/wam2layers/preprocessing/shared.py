@@ -375,7 +375,7 @@ def convergence(fx, fy):
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
-def calculate_fz(F, S0, S1, kvf=0):
+def calculate_fz(F, S0, S1, kvf):
     """Calculate the vertical fluxes.
 
     The vertical flux is calculated as a closure term. Residuals are distributed
@@ -387,6 +387,8 @@ def calculate_fz(F, S0, S1, kvf=0):
         F: xarray dataset with fluxes evaluated at temporal midpoints between states
         S0: xarray dataset with states at current time t
         S1: xarray dataset with states at updated time t+1 (always forward looking)
+        kvf: net to gross vertical flux multiplication parameter. With the a value of 0,
+            the net and gross fluxes are equal.
 
     Returns:
         fz: vertical flux, positive downward
