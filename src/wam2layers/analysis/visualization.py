@@ -132,7 +132,7 @@ def _plot_output(config, ax):
         cmap=cm.rain,
         cbar_kwargs=dict(fraction=0.05, shrink=0.5),
     )
-    out_track.plot.contour(ax=ax, levels=[0.1, 1], colors=["lightgrey", "grey"])
+
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
     # Add source region outline
