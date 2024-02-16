@@ -101,7 +101,6 @@ class ProgressTracker:
         fy_corrected: xr.DataArray,
         fy_abs: xr.DataArray,
         config: Config,
-        coords: xr.Coordinates,
         t: pd.Timestamp,
     ) -> None:
         """Issue warning if correction exceeds criterion.
@@ -140,7 +139,7 @@ class ProgressTracker:
 
         logger.warn(
             f"Stability correction applied to {corrected_percent:.1f}% of "
-            f"grid. Average correction was {correction.mean():.1f}, "
-            f"maximum correction was {correction.max():.1f}. The total "
+            f"grid. Average correction was {correction.mean():.2E}, "
+            f"maximum correction was {correction.max():.2E}. The total "
             f"correction field is written to {filename}."
         )

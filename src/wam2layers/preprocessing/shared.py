@@ -359,7 +359,7 @@ def stabilize_fluxes(F, S, progress_tracker, config, t):
         fy_limit = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_limit)
 
-        progress_tracker.track_stability_correction(fy_limit, fy_abs, config, coords, t)
+        progress_tracker.track_stability_correction(fy_limit, fy_abs, config, t)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
