@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -35,7 +36,17 @@ def polish(ax, region):
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
-def _plot_input(config, ax):
+def infer_mode(output_folder: Path) -> Literal["forward", "backward"]:
+    output_file = next(output_folder.glob("*.nc"))
+    if "forward" in str(output_file):
+        return "forward"
+    if "backward" in str(output_file):
+        return "backward"
+    else:
+        raise FileNotFoundError(f"No output files found in {output_folder}")
+
+
+def _plot_input(config: Config, ax):
     """
     Return subplot with input.
     backtrack = precipitation
@@ -54,28 +65,15 @@ def _plot_input(config, ax):
         inclusive="left",
     )
 
-    # TODO: find easier way to infer whether we have forward or backward tracking
-    try:  # if backtrack data exists
-        output_files = []
-        for date in dates[0:-1]:
-            output_files.append(output_path(date, config, mode="backtrack"))
-            input_files.append(input_path(date, config))
-        d_unused = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
-        ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
+    mode = infer_mode(config.output_folder)
+    input_files = []
+    for date in dates[:-1]:
+        input_files.append(input_path(date, config))
+    ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
+    if mode == "backward":
         subset = ds.precip.sel(time=slice(start, end))
-    except:  # check if forward data exists instead
-        output_files = []
-        input_files = []
-        for date in dates[1:]:
-            output_files.append(output_path(date, config, mode="forwardtrack"))
-            input_files.append(input_path(date, config))
-        d_unused = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
-        ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
-        subset = ds.evap.sel(time=slice(start, end))
     else:
-        logger.info(
-            "no output files found (so tagging input would also be meaningless)"
-        )
+        subset = ds.evap.sel(time=slice(start, end))
 
     # TODO: check if backtrack files or forwardtrack files were in output
     input = (subset * region * 3600).sum("time").compute()
@@ -109,22 +107,18 @@ def _plot_output(config, ax):
     forwardtrack_files = [
         output_path(date, config, mode="forwardtrack") for date in dates[1:]
     ]
-    try:
+    if len(backtrack_files) > 0:
         ds = xr.open_mfdataset(backtrack_files, combine="nested", concat_dim="time")
-        mode = "backtrack"
         out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
-    except:  # TODO, make error specific FileNoteFoundError?
+    else:
         ds = xr.open_mfdataset(forwardtrack_files, combine="nested", concat_dim="time")
-        mode = "forwardtrack"
         out_track = (
             (ds.p_track_lower.sum("time") + ds.p_track_upper.sum("time"))
             * 1000
             / a_gridcell[:, None]
         )
-    else:
-        logger.info("no output files found")
 
-        # Make figure
+    # Make figure
     out_track.plot(
         ax=ax,
         vmin=0,
