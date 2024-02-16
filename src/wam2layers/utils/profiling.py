@@ -37,8 +37,8 @@ class ProgressTracker:
         self.gained_water = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
-        self.stability_correction_previous_grid = 0
-        self.stability_correction_previous_value = 0
+        self.stability_correction_previous_grid = 5/1.1
+        self.stability_correction_previous_value = 1
 
     def store_intermediate_states(self, output):
         """Update moisture totals based on output since previous time step.
@@ -112,34 +112,34 @@ class ProgressTracker:
         2. Previous correction is exceeded by either 5%-point of grid
         3. Previous correction is doubled in magnitude
         """
-        corrected = fy_corrected < fy_abs
-        corrected_percent = corrected.sum() / corrected.count() * 100
-        correction = xr.where(corrected, fy_abs - fy_corrected, 0)
-        correction_max = correction.max()
+        corrected_area = fy_corrected < fy_abs
+        corrected_percent = corrected_area.sum() / corrected_area.count() * 100
+        correction_fraction = fy_corrected / fy_abs
+        strongest_correction = correction_fraction.min()
 
-        # Reversed conditions lead to cleaner code
-        if correction_max < (2 * self.stability_correction_previous_value):
-            return
-        if (corrected_percent - 5) < self.stability_correction_previous_value:
-            return
+        if (
+            strongest_correction < 0.9 * self.stability_correction_previous_value or
+            corrected_percent > self.stability_correction_previous_grid * 1.1
+        ):
+            self.stability_correction_previous_grid = corrected_percent
+            self.stability_correction_previous_value = strongest_correction
 
-        self.stability_correction_previous_grid = corrected_percent
-        self.stability_correction_previous_value = correction_max
+            # Write correction field to output debug file
+            # TODO: doesn't feel like the right place to do this.
+            # a model object could improve the code structure.
+            debug_dir = config.output_folder / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            timestamp = t.strftime("%Y%m%d-%H%M%S")
+            filename = debug_dir / f"stability_correction_{timestamp}.nc"
 
-        # Write correction field to output debug file
-        # TODO: doesn't feel like the right place to do this.
-        # a model object could improve the code structure.
-        debug_dir = config.output_folder / "debug"
-        debug_dir.mkdir(exist_ok=True)
-        timestamp = t.strftime("%Y%m%d-%H%M%S")
-        filename = debug_dir / f"stability_correction_{timestamp}.nc"
+            correction_fraction.name = "correction_fraction"
+            correction_fraction.to_netcdf(filename)
 
-        correction.name = "correction"
-        correction.to_netcdf(filename)
-
-        logger.warn(
-            f"Stability correction applied to {corrected_percent:.1f}% of "
-            f"grid. Average correction was {correction.mean():.2E}, "
-            f"maximum correction was {correction.max():.2E}. The total "
-            f"correction field is written to {filename}."
-        )
+            logger.warn(
+                f"Stability correction applied to {corrected_percent:.1f}% of "
+                f"grid. Average correction factor was {correction_fraction.mean():.2f},"
+                f" the strongest correction factor was {strongest_correction:.2f} "
+                f"The correction factor field is written to {filename}."
+                "\n The next warning will only be raised when at least 10% more cells "
+                "are corrected, or the strongest correction factor is 10% stronger."
+            )
