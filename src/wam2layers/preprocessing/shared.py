@@ -342,7 +342,6 @@ def stabilize_fluxes(F, S, progress_tracker, config, t):
 
     CFL: Water cannot move further than one grid cell per timestep.
     """
-    coords = S.coords
     for level in ["upper", "lower"]:
         fx = F["fx_" + level]
         fy = F["fy_" + level]
