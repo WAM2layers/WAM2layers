@@ -326,7 +326,7 @@ class Config(BaseModel):
         periodic_boundary: true
     """
 
-    kvf: int
+    kvf: float
     """net to gross vertical flux multiplication parameter
 
     For example:

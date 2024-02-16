@@ -14,9 +14,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Fixed a bug in the profiler's `track_stability_correction` method ([#325](https://github.com/WAM2layers/WAM2layers/pull/320)).
+
 ### Changed
 - The workflow tests use a temporary directory managed by pytest and the user's operating system, to avoid the `/tmp` folder polluting the workspace ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The workflow tests now make extensive use of pytest's [fixtures](https://docs.pytest.org/en/8.0.x/explanation/fixtures.html), which will make future test writing easier ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
+- The `kvf` parameter can now be a floating point number instead of an integer ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 
 ## Release v3.0.0-beta.6 (2023-12-22)
 

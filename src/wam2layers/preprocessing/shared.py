@@ -342,7 +342,6 @@ def stabilize_fluxes(F, S, progress_tracker, config, t):
 
     CFL: Water cannot move further than one grid cell per timestep.
     """
-    coords = S.coords
     for level in ["upper", "lower"]:
         fx = F["fx_" + level]
         fy = F["fy_" + level]
@@ -359,7 +358,7 @@ def stabilize_fluxes(F, S, progress_tracker, config, t):
         fy_limit = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_limit)
 
-        progress_tracker.track_stability_correction(fy_limit, fy_abs, config, coords, t)
+        progress_tracker.track_stability_correction(fy_limit, fy_abs, config, t)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
@@ -375,7 +374,7 @@ def convergence(fx, fy):
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
-def calculate_fz(F, S0, S1, kvf=0):
+def calculate_fz(F, S0, S1, kvf):
     """Calculate the vertical fluxes.
 
     The vertical flux is calculated as a closure term. Residuals are distributed
@@ -387,6 +386,8 @@ def calculate_fz(F, S0, S1, kvf=0):
         F: xarray dataset with fluxes evaluated at temporal midpoints between states
         S0: xarray dataset with states at current time t
         S1: xarray dataset with states at updated time t+1 (always forward looking)
+        kvf: net to gross vertical flux multiplication parameter. With the a value of 0,
+            the net and gross fluxes are equal.
 
     Returns:
         fz: vertical flux, positive downward
