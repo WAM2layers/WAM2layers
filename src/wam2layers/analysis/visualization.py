@@ -54,11 +54,12 @@ def _plot_input(config, ax):
         inclusive="left",
     )
 
+    # TODO: find easier way to infer whether we have forward or backward tracking
     try:  # if backtrack data exists
         output_files = []
         for date in dates[0:-1]:
             output_files.append(output_path(date, config, mode="backtrack"))
-        input_files.append(input_path(date, config))
+            input_files.append(input_path(date, config))
         d_unused = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
         ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
         subset = ds.precip.sel(time=slice(start, end))
@@ -102,17 +103,19 @@ def _plot_output(config, ax):
         inclusive="left",
     )
 
+    backtrack_files = [
+        output_path(date, config, mode="backtrack") for date in dates[:-1]
+    ]
+    forwardtrack_files = [
+        output_path(date, config, mode="forwardtrack") for date in dates[1:]
+    ]
     try:
-        output_files = []
-        for date in dates[0:-1]:
-            output_files.append(output_path(date, config, mode="backtrack"))
-        ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
+        ds = xr.open_mfdataset(backtrackfiles, combine="nested", concat_dim="time")
+        mode = "backtrack"
         out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
-    except:
-        output_files = []
-        for date in dates[1:]:
-            output_files.append(output_path(date, config, mode="forwardtrack"))
-        ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
+    except:  # TODO, make error specific FileNoteFoundError?
+        ds = xr.open_mfdataset(forwardtrack_files, combine="nested", concat_dim="time")
+        mode = "forwardtrack"
         out_track = (
             (ds.p_track_lower.sum("time") + ds.p_track_upper.sum("time"))
             * 1000
