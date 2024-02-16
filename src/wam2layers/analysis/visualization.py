@@ -203,6 +203,7 @@ def visualize_both(config_file):
     logger.info(f"Diagnostic figure of input and output data written to {path_to_fig}.")
 
 
+# TODO: this part seems broken
 def visualize_snapshots(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
     # TODO: make this work for forwardtrack
