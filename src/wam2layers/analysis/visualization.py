@@ -136,6 +136,7 @@ def _plot_output(config, ax):
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
     # Add source region outline
+    # TODO: fix this, because no region contours are shown
     region.plot.contour(ax=ax, levels=[1], colors="k")
     polish(ax, region)
 
@@ -209,12 +210,12 @@ def visualize_snapshots(config_file):
     # TODO: make this work for forwardtrack
     config = Config.from_yaml(config_file)
     dates = pd.date_range(
-        start=config.track_start_date,
-        end=config.track_end_date,
+        start=config.tracking_start_date,
+        end=config.tracking_end_date,
         freq=config.output_frequency,
         inclusive="left",
     )
-    region = load_region(config)
+    region = load_tagging_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
 
     out_dir = Path(config.output_folder) / "figures"
