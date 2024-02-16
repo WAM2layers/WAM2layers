@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -35,38 +36,60 @@ def polish(ax, region):
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
-def _plot_precip(config, ax):
-    """Return subplot with precip."""
-    # Load config and some usful stuf.
+def infer_mode(output_folder: Path) -> Literal["forwardtrack", "backtrack"]:
+    output_file = next(output_folder.glob("*.nc"))
+    if "forwardtrack" in str(output_file):
+        return "forwardtrack"
+    if "backtrack" in str(output_file):
+        return "backtrack"
+    else:
+        raise FileNotFoundError(f"No output files found in {output_folder}")
+
+
+def _plot_input(config: Config, ax):
+    """
+    Return subplot with input.
+    backtrack = precipitation
+    forwardtrack = evaporation
+    """
+    # Load config and some useful stuf.
     region = load_tagging_region(config)
 
     # Load data
+    start = config.tagging_start_date
+    end = config.tagging_end_date
     dates = pd.date_range(
-        start=config.preprocess_start_date,
-        end=config.preprocess_end_date,
-        freq=config.output_frequency,  # Should be output frequency, since this is used to save the data
+        start=start,
+        end=end,
+        freq=config.output_frequency,
         inclusive="left",
     )
 
+    mode = infer_mode(config.output_folder)
     input_files = []
-    for date in dates:
+    for date in dates[:-1]:
         input_files.append(input_path(date, config))
-
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
-    # TODO: make region time-dependent
-    start = config.tagging_start_date
-    end = config.tagging_end_date
-    subset = ds.precip.sel(time=slice(start, end))
-    precip = (subset * region * 3600).sum("time").compute()
+    if mode == "backtrack":
+        subset = ds.precip.sel(time=slice(start, end))
+    else:
+        subset = ds.evap.sel(time=slice(start, end))
+
+    # TODO: check if backtrack files or forwardtrack files were in output
+    input = (subset * region * 3600).sum("time").compute()
 
     # Make figure
-    precip.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
-    ax.set_title("Cumulative precipitation during event [mm]", loc="left")
+    input.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    ax.set_title("Cumulative input during tagging [mm]", loc="left")
     polish(ax, region.where(region > 0, drop=True))
 
 
-def _plot_evap(config, ax):
-    """Return subplot with tracked evaporation."""
+def _plot_output(config: Config, ax):
+    """
+    Return subplot with tracked moisture
+    forwardtrack = precipitation
+    backtrack = evaporation
+    """
     region = load_tagging_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
 
@@ -76,27 +99,42 @@ def _plot_evap(config, ax):
         end=config.tracking_end_date,
         freq=config.output_frequency,
         inclusive="left",
-    )[1:]
+    )
 
-    output_files = []
-    for date in dates:
-        output_files.append(output_path(date, config, mode="backtrack"))
+    mode = infer_mode(config.output_folder)
+    if mode == "backtrack":
+        output_files = [output_path(date, config, mode=mode) for date in dates[:-1]]
+    else:
+        output_files = [output_path(date, config, mode=mode) for date in dates[1:]]
+
+    if not all([Path(file).exists() for file in output_files]):
+        raise FileNotFoundError(f"Could not find all files: {output_files}.")
+    elif len(output_files) == 0:
+        raise ValueError("Too few output files to visualize.")
 
     ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
-    e_track = ds.e_track.sum("time").compute() * 1000 / a_gridcell[:, None]
+    if mode == "backtrack":
+        out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
+    else:
+        out_track = (
+            (ds.p_track_lower.sum("time") + ds.p_track_upper.sum("time"))
+            * 1000
+            / a_gridcell[:, None]
+        )
 
     # Make figure
-    e_track.plot(
+    out_track.plot(
         ax=ax,
         vmin=0,
         robust=True,
         cmap=cm.rain,
         cbar_kwargs=dict(fraction=0.05, shrink=0.5),
     )
-    e_track.plot.contour(ax=ax, levels=[0.1, 1], colors=["lightgrey", "grey"])
+
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
     # Add source region outline
+    # TODO: fix this, because no region contours are shown
     region.plot.contour(ax=ax, levels=[1], colors="k")
     polish(ax, region)
 
@@ -112,7 +150,7 @@ def visualize_input_data(config_file):
     fig = plt.figure(figsize=(16, 10))
     ax = fig.add_subplot(111, projection=crs.PlateCarree())
 
-    _plot_precip(config, ax)
+    _plot_input(config, ax)
 
     # Save
     out_dir = Path(config.output_folder) / "figures"
@@ -133,8 +171,7 @@ def visualize_output_data(config_file):
     # Make figure
     fig = plt.figure(figsize=(16, 10))
     ax = fig.add_subplot(111, projection=crs.PlateCarree())
-
-    _plot_evap(config, ax)
+    _plot_output(config, ax)
 
     # Save
     out_dir = Path(config.output_folder) / "figures"
@@ -154,8 +191,8 @@ def visualize_both(config_file):
         2, 1, figsize=(16, 10), subplot_kw=dict(projection=crs.PlateCarree())
     )
 
-    _plot_precip(config, ax1)
-    _plot_evap(config, ax2)
+    _plot_input(config, ax1)
+    _plot_output(config, ax2)
 
     # Save
     out_dir = Path(config.output_folder) / "figures"
@@ -165,16 +202,18 @@ def visualize_both(config_file):
     logger.info(f"Diagnostic figure of input and output data written to {path_to_fig}.")
 
 
+# TODO: this part seems broken
 def visualize_snapshots(config_file):
     """Diagnostic figure with four subplots combining input and output data."""
+    # TODO: make this work for forwardtrack
     config = Config.from_yaml(config_file)
     dates = pd.date_range(
-        start=config.track_start_date,
-        end=config.track_end_date,
+        start=config.tracking_start_date,
+        end=config.tracking_end_date,
         freq=config.output_frequency,
         inclusive="left",
     )
-    region = load_region(config)
+    region = load_tagging_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
 
     out_dir = Path(config.output_folder) / "figures"
