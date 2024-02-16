@@ -110,7 +110,7 @@ def _plot_output(config, ax):
         output_path(date, config, mode="forwardtrack") for date in dates[1:]
     ]
     try:
-        ds = xr.open_mfdataset(backtrackfiles, combine="nested", concat_dim="time")
+        ds = xr.open_mfdataset(backtrack_files, combine="nested", concat_dim="time")
         mode = "backtrack"
         out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
     except:  # TODO, make error specific FileNoteFoundError?
