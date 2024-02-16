@@ -6,7 +6,7 @@ import pytest
 from wam2layers.config import BoundingBox, Config
 
 EXAMPLE_CONFIG = "example_config.yaml"
-TEST_CONFIG = "tests/test_data/test_config.yaml"
+TEST_CONFIG = "tests/test_data/config_rhine.yaml"
 
 
 def test_load_example_config():
@@ -17,6 +17,16 @@ def test_load_example_config():
 def test_load_test_config():
     """Verify that the test config file can be loaded"""
     Config.from_yaml(TEST_CONFIG)
+
+
+@pytest.mark.parametrize("config_file", [EXAMPLE_CONFIG, TEST_CONFIG])
+def test_config_export(tmp_path, config_file):
+    """Verify that a config written to a file is identical to the original one."""
+    cfg = Config.from_yaml(EXAMPLE_CONFIG)
+    export_path = tmp_path / "config.yaml"
+    cfg.to_file(export_path)
+    cfg_exported = Config.from_yaml(export_path)
+    assert cfg_exported == cfg
 
 
 def test_check_date_order_invalid_tracking():
@@ -52,7 +62,7 @@ class TestValidateRegion:
         """Check path is expanded."""
         config = Config.from_yaml(TEST_CONFIG)
         assert config.tagging_region.is_absolute()
-        config.tagging_region = "tests/test_data/test_region.nc"
+        config.tagging_region = "tests/test_data/region_rhine.nc"
         assert config.tagging_region.is_absolute()
 
     def test_invalid_path(self):
