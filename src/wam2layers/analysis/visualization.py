@@ -36,12 +36,12 @@ def polish(ax, region):
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
-def infer_mode(output_folder: Path) -> Literal["forward", "backward"]:
+def infer_mode(output_folder: Path) -> Literal["forwardtrack", "backtrack"]:
     output_file = next(output_folder.glob("*.nc"))
-    if "forward" in str(output_file):
-        return "forward"
-    if "backward" in str(output_file):
-        return "backward"
+    if "forwardtrack" in str(output_file):
+        return "forwardtrack"
+    if "backtrack" in str(output_file):
+        return "backtrack"
     else:
         raise FileNotFoundError(f"No output files found in {output_folder}")
 
@@ -70,7 +70,7 @@ def _plot_input(config: Config, ax):
     for date in dates[:-1]:
         input_files.append(input_path(date, config))
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
-    if mode == "backward":
+    if mode == "backtrack":
         subset = ds.precip.sel(time=slice(start, end))
     else:
         subset = ds.evap.sel(time=slice(start, end))
@@ -84,7 +84,7 @@ def _plot_input(config: Config, ax):
     polish(ax, region.where(region > 0, drop=True))
 
 
-def _plot_output(config, ax):
+def _plot_output(config: Config, ax):
     """
     Return subplot with tracked moisture
     forwardtrack = precipitation
@@ -101,17 +101,21 @@ def _plot_output(config, ax):
         inclusive="left",
     )
 
-    backtrack_files = [
-        output_path(date, config, mode="backtrack") for date in dates[:-1]
-    ]
-    forwardtrack_files = [
-        output_path(date, config, mode="forwardtrack") for date in dates[1:]
-    ]
-    if len(backtrack_files) > 0:
-        ds = xr.open_mfdataset(backtrack_files, combine="nested", concat_dim="time")
+    mode = infer_mode(config.output_folder)
+    if mode == "backtrack":
+        output_files = [output_path(date, config, mode=mode) for date in dates[:-1]]
+    else:
+        output_files = [output_path(date, config, mode=mode) for date in dates[1:]]
+
+    if not all([Path(file).exists() for file in output_files]):
+        raise FileNotFoundError(f"Could not find all files: {output_files}.")
+    elif len(output_files) == 0:
+        raise ValueError("Too few output files to visualize.")
+
+    ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
+    if mode == "backtrack":
         out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
     else:
-        ds = xr.open_mfdataset(forwardtrack_files, combine="nested", concat_dim="time")
         out_track = (
             (ds.p_track_lower.sum("time") + ds.p_track_upper.sum("time"))
             * 1000
