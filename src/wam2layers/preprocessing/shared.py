@@ -5,6 +5,9 @@ import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
 
+from wam2layers.config import Config
+from wam2layers.utils.profiling import ProgressTracker
+
 
 # old, keep only for reference and ecearth starting case
 def resample(variable, divt, count_time, method="interp"):
@@ -337,7 +340,7 @@ def change_units(data, target_freq):
         data[variable] = data[variable].assign_attrs(units="m**3")
 
 
-def stabilize_fluxes(F, S, progress_tracker, config, t):
+def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
@@ -358,7 +361,7 @@ def stabilize_fluxes(F, S, progress_tracker, config, t):
         fy_limit = 1 / 2 * fy_abs / ft_abs * s.values
         fy_stable = np.minimum(fy_abs, fy_limit)
 
-        progress_tracker.track_stability_correction(fy_limit, fy_abs, config, t)
+        progress_tracker.track_stability_correction(fy_stable, fy_abs, config, t)
 
         # Get rid of any nan values
         fx_stable.fillna(0)
