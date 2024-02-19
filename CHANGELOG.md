@@ -6,22 +6,26 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- made some updates to the visualization: more generic for forward and backward tracking
+- Updated the visualization: more generic for forward and backward tracking ([#318](https://github.com/WAM2layers/WAM2layers/pull/318)).
 - Add difference plots to the regression tests (`test_workflow.py`). The plots are uploaded as "artifacts" on Github Actions for easy inspection ([#319](https://github.com/WAM2layers/WAM2layers/pull/319)).
 - Added an export to file method for the configuration object (`wam2layers.config.Config`) to allow for easier testing of the command line interface ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - Added a regression test for the forward tracking workflow ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
+- Added support for Python 3.12 ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
+- Adopted [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html) as version support policy ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
 
 ### Removed
 
+- Support for Python 3.8 has been removed. This is in line with the new policy ([following NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html)) ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
+
 ### Fixed
 
-- Fixed a bug in the profiler's `track_stability_correction` method ([#325](https://github.com/WAM2layers/WAM2layers/pull/320)).
+- Fixed a bug in the profiler's `track_stability_correction` method ([#325](https://github.com/WAM2layers/WAM2layers/pull/325)).
 
 ### Changed
 - The workflow tests use a temporary directory managed by pytest and the user's operating system, to avoid the `/tmp` folder polluting the workspace ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The workflow tests now make extensive use of pytest's [fixtures](https://docs.pytest.org/en/8.0.x/explanation/fixtures.html), which will make future test writing easier ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The `kvf` parameter can now be a floating point number instead of an integer ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
-- The stability correction warning will now occur only when 10% more of the grid is corrected compared to last warning, or the correction factor is 10% stronger.
+- The stability correction warning will now occur only when 10% more of the grid is corrected compared to last warning, or the correction factor is 10% stronger  ([#332](https://github.com/WAM2layers/WAM2layers/pull/332)).
 
 ## Release v3.0.0-beta.6 (2023-12-22)
 
