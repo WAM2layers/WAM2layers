@@ -451,9 +451,14 @@ unrelated) changes. They can be set up to be run automatically when you make a p
 pytest tests/
 ```
 
+It is possible to run a single test (for example, when debugging). For example:
+```
+pytest tests/test_workflow.py::TestBacktrack::test_backtrack
+```
+
 For more information, please have a look at the documentation of pytest.
 
-## Typing
+### Typing
 
 Since Python 3.5 type hints can be added to Python code.
 These denote what the types of objects and function arguments should be.
@@ -482,3 +487,9 @@ mypy src/ --install-types --ignore-missing-imports
 `install-types` only needs to be run the first time, afterwards this is not needed.
 
 If you are unsure about adding types, it is not required so you can leave them out.
+
+### Python version support
+
+In WAM2layers we follow Numpy's version support policy ([NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html)).
+
+This means that new releases will only support minor Python versions (e.g. 3.9, 3.10) which have been released within the last 42 months.
