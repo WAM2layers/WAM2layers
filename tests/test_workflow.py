@@ -33,8 +33,15 @@ def temp_directory(tmp_path_factory) -> Path:
 
 
 @pytest.fixture(scope="session")
-def output_dir(temp_directory: Path) -> Path:
-    output_dir = temp_directory / "output"
+def output_dir_backtrack(temp_directory: Path) -> Path:
+    output_dir = temp_directory / "output_backtrack"
+    output_dir.mkdir()
+    return output_dir
+
+
+@pytest.fixture(scope="session")
+def output_dir_forwardtrack(temp_directory: Path) -> Path:
+    output_dir = temp_directory / "output_forwardtrack"
     output_dir.mkdir()
     return output_dir
 
@@ -45,15 +52,15 @@ def preprocessed_dir(temp_directory: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
-def figures_directory(output_dir: Path) -> Path:
-    fig_dir = output_dir / "figures"
+def figures_directory(temp_directory: Path) -> Path:
+    fig_dir = temp_directory / "figures"
     fig_dir.mkdir()
     return fig_dir
 
 
 @pytest.fixture(scope="session")
 def test_config_backward(
-    temp_directory: Path, preprocessed_dir: Path, output_dir: Path
+    temp_directory: Path, preprocessed_dir: Path, output_dir_backtrack: Path
 ) -> str:
     """Return the path to the config for the preprocess, backward, and visualize tests.
 
@@ -62,7 +69,7 @@ def test_config_backward(
     """
     cfg = Config.from_yaml(CFG_FILE_BACKWARD)
     cfg.preprocessed_data_folder = preprocessed_dir
-    cfg.output_folder = output_dir
+    cfg.output_folder = output_dir_backtrack
     tmp_config = temp_directory / "config_rhine.yaml"
     cfg.to_file(tmp_config)
     return str(tmp_config)
@@ -70,14 +77,14 @@ def test_config_backward(
 
 @pytest.fixture(scope="session")
 def test_config_forward(
-    temp_directory: Path, preprocessed_dir: Path, output_dir: Path
+    temp_directory: Path, preprocessed_dir: Path, output_dir_forwardtrack: Path
 ) -> str:
     """Return the path to the config for the forward tracking test(s).
 
     The output data folder of this config is modified to use a temporary directory.
     """
     cfg = Config.from_yaml(CFG_FILE_FORWARD)
-    cfg.output_folder = output_dir
+    cfg.output_folder = output_dir_forwardtrack
     tmp_config = temp_directory / "config_west_africa.yaml"
     cfg.to_file(tmp_config)
     return str(tmp_config)
@@ -99,10 +106,18 @@ def backtrack(test_config_backward: str, preprocess) -> None:
 
 
 @pytest.fixture(scope="session")
-def visualize(test_config_backward: str, backtrack) -> None:
+def visualize_backward(test_config_backward: str, backtrack) -> None:
     runner = CliRunner()
     runner.invoke(
         cli, ["visualize", "output", test_config_backward], catch_exceptions=False
+    )
+
+
+@pytest.fixture(scope="session")
+def visualize_forward(test_config_forward: str, forwardtrack) -> None:
+    runner = CliRunner()
+    runner.invoke(
+        cli, ["visualize", "output", test_config_forward], catch_exceptions=False
     )
 
 
@@ -195,8 +210,8 @@ class TestBacktrack:
     def run_backtrack(self, backtrack):
         pass
 
-    def test_backtrack(self, output_dir: Path, figures_directory: Path):
-        output_path = output_dir / "backtrack_2022-08-31T18-00.nc"
+    def test_backtrack(self, output_dir_backtrack: Path, figures_directory: Path):
+        output_path = output_dir_backtrack / "backtrack_2022-08-31T18-00.nc"
         assert output_path.exists()
 
         # verify outputs
@@ -215,12 +230,12 @@ class TestBacktrack:
             err_msg=different_output_message(diff_figure, output_path, expected_path),
         )
 
-    def test_log_file(self, output_dir):
-        log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+    def test_log_file(self, output_dir_backtrack):
+        log_files = [i for i in output_dir_backtrack.glob("wam2layers_*.log")]
         len(log_files) >= 1
 
-    def test_config(self, output_dir):
-        config_path = output_dir / "config_rhine.yaml"
+    def test_config(self, output_dir_backtrack):
+        config_path = output_dir_backtrack / "config_rhine.yaml"
         assert config_path.exists()
 
 
@@ -229,8 +244,8 @@ class TestForwardtrack:
     def run_forwardtrack(self, forwardtrack):
         pass
 
-    def test_forwardtrack(self, output_dir: Path, figures_directory: Path):
-        output_path = output_dir / "forwardtrack_1979-07-01T23-00.nc"
+    def test_forwardtrack(self, output_dir_forwardtrack: Path, figures_directory: Path):
+        output_path = output_dir_forwardtrack / "forwardtrack_1979-07-01T23-00.nc"
         assert output_path.exists()
         # verify outputs
         expected_path = Path(
@@ -252,24 +267,26 @@ class TestForwardtrack:
                 ),
             )
 
-    def test_log_file(self, output_dir):
-        log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+    def test_log_file(self, output_dir_forwardtrack):
+        log_files = [i for i in output_dir_forwardtrack.glob("wam2layers_*.log")]
         assert len(log_files) >= 1
 
-    def test_config(self, output_dir):
-        config_path = output_dir / "config_west_africa.yaml"
+    def test_config(self, output_dir_forwardtrack):
+        config_path = output_dir_forwardtrack / "config_west_africa.yaml"
         assert config_path.exists()
 
 
 class TestVisualize:
     @pytest.fixture(autouse=True)
-    def run_visualize(self, visualize):
+    def run_visualize(self, visualize_backward, visualize_forward):
         pass
 
-    def test_visualize(self, output_dir: Path, figures_directory: Path):
-        output_path = figures_directory / "cumulative_sources.png"
+    def test_visualize_forward(self, output_dir_forwardtrack: Path):
+        output_path = output_dir_forwardtrack / "figures" / "cumulative_sources.png"
         assert output_path.exists()
-        expected_output = Path("tests/test_data/verify_output/cumulative_sources.png")
+        expected_output = Path(
+            "tests/test_data/verify_output/cumulative_sources_fw.png"
+        )
         stdout = matplotlib.testing.compare.compare_images(
             expected_output, output_path, tol=5
         )
@@ -282,10 +299,28 @@ class TestVisualize:
                 f"`cp {output_path} {expected_output}`"
             )
 
-    def test_log_file(self, output_dir):
-        log_files = [i for i in output_dir.glob("wam2layers_*.log")]
+    def test_visualize_backward(self, output_dir_backtrack: Path):
+        output_path = output_dir_backtrack / "figures" / "cumulative_sources.png"
+        assert output_path.exists()
+        expected_output = Path(
+            "tests/test_data/verify_output/cumulative_sources_bw.png"
+        )
+        stdout = matplotlib.testing.compare.compare_images(
+            expected_output, output_path, tol=5
+        )
+        if stdout:
+            raise ValueError(
+                "Output figures are different! Please check the difference in the produced \n"
+                " `cumulative_sources-failed-diff.png` figure and verify your results. \n"
+                "If you want to keep the new results and include it in your commit, \n"
+                "you can update the reference figure with the following command: \n"
+                f"`cp {output_path} {expected_output}`"
+            )
+
+    def test_log_file(self, output_dir_backtrack):
+        log_files = [i for i in output_dir_backtrack.glob("wam2layers_*.log")]
         assert len(log_files) >= 2
 
-    def test_config(self, output_dir):
-        config_path = output_dir / "config_rhine.yaml"
+    def test_config(self, output_dir_backtrack):
+        config_path = output_dir_backtrack / "config_rhine.yaml"
         assert config_path.exists()
