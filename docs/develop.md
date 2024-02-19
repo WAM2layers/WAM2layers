@@ -451,6 +451,11 @@ unrelated) changes. They can be set up to be run automatically when you make a p
 pytest tests/
 ```
 
+It is possible to run a single test (for example, when debugging). For example:
+```
+pytest tests/test_workflow.py::TestBacktrack::test_backtrack
+```
+
 For more information, please have a look at the documentation of pytest.
 
 ### Typing
