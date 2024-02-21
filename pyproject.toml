@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wam2layers"
 description = "Atmospheric moisture tracking model"
-version = "3.0.0-beta.6"
 readme = "README.md"
+dynamic = ["version"]
 license = { text = "Apache 2.0" }
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -68,6 +68,9 @@ wam2layers = "wam2layers.cli:cli"
 
 [tool.setuptools.package-data]
 "wam2layers.preprocessing" = ["*.csv"]
+
+[tool.setuptools.dynamic]
+version = {attr = "wam2layers.__version__"}
 
 [tool.isort]
 profile = "black"
