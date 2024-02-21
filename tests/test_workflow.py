@@ -210,8 +210,11 @@ class TestBacktrack:
     def run_backtrack(self, backtrack):
         pass
 
-    def test_backtrack(self, output_dir_backtrack: Path, figures_directory: Path):
-        output_path = output_dir_backtrack / "backtrack_2022-08-31T18-00.nc"
+    @pytest.fixture()
+    def output_path(self, output_dir_backtrack: Path):
+        return output_dir_backtrack / "backtrack_2022-08-31T18-00.nc"
+
+    def test_backtrack_result(self, output_path: Path, figures_directory: Path):
         assert output_path.exists()
 
         # verify outputs
@@ -222,13 +225,32 @@ class TestBacktrack:
         output = xr.open_dataset(output_path)
 
         diff_figure = figures_directory / "backtrack_diff.png"
-        plot_difference(expected_output["e_track"], output["e_track"], diff_figure)
+        plot_difference(
+            expected_output["e_track"].isel(time=0),
+            output["e_track"].isel(time=0),
+            diff_figure,
+        )
 
         numpy.testing.assert_allclose(
             expected_output["e_track"].values,
             output["e_track"].values,
             err_msg=different_output_message(diff_figure, output_path, expected_path),
         )
+
+    def test_time_coord(self, output_path: Path):
+        expected_time = numpy.datetime64("2022-08-31T18:00:00")
+        assert xr.open_dataset(output_path)["time"].to_numpy() == expected_time
+
+    @pytest.mark.parametrize("attr", ("history", "title"))
+    def test_dataset_attrs(self, output_path: Path, attr: str):
+        output = xr.open_dataset(output_path)
+        assert attr in output.attrs
+
+    @pytest.mark.parametrize("attr", ("long_name", "units", "description"))
+    def test_variable_attrs(self, output_path: Path, attr: str):
+        output = xr.open_dataset(output_path)
+        for var in output.data_vars:
+            assert attr in output[var].attrs
 
     def test_log_file(self, output_dir_backtrack):
         log_files = [i for i in output_dir_backtrack.glob("wam2layers_*.log")]
@@ -244,8 +266,11 @@ class TestForwardtrack:
     def run_forwardtrack(self, forwardtrack):
         pass
 
-    def test_forwardtrack(self, output_dir_forwardtrack: Path, figures_directory: Path):
-        output_path = output_dir_forwardtrack / "forwardtrack_1979-07-01T23-00.nc"
+    @pytest.fixture()
+    def output_path(self, output_dir_forwardtrack: Path):
+        return output_dir_forwardtrack / "forwardtrack_1979-07-01T23-00.nc"
+
+    def test_forwardtrack(self, output_path: Path, figures_directory: Path):
         assert output_path.exists()
         # verify outputs
         expected_path = Path(
@@ -256,8 +281,9 @@ class TestForwardtrack:
 
         for var in ["p_track_upper", "p_track_lower"]:
             diff_figure = figures_directory / f"forwardtrack_diff_{var}.png"
-            expected_output[var] = expected_output[var]
-            plot_difference(expected_output[var], output[var], diff_figure)
+            plot_difference(
+                expected_output[var].isel(time=0), output[var].isel(time=0), diff_figure
+            )
 
             numpy.testing.assert_allclose(
                 expected_output[var].values,
@@ -266,6 +292,21 @@ class TestForwardtrack:
                     diff_figure, output_path, expected_path
                 ),
             )
+
+    def test_time_coord(self, output_path: Path):
+        expected_time = numpy.datetime64("1979-07-01T23:00:00.00")
+        assert xr.open_dataset(output_path)["time"].to_numpy() == expected_time
+
+    @pytest.mark.parametrize("attr", ("history", "title"))
+    def test_dataset_attrs(self, output_path: Path, attr: str):
+        output = xr.open_dataset(output_path)
+        assert attr in output.attrs
+
+    @pytest.mark.parametrize("attr", ("long_name", "units", "description"))
+    def test_variable_attrs(self, output_path: Path, attr: str):
+        output = xr.open_dataset(output_path)
+        for var in output.data_vars:
+            assert attr in output[var].attrs
 
     def test_log_file(self, output_dir_forwardtrack):
         log_files = [i for i in output_dir_forwardtrack.glob("wam2layers_*.log")]

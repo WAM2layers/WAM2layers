@@ -1,8 +1,14 @@
 import logging
-from functools import lru_cache
-from pathlib import Path
+from datetime import datetime
+from typing import Literal
 
+import pandas as pd
 import xarray as xr
+import yaml
+
+import wam2layers
+from wam2layers.config import Config
+from wam2layers.reference.variables import DATA_ATTRIBUTES
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +89,29 @@ def load_tagging_region(config, t=None):
     return tagging_region
 
 
-def write_output(output, t, config, mode):
+def write_output(
+    output: xr.Dataset,
+    t: pd.Timestamp,
+    config: Config,
+    mode: Literal["forwardtrack", "backtrack"],
+) -> None:
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config, mode)
     logger.info(f"{t} - Writing output to file {path}")
+
+    output = output.assign_coords({"time": t})
+    output = output.expand_dims(dim="time")
+
+    for var in output.data_vars:
+        output[var].attrs.update(DATA_ATTRIBUTES[str(var)])
+
+    output.attrs.update(
+        {
+            "history": (
+                f"created on {datetime.utcnow():%Y-%m-%dT%H:%M:%S} using WAM2Layers version"
+                f" {wam2layers.__version__}"
+            ),
+            "title": f"WAM2Layers {mode} output file",
+        }
+    )
     output.astype("float32").to_netcdf(path)
