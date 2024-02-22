@@ -108,8 +108,8 @@ def write_output(
     output.attrs.update(
         {
             "history": (
-                f"created on {datetime.utcnow():%Y-%m-%dT%H:%M:%S} using WAM2Layers version"
-                f" {wam2layers.__version__}"
+                f"created on {datetime.utcnow():%Y-%m-%dT%H:%M:%S}Z using WAM2Layers "
+                f"version {wam2layers.__version__}"
             ),
             "title": f"WAM2Layers {mode} output file",
         }
