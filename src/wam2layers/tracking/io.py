@@ -112,6 +112,7 @@ def write_output(
                 f"version {wam2layers.__version__}"
             ),
             "title": f"WAM2Layers {mode} output file",
+            "WAM2Layers_config": config.model_dump_json(),
         }
     )
     output.astype("float32").to_netcdf(path)
