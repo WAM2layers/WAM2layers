@@ -247,7 +247,7 @@ You need an [account on PyPI](https://pypi.org/account/register/) with owner
 rights on WAM2layers.
 
 - Create a new branch, e.g. `prep_release_vXXX`
-- Update "version" in pyproject.toml and in citation.cff (use [semantic
+- Update "version" in `src/wam2layers/__init__.py` and in `citation.cff` (use [semantic
   versioning](https://semver.org/))
 - Make sure the code is neatly formatted (see above)
 - Make sure the changelog is up to date; update the "Unreleased" header with the

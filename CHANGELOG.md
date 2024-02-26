@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Added a regression test for the forward tracking workflow ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - Added support for Python 3.12 ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
 - Adopted [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html) as version support policy ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
+- The output files now contain many attributes for easier interpretation ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 
 ### Removed
 
@@ -26,6 +27,8 @@ All notable changes to this project will be documented in this file.
 - The workflow tests now make extensive use of pytest's [fixtures](https://docs.pytest.org/en/8.0.x/explanation/fixtures.html), which will make future test writing easier ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The `kvf` parameter can now be a floating point number instead of an integer ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The stability correction warning will now occur only when 10% more of the grid is corrected compared to last warning, or the correction factor is 10% stronger  ([#332](https://github.com/WAM2layers/WAM2layers/pull/332)).
+- The output files now contain a time dimension (incl. the coordinate) ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
+- The package version is now defined in `src/wam2layers/__init__.py` ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 
 ## Release v3.0.0-beta.6 (2023-12-22)
 
