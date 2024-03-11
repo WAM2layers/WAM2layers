@@ -121,7 +121,15 @@ def visualize_cli():
 @visualize_cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
 def input(config_file):
-    """Visualize input data for experiment."""
+    """Visualize input data for experiment.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        \b
+        - wam2layers visualize input path/to/cases/era5_2021.yaml
+    """
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
     _copy_config_yaml(config_file, log_path)
@@ -133,7 +141,15 @@ def input(config_file):
 @visualize_cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
 def output(config_file):
-    """Visualize output data for experiment."""
+    """Visualize output data for experiment.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        \b
+        - wam2layers visualize output path/to/cases/era5_2021.yaml
+    """
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
     _copy_config_yaml(config_file, log_path)
