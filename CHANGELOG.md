@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - The stability correction warning will now occur only when 10% more of the grid is corrected compared to last warning, or the correction factor is 10% stronger  ([#332](https://github.com/WAM2layers/WAM2layers/pull/332)).
 - The output files now contain a time dimension (incl. the coordinate) ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 - The package version is now defined in `src/wam2layers/__init__.py` ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
+- The command line interface for tracking has changed. Tracking experiments are now started by doing `wam2layers track config.yml`. The tracking direction is retrieved from the new configuration entry "tracking_direction" ([#338](https://github.com/WAM2layers/WAM2layers/pull/338)).
 
 ## Release v3.0.0-beta.6 (2023-12-22)
 
