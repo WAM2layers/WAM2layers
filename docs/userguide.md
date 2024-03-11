@@ -30,15 +30,13 @@ interace (CLI), much like pip, conda, git, cdo, et cetera. It looks like this:
 ```
 # Get help
 wam2layers --help
-wam2layers backtrack --help
-wam2layers forwardtrack --help
+wam2layers track --help
 
 # Preprocess data (you need to have downloaded the data)
 wam2layers preprocess era5 floodcase_202107.yaml
 
 # Perform tracking
-wam2layers backtrack floodcase_202107.yaml
-wam2layers forwardtrack floodcase_202107.yaml
+wam2layers track floodcase_202107.yaml
 
 # Make some basic plots
 wam2layers visualize output floodcase_202107.yaml
@@ -59,8 +57,9 @@ here:
    `wam2layers` should point to the file `src/wam2layers/cli.py`.
 1. We use [`click`](https://click.palletsprojects.com/en/8.1.x/) to further
    process everything that comes after the `wam2layers` command. For example,
-   `wam2layers backtrack` is redirected to
-   `src/wam2layers/tracking/backtrack.py:cli`. This function takes the
+   `wam2layers track` is redirected to the appropriate module
+   (`src/wam2layers/tracking/backtrack.py:run_experiment` or
+   `src/wam2layers/tracking/forwardtrack.py:run_experiment`). This function takes the
    configuration file as input and passes it on to a function called
    `run_experiment`.
 ```
@@ -231,14 +230,14 @@ Assuming you have a preprocessed dataset and prepared a configuration file for
 your experiment, running WAM2layers is as simple as:
 
 ```
-wam2layers backtrack config-file.yaml
+wam2layers track config-file.yaml
 ```
 
 where `config-file.yaml` is the path to your configuration file. Among others,
-this file should have settings on the date range for which you want to run
-track, and also about the location where the preprocessed data are stored and
-where the output will be stored. For more information, see [](./config) or have
-a look at the example config file
+this file should have settings on the tracking direction (forward/backward), 
+the date range for which you want to run track, and also about the location where the 
+preprocessed data are stored and where the output will be stored.
+For more information, see [](./config) or have a look at the example config file
 [here](https://github.com/WAM2layers/WAM2layers/blob/main/example_config.yaml).
 
 ```{tip}

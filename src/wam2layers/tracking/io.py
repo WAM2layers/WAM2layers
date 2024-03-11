@@ -18,8 +18,9 @@ def input_path(date, config):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
-def output_path(date, config, mode):
+def output_path(date, config):
     output_dir = config.output_folder
+    mode = "backtrack" if config.tracking_direction == "backward" else "forwardtrack"
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
@@ -96,7 +97,7 @@ def write_output(
     mode: Literal["forwardtrack", "backtrack"],
 ) -> None:
     # TODO: add back (and cleanup) coordinates and units
-    path = output_path(t, config, mode)
+    path = output_path(t, config)
     logger.info(f"{t} - Writing output to file {path}")
 
     output = output.assign_coords({"time": t})

@@ -102,7 +102,7 @@ def preprocess(test_config_backward: str) -> None:
 @pytest.fixture(scope="session")
 def backtrack(test_config_backward: str, preprocess) -> None:
     runner = CliRunner()
-    runner.invoke(cli, ["backtrack", test_config_backward], catch_exceptions=False)
+    runner.invoke(cli, ["track", test_config_backward], catch_exceptions=False)
 
 
 @pytest.fixture(scope="session")
@@ -124,7 +124,7 @@ def visualize_forward(test_config_forward: str, forwardtrack) -> None:
 @pytest.fixture(scope="session")
 def forwardtrack(test_config_forward: str) -> None:
     runner = CliRunner()
-    runner.invoke(cli, ["forwardtrack", test_config_forward], catch_exceptions=False)
+    runner.invoke(cli, ["track", test_config_forward], catch_exceptions=False)
 
 
 def plot_difference(

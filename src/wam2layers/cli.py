@@ -3,7 +3,7 @@
 This module contains all the functionality that makes it possible to run wam2layers on the command line, like so:
 
     wam2layers preprocess era5 floodcase.yaml
-    wam2layers backtrack floodcase.yaml
+    wam2layers track floodcase.yaml
 
 et cetera. It is built with [click](https://click.palletsprojects.com/en/8.1.x/).
 """
@@ -62,45 +62,26 @@ def cli():
 
 @cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
-def backtrack(config_file):
-    """Run WAM2layers backtrack experiment.
+def track(config_file):
+    """Run WAM2layers tracking experiment.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
 
     Usage examples:
 
         \b
-        - wam2layers backtrack path/to/cases/era5_2021.yaml
+        - wam2layers track path/to/cases/era5_2021.yaml
     """
-    log_path = Config.from_yaml(config_file).output_folder
+    config = Config.from_yaml(config_file)
+    log_path = config.output_folder
     setup_logging(log_path)
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
-    logger.info("Starting backtrack experiment.")
-    run_backtrack_experiment(config_file)
-
-
-# Command line setup for forwardtrack
-
-
-@cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def forwardtrack(config_file):
-    """Run WAM2layers forwardtrack experiment.
-
-    CONFIG_FILE: Path to WAM2layers experiment configuration file.
-
-    Usage examples:
-
-        \b
-        - wam2layers forwardtrack path/to/cases/era5_2021.yaml
-    """
-    log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path)
-    _copy_config_yaml(config_file, log_path)
-    logger.info("Welcome to WAM2layers.")
-    logger.info("Starting forwardtrack experiment.")
-    run_forwardtrack_experiment(config_file)
+    logger.info(f"Starting {config.tracking_direction} tracking experiment.")
+    if config.tracking_direction == "backward":
+        run_backtrack_experiment(config_file)
+    else:
+        run_forwardtrack_experiment(config_file)
 
 
 # Command line setup for preprocess
