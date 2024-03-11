@@ -10,6 +10,7 @@ level_type: model_levels
 levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
 # Tracking
+tracking_direction: forward
 tagging_region: tests/test_data/region_lake_volta.nc
 tracking_start_date: "1979-07-01T00:00"
 tracking_end_date: "1979-07-01T23:00"

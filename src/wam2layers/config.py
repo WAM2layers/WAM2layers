@@ -80,6 +80,19 @@ class Config(BaseModel):
 
     """
 
+    tracking_direction: Literal["forward", "backward"]
+    """The tracking direction, either forward or backward.
+
+    You have to specify if either forward or backward tracking should be performed.
+
+    For example:
+
+    .. code-block:: yaml
+    
+        tracking_direction: backward
+
+    """
+
     tagging_region: Annotated[
         Union[FilePath, BoundingBox], AfterValidator(validate_region)
     ]
