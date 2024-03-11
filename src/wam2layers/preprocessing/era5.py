@@ -277,10 +277,6 @@ def prep_experiment(config_file):
                 logger, f"Total column water not available; using water vapour only"
             )
 
-        # Determine the fluxes
-        fx = u * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
-        fy = v * cw  # northward atmospheric moisture flux (kg m-1 s-1)
-
         # Integrate fluxes and states to upper and lower layer
         if config.level_type == "model_levels":
             # TODO: Check if this is a reasonable choice for boundary
