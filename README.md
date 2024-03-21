@@ -21,6 +21,7 @@ Ruud van der Ent (Delft University of Technology)
 Imme Benedict (Wageningen University)
 Chris Weijenborg (Wageningen University)
 Peter Kalverla (Netherlands eScienceCenter)
+Bart Schilperoort (Netherlands eScience Center)
 
 # How to use
 See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description. 

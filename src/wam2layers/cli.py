@@ -57,7 +57,7 @@ def cli():
     pass
 
 
-# Command line setup for backtrack
+# Command line setup for tracking
 
 
 @cli.command()
@@ -83,6 +83,31 @@ def track(config_file):
     else:
         run_forwardtrack_experiment(config_file)
 
+@cli.command()
+def backtrack():
+    msg = (
+        "The `backtrack` and `forwardtrack` commands have been removed in favor of "
+        "`track`.\nPlease specify the tracking direction in your config file and use "
+        "the `track` command instead."
+        "\n"
+        "\nFor example, in your config.yaml file add:"
+        "\n    # Tracking"
+        "\n    tracking_direction: backward"
+    )
+    raise ValueError(msg)
+
+@cli.command()
+def forwardtrack():
+    msg = (
+        "The `backtrack` and `forwardtrack` commands have been removed in favor of "
+        "`track`.\nPlease specify the tracking direction in your config file and use "
+        "the `track` command instead."
+        "\n"
+        "\nFor example, in your config.yaml file add:"
+        "\n    # Tracking"
+        "\n    tracking_direction: forward"
+    )
+    raise ValueError(msg)
 
 # Command line setup for preprocess
 @click.group()
