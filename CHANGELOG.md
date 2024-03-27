@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Added support for Python 3.12 ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
 - Adopted [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html) as version support policy ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
 - The output files now contain many attributes for easier interpretation ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
+- Publishing of the package to the Python Package Index ([PyPI](https://pypi.org/)) is now automated with a Github Actions workflow ([#342](https://github.com/WAM2layers/WAM2layers/pull/342)).
 
 ### Removed
 
