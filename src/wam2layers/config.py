@@ -88,7 +88,7 @@ class Config(BaseModel):
     For example:
 
     .. code-block:: yaml
-    
+
         tracking_direction: backward
 
     """
@@ -258,19 +258,19 @@ class Config(BaseModel):
 
     """
 
-    target_frequency: str
-    """Frequence at which to perform the tracking.
+    timestep: int
+    """Timestep in seconds with which to perform the tracking.
 
-    The data will be interpolated during model execution. Too low frequency will
-    violate CFL criterion, too high frequency will lead to excessive numerical
+    The data will be interpolated during model execution. Too large timestep will
+    violate CFL criterion, too small timestep will lead to excessive numerical
     diffusion and slow progress. For best performance, the input frequency
-    should be divisible by the target frequency.
+    should be divisible by the timestep.
 
     For example:
 
     .. code-block:: yaml
 
-        target_frequency: '10min'
+        timestep: 600  # timestep in seconds
 
     """
 

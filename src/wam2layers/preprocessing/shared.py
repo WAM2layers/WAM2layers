@@ -315,7 +315,7 @@ def stagger_y(f):
     return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
 
 
-def change_units(data, target_freq):
+def change_units(data):
     """Change units to m3.
     Multiply by edge length or area to get flux in m3
     Multiply by time to get accumulation instead of flux
@@ -324,20 +324,18 @@ def change_units(data, target_freq):
     density = 1000  # [kg/m3]
     a, ly, lx = get_grid_info(data)
 
-    total_seconds = pd.Timedelta(target_freq).total_seconds()
-
     for variable in data.data_vars:
         if variable in ["fx_upper", "fx_lower"]:
-            data[variable] *= total_seconds / density * ly
+            data[variable] *= 1 / density * ly
         elif variable in ["fy_upper", "fy_lower"]:
-            data[variable] *= total_seconds / density * lx[:, None]
+            data[variable] *= 1 / density * lx[:, None]
         elif variable in ["evap", "precip"]:
-            data[variable] *= total_seconds / density * a[:, None]
+            data[variable] *= 1 / density * a[:, None]
         elif variable in ["s_upper", "s_lower"]:
             data[variable] *= a[:, None] / density
         else:
             raise ValueError(f"Unrecognized variable {variable}")
-        data[variable] = data[variable].assign_attrs(units="m**3")
+        # data[variable] = data[variable].assign_attrs(units="m**3")
 
 
 def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
@@ -346,8 +344,8 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
     CFL: Water cannot move further than one grid cell per timestep.
     """
     for level in ["upper", "lower"]:
-        fx = F["fx_" + level]
-        fy = F["fy_" + level]
+        fx = F["fx_" + level] * config.timestep
+        fy = F["fy_" + level] * config.timestep
         s = S["s_" + level]
 
         fx_abs = np.abs(fx)
@@ -367,9 +365,9 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
         fx_stable.fillna(0)
         fy_stable.fillna(0)
 
-        # Re-instate the sign
-        F["fx_" + level] = np.sign(fx) * fx_stable
-        F["fy_" + level] = np.sign(fy) * fy_stable
+        # Re-instate the sign and convert back to flux instead of accumulation
+        F["fx_" + level] = np.sign(fx) * fx_stable / config.timestep
+        F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep
 
 
 def convergence(fx, fy):
@@ -377,7 +375,7 @@ def convergence(fx, fy):
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
-def calculate_fz(F, S0, S1, kvf):
+def calculate_fz(F, S0, S1, dt, kvf):
     """Calculate the vertical fluxes.
 
     The vertical flux is calculated as a closure term. Residuals are distributed
@@ -389,6 +387,7 @@ def calculate_fz(F, S0, S1, kvf):
         F: xarray dataset with fluxes evaluated at temporal midpoints between states
         S0: xarray dataset with states at current time t
         S1: xarray dataset with states at updated time t+1 (always forward looking)
+        dt: timestep
         kvf: net to gross vertical flux multiplication parameter. With the a value of 0,
             the net and gross fluxes are equal.
 
@@ -420,7 +419,7 @@ def calculate_fz(F, S0, S1, kvf):
         ...     's_upper': 8 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
         ...     's_lower': 7 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
         ... })
-        >>> calculate_fz(F, S0, S1)
+        >>> calculate_fz(F, S0, S1, dt=1)
         <xarray.DataArray (lat: 3, lon: 3)>
         array([[1.46666667, 1.46666667, 1.46666667],
                [1.46666667, 1.46666667, 1.46666667],
@@ -433,16 +432,11 @@ def calculate_fz(F, S0, S1, kvf):
     s_rel = s_mean / s_total
 
     # Evaluate all terms in the moisture balance execpt the unknown Fz and err
-    foo_upper = (
-        (S1 - S0).s_upper
-        - convergence(F.fx_upper, F.fy_upper)
-        + F.precip.values * s_rel.s_upper
+    foo_upper = (S1 - S0).s_upper + dt * (
+        -convergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
     )
-    foo_lower = (
-        (S1 - S0).s_lower
-        - convergence(F.fx_lower, F.fy_lower)
-        + F.precip.values * s_rel.s_lower
-        - F.evap
+    foo_lower = (S1 - S0).s_lower + dt * (
+        -convergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
     )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
@@ -459,5 +453,5 @@ def calculate_fz(F, S0, S1, kvf):
     )  # TODO why is this not 'just' the upstream bucket?
     fz_stable = np.minimum(np.abs(fz), stab * flux_limit)
 
-    # Reinstate the sign
-    return np.sign(fz) * fz_stable
+    # Reinstate the sign and convert accumulation back to flux
+    return np.sign(fz) * fz_stable / dt

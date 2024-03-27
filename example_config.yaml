@@ -24,7 +24,7 @@ tagging_start_date: "2021-07-13T00:00"
 tagging_end_date: "2021-07-15T00:00"
 
 input_frequency: "1h"
-target_frequency: "10min"
+timestep: 600  # Time step in seconds
 output_frequency: "1d"
 restart: False
 periodic_boundary: false

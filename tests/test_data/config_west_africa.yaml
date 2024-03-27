@@ -21,7 +21,7 @@ tagging_end_date: "1979-07-01T12:00"
 
 # Time
 input_frequency: "1h"
-target_frequency: "10min"
+timestep: 600  # Time step in seconds
 output_frequency: "6h"
 
 # Model settings
