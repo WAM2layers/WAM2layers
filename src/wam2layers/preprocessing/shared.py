@@ -316,9 +316,8 @@ def stagger_y(f):
 
 
 def change_units(data):
-    """Change units to m3.
-    Multiply by edge length or area to get flux in m3
-    Multiply by time to get accumulation instead of flux
+    """Change units to m3 or m3/s.
+    Multiply by edge length or area to get flux in m3/s
     Divide by density of water to go from kg to m3
     """
     density = 1000  # [kg/m3]
@@ -326,16 +325,18 @@ def change_units(data):
 
     for variable in data.data_vars:
         if variable in ["fx_upper", "fx_lower"]:
-            data[variable] *= 1 / density * ly
+            data[variable] *= ly / density
         elif variable in ["fy_upper", "fy_lower"]:
-            data[variable] *= 1 / density * lx[:, None]
-        elif variable in ["evap", "precip"]:
-            data[variable] *= 1 / density * a[:, None]
-        elif variable in ["s_upper", "s_lower"]:
+            data[variable] *= lx[:, None] / density
+        elif variable in ["evap", "precip", "s_upper", "s_lower"]:
             data[variable] *= a[:, None] / density
         else:
             raise ValueError(f"Unrecognized variable {variable}")
-        # data[variable] = data[variable].assign_attrs(units="m**3")
+
+        if variable in ["s_upper", "s_lower"]:
+            data[variable] = data[variable].assign_attrs(units="m**3")
+        else:
+            data[variable] = data[variable].assign_attrs(units="m**3 s**-1")
 
 
 def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
