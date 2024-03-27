@@ -37,13 +37,16 @@ dependencies = [
     "dask",
     "distributed",
     "psutil",
-    "matplotlib",
-    "cmocean",
     "regionmask",
 ]
 
 [project.optional-dependencies]
-develop = [
+viz = [
+    "matplotlib",
+    "cmocean",
+    "cartopy",
+]
+dev = [
     "black",
     "cffconvert",
     "isort",
@@ -58,6 +61,7 @@ develop = [
     "twine",
     "mypy",
 ]
+complete = ["wam2layers[viz,dev]"]
 
 [project.urls]
 Documentation = "https://wam2layers.readthedocs.io/en/latest"
