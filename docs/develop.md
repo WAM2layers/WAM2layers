@@ -243,9 +243,6 @@ publications.
 
 These instructions are intended for core developers.
 
-You need an [account on PyPI](https://pypi.org/account/register/) with owner
-rights on WAM2layers.
-
 - Create a new branch, e.g. `prep_release_vXXX`
 - Update "version" in `src/wam2layers/__init__.py` and in `citation.cff` (use [semantic
   versioning](https://semver.org/))
@@ -254,14 +251,7 @@ rights on WAM2layers.
   new version, and add a new "Unreleased" header above
 - Review and merge the release branch
 - [Make a release on GitHub](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
-- Make sure to pull the latest changes to main in your local copy of the repo.
-- Publish to PyPI. In your terminal, in the base path of the repository, type:
-
-  ```bash
-  python -m build
-  twine upload dist/*
-  ```
-
+- Upon release, the Github Actions workflow for publishing will run. The publishing step requires manual approval, so go to the [workflow overview](https://github.com/WAM2layers/WAM2layers/actions) and approve the run. More extensive documentation on publishing is available [here](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/).
 - Check that the new release is successfully rendered on Zenodo and PyPI.
 - Verify that you can install the new version with pip.
 
