@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 def backtrack(
     F,
     S1,
-    S0,
+    S0,  # TODO: why is this not used but both are used in forwardtrack?
     tagging_mask,
     output,
     config,
