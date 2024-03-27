@@ -140,7 +140,7 @@ def era5(config_file):
 @click.group()
 def visualize_cli():
     """Visualize input or output data of a WAM2layers experiment"""
-    visualization.try_import_cartopy()
+    pass
 
 
 @visualize_cli.command()
