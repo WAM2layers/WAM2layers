@@ -164,7 +164,7 @@ def initialize(config_file):
     if config.restart:
         # Reload last state from existing output
         date = config.tracking_start_date
-        ds = xr.open_dataset(output_path(date, config, mode="forwardtrack"))
+        ds = xr.open_dataset(output_path(date, config))
         output["s_track_upper_restart"].values = ds.s_track_upper_restart.values
         output["s_track_lower_restart"].values = ds.s_track_lower_restart.values
 

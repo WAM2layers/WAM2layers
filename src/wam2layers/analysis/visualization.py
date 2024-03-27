@@ -36,16 +36,6 @@ def polish(ax, region):
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
 
-def infer_mode(output_folder: Path) -> Literal["forwardtrack", "backtrack"]:
-    output_file = next(output_folder.glob("*.nc"))
-    if "forwardtrack" in str(output_file):
-        return "forwardtrack"
-    if "backtrack" in str(output_file):
-        return "backtrack"
-    else:
-        raise FileNotFoundError(f"No output files found in {output_folder}")
-
-
 def _plot_input(config: Config, ax):
     """
     Return subplot with input.
@@ -65,12 +55,11 @@ def _plot_input(config: Config, ax):
         inclusive="left",
     )
 
-    mode = infer_mode(config.output_folder)
     input_files = []
     for date in dates[:-1]:
         input_files.append(input_path(date, config))
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
-    if mode == "backtrack":
+    if config.tracking_direction == "backward":
         subset = ds.precip.sel(time=slice(start, end))
     else:
         subset = ds.evap.sel(time=slice(start, end))
@@ -101,11 +90,10 @@ def _plot_output(config: Config, ax):
         inclusive="left",
     )
 
-    mode = infer_mode(config.output_folder)
-    if mode == "backtrack":
-        output_files = [output_path(date, config, mode=mode) for date in dates[:-1]]
+    if config.tracking_direction == "backward":
+        output_files = [output_path(date, config) for date in dates[:-1]]
     else:
-        output_files = [output_path(date, config, mode=mode) for date in dates[1:]]
+        output_files = [output_path(date, config) for date in dates[1:]]
 
     if not all([Path(file).exists() for file in output_files]):
         raise FileNotFoundError(f"Could not find all files: {output_files}.")
@@ -113,7 +101,7 @@ def _plot_output(config: Config, ax):
         raise ValueError("Too few output files to visualize.")
 
     ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
-    if mode == "backtrack":
+    if config.tracking_direction == "backward":
         out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
     else:
         out_track = (

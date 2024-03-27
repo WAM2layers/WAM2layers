@@ -3,7 +3,7 @@
 This module contains all the functionality that makes it possible to run wam2layers on the command line, like so:
 
     wam2layers preprocess era5 floodcase.yaml
-    wam2layers backtrack floodcase.yaml
+    wam2layers track floodcase.yaml
 
 et cetera. It is built with [click](https://click.palletsprojects.com/en/8.1.x/).
 """
@@ -57,51 +57,57 @@ def cli():
     pass
 
 
-# Command line setup for backtrack
+# Command line setup for tracking
 
 
 @cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
-def backtrack(config_file):
-    """Run WAM2layers backtrack experiment.
+def track(config_file):
+    """Run WAM2layers tracking experiment.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
 
     Usage examples:
 
         \b
-        - wam2layers backtrack path/to/cases/era5_2021.yaml
+        - wam2layers track path/to/cases/era5_2021.yaml
     """
-    log_path = Config.from_yaml(config_file).output_folder
+    config = Config.from_yaml(config_file)
+    log_path = config.output_folder
     setup_logging(log_path)
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
-    logger.info("Starting backtrack experiment.")
-    run_backtrack_experiment(config_file)
-
-
-# Command line setup for forwardtrack
-
+    logger.info(f"Starting {config.tracking_direction} tracking experiment.")
+    if config.tracking_direction == "backward":
+        run_backtrack_experiment(config_file)
+    else:
+        run_forwardtrack_experiment(config_file)
 
 @cli.command()
-@click.argument("config_file", type=click.Path(exists=True))
-def forwardtrack(config_file):
-    """Run WAM2layers forwardtrack experiment.
+def backtrack():
+    msg = (
+        "The `backtrack` and `forwardtrack` commands have been removed in favor of "
+        "`track`.\nPlease specify the tracking direction in your config file and use "
+        "the `track` command instead."
+        "\n"
+        "\nFor example, in your config.yaml file add:"
+        "\n    # Tracking"
+        "\n    tracking_direction: backward"
+    )
+    raise ValueError(msg)
 
-    CONFIG_FILE: Path to WAM2layers experiment configuration file.
-
-    Usage examples:
-
-        \b
-        - wam2layers forwardtrack path/to/cases/era5_2021.yaml
-    """
-    log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path)
-    _copy_config_yaml(config_file, log_path)
-    logger.info("Welcome to WAM2layers.")
-    logger.info("Starting forwardtrack experiment.")
-    run_forwardtrack_experiment(config_file)
-
+@cli.command()
+def forwardtrack():
+    msg = (
+        "The `backtrack` and `forwardtrack` commands have been removed in favor of "
+        "`track`.\nPlease specify the tracking direction in your config file and use "
+        "the `track` command instead."
+        "\n"
+        "\nFor example, in your config.yaml file add:"
+        "\n    # Tracking"
+        "\n    tracking_direction: forward"
+    )
+    raise ValueError(msg)
 
 # Command line setup for preprocess
 @click.group()
@@ -140,7 +146,15 @@ def visualize_cli():
 @visualize_cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
 def input(config_file):
-    """Visualize input data for experiment."""
+    """Visualize input data for experiment.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        \b
+        - wam2layers visualize input path/to/cases/era5_2021.yaml
+    """
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
     _copy_config_yaml(config_file, log_path)
@@ -152,7 +166,15 @@ def input(config_file):
 @visualize_cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
 def output(config_file):
-    """Visualize output data for experiment."""
+    """Visualize output data for experiment.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        \b
+        - wam2layers visualize output path/to/cases/era5_2021.yaml
+    """
     log_path = Config.from_yaml(config_file).output_folder
     setup_logging(log_path)
     _copy_config_yaml(config_file, log_path)
