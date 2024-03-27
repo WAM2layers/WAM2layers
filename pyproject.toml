@@ -50,10 +50,6 @@ dev = [
     "black",
     "cffconvert",
     "isort",
-    "myst-nb",
-    "sphinx_rtd_theme",
-    "sphinx",
-    "myst-nb",
     "pytest",
     "pre-commit",
     "flake8",
@@ -61,7 +57,13 @@ dev = [
     "twine",
     "mypy",
 ]
-complete = ["wam2layers[viz,dev]"]
+docs = [
+    "myst-nb",
+    "sphinx_rtd_theme",
+    "sphinx",
+    "myst-nb",
+]
+complete = ["wam2layers[viz,dev,docs]"]
 
 [project.urls]
 Documentation = "https://wam2layers.readthedocs.io/en/latest"
