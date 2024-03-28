@@ -35,6 +35,7 @@ class ProgressTracker:
         self.tracked = 0
         self.lost_water = 0
         self.gained_water = 0
+        self.boundary_transport = 0
         self.store_intermediate_states(output)
         self.profile = Profiler()
         self.stability_correction_previous_grid = 0.0
@@ -47,14 +48,21 @@ class ProgressTracker:
         don't lose accumulations from previous outputs.
         """
         totals = output.sum()
+
         if self.mode == "backtrack":
             self.tracked += totals["e_track"]
             self.total_tagged_moisture += totals["tagged_precip"]
         else:  # mode is forwardtrack
             self.tracked += totals["p_track_lower"] + totals["p_track_upper"]
             self.total_tagged_moisture += totals["tagged_evap"]
+
+        # Don't include boundary losses in log messages
+        interior_losses = output.losses[1:-1, 1:-1].sum()
+        boundary_transport = totals["losses"] - interior_losses
+
+        self.lost_water += interior_losses
+        self.boundary_transport += boundary_transport
         self.gained_water += totals["gains"]
-        self.lost_water += totals["losses"]
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
@@ -69,18 +77,26 @@ class ProgressTracker:
         still_in_atmosphere = (
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
-        lost_water = self.lost_water + totals["losses"]
+
+        # Don't include boundary losses in log messages
+        interior_losses = output.losses[1:-1, 1:-1].sum()
+        boundary_transport = totals["losses"] - interior_losses
+
+        lost_water = self.lost_water + interior_losses
+        boundary_transport = self.boundary_transport + boundary_transport
         gained_water = self.gained_water + totals["gains"]
 
         tracked_percentage = tracked / total_tagged_moisture * 100
         in_atmos_percentage = still_in_atmosphere / total_tagged_moisture * 100
         lost_percentage = lost_water / total_tagged_moisture * 100
         gained_percentage = gained_water / total_tagged_moisture * 100
+        boundary_percentage = boundary_transport / total_tagged_moisture * 100
         closure_check_percentage = (
             tracked_percentage
             + in_atmos_percentage
             + lost_percentage
             - gained_percentage
+            + boundary_percentage
         )
 
         time, memory = self.profile()
@@ -90,6 +106,7 @@ class ProgressTracker:
             f"{t} - "
             f"Tracked moisture: {tracked_percentage.item():.2f}%. "
             f"Tagged in atmosphere: {in_atmos_percentage.item():.2f}%. "
+            f"Boundary transport: {boundary_percentage.item():.2f}%. "
             f"Lost moisture: {lost_percentage.item():.2f}%. "
             f"Gained moisture: {gained_percentage.item():.2f}%. "
             f"Tagging closure: {closure_check_percentage.item():.2f}%. "

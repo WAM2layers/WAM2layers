@@ -22,6 +22,9 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Fixed a bug in the profiler's `track_stability_correction` method ([#325](https://github.com/WAM2layers/WAM2layers/pull/325)).
+- Log message about "lost moisture" no longer includes boundary losses. Instead,
+  there is a separate log message for "boundary transport"
+  ([#343](https://github.com/WAM2layers/WAM2layers/pull/343))
 
 ### Changed
 - The workflow tests use a temporary directory managed by pytest and the user's operating system, to avoid the `/tmp` folder polluting the workspace ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
