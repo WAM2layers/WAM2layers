@@ -3,7 +3,7 @@ import xarray as xr
 
 
 def initialize_time(config, direction="forward"):
-    dt = pd.Timedelta(config.target_frequency)
+    dt = pd.Timedelta(seconds=config.timestep)
 
     if direction == "forward":
         t0 = pd.Timestamp(config.tracking_start_date)
