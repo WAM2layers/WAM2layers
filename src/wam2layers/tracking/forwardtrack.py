@@ -60,7 +60,7 @@ def forwardtrack(
 
     bc = config.periodic_boundary  # boundary condition True/False
     # TODO: apply terms in successive steps instead of all at once?
-    s_track_lower += (
+    s_track_lower += config.timestep * (
         horizontal_advection(s_track_relative_lower, fx_lower, fy_lower, bc)
         + vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(
@@ -79,7 +79,7 @@ def forwardtrack(
         )
     s_track_lower = np.maximum(s_track_lower, 0)
 
-    s_track_upper += (
+    s_track_upper += config.timestep * (
         horizontal_advection(s_track_relative_upper, fx_upper, fy_upper, bc)
         - vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(
@@ -114,8 +114,8 @@ def forwardtrack(
     s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
 
     # Update output fields
-    output["p_track_lower"] += precip_lower * s_track_relative_lower
-    output["p_track_upper"] += precip_upper * s_track_relative_upper
+    output["p_track_lower"] += precip_lower * s_track_relative_lower * config.timestep
+    output["p_track_upper"] += precip_upper * s_track_relative_upper * config.timestep
     output["losses"] += losses
     output["gains"] += gains
 
@@ -136,7 +136,7 @@ def forwardtrack(
 
     output["s_track_lower_restart"].values = s_track_lower
     output["s_track_upper_restart"].values = s_track_upper
-    output["tagged_evap"] += region * evap
+    output["tagged_evap"] += region * evap * config.timestep
 
 
 def initialize(config_file):
@@ -209,15 +209,15 @@ def run_experiment(config_file):
                 tagging_mask = load_tagging_region(config, t=t0)
 
         # Convert data to volumes
-        change_units(S0, config.target_frequency)
-        change_units(F, config.target_frequency)
-        change_units(S1, config.target_frequency)
+        change_units(S0)
+        change_units(F)
+        change_units(S1)
 
         # Apply a stability correction if needed
         stabilize_fluxes(F, S0, progress_tracker, config, t0)
 
         # Determine the vertical moisture flux
-        F["f_vert"] = calculate_fz(F, S0, S1, config.kvf)
+        F["f_vert"] = calculate_fz(F, S0, S1, config.timestep, config.kvf)
 
         # TODO: consider changing signature to F, S0, S1
         # Inside forwardtrack the "output" dictionary is updated

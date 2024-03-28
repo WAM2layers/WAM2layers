@@ -34,6 +34,7 @@ All notable changes to this project will be documented in this file.
 - The output files now contain a time dimension (incl. the coordinate) ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 - The package version is now defined in `src/wam2layers/__init__.py` ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 - The command line interface for tracking has changed. Tracking experiments are now started by doing `wam2layers track config.yml`. The tracking direction is retrieved from the new configuration entry "tracking_direction" ([#338](https://github.com/WAM2layers/WAM2layers/pull/338)).
+- The configuration parameter "target_frequency" has been renamed to "timestep". Also, under the hood, it is applied in a different location, closer to the core computations. This makes it easier to see the relation between the formula "on paper" and the implementation in the code ([#346](https://github.com/WAM2layers/WAM2layers/pull/346)).
 
 ## Release v3.0.0-beta.6 (2023-12-22)
 
