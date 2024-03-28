@@ -37,27 +37,31 @@ dependencies = [
     "dask",
     "distributed",
     "psutil",
-    "matplotlib",
-    "cmocean",
     "regionmask",
 ]
 
 [project.optional-dependencies]
-develop = [
+viz = [
+    "matplotlib",
+    "cmocean",
+    "cartopy",
+]
+dev = [
     "black",
     "cffconvert",
     "isort",
+    "pytest",
+    "pre-commit",
+    "flake8",
+    "mypy",
+]
+docs = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
     "myst-nb",
-    "pytest",
-    "pre-commit",
-    "flake8",
-    "build",
-    "twine",
-    "mypy",
 ]
+complete = ["wam2layers[viz,dev,docs]"]
 
 [project.urls]
 Documentation = "https://wam2layers.readthedocs.io/en/latest"

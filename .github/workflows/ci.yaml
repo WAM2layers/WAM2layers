@@ -35,7 +35,7 @@ jobs:
           micromamba info
       - name: Install dev dependencies
         run: |
-          pip install .[develop]
+          pip install .[dev,viz]
           wam2layers --help
         shell: bash -el {0}
       - name: Run pytest
