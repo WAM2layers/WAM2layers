@@ -13,12 +13,12 @@ instructions in the [contributing](./contributing) section of the documentation.
 
 If you know your way around, the following quick reference might be all you need:
 
-For non-conda users:
+Install WAM2layers in an existing Python environment:
 ```
 pip install wam2layers[viz]
 ```
 
-With conda:
+Create a new Jupyter Lab environment with conda and install wam2layers inside it.
 ```
 conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy matplotlib
 conda activate wamenv
