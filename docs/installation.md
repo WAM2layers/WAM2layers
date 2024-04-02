@@ -20,7 +20,7 @@ pip install wam2layers[viz]
 
 Create a new Jupyter Lab environment with conda and install wam2layers inside it.
 ```
-conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy matplotlib
+conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy
 conda activate wamenv
 pip install wam2layers
 ```
@@ -49,16 +49,16 @@ which python3
 which pip
 ```
 
-If this returns nothing, you don't have Python/pip. In that case, we recommend 
+If this returns nothing, you don't have Python/pip. In that case, we recommend
 installing Python with conda (see below).
 
-If you do have Python and pip installed, you can install wam2layers with one of the 
+If you do have Python and pip installed, you can install wam2layers with one of the
 following commands, depending on your requirements:
 
 ```
 pip install wam2layers
 pip install wam2layers[viz]  # includes packages required for visualization
-pip install wam2layers[complete]  # include all optional packages (for development)
+pip install wam2layers[dev]  # include all packages needed for working on the code
 ```
 
 ### Conda installation
@@ -67,8 +67,8 @@ If you are less experienced with setting up Python virtual environments,
 it can be more convenient to use Conda.
 Additionally, some packages might not be available from pip on all systems.
 
-Again, you can use `which conda` to see if conda is available on your system. 
-If it's not, [here](https://docs.anaconda.com/free/miniconda/index.html) is a 
+Again, you can use `which conda` to see if conda is available on your system.
+If it's not, [here](https://docs.anaconda.com/free/miniconda/index.html) is a
 really nice walkthrough for installing miniconda.
 
 If you have conda installed, to set up a dedicated environment for your
@@ -100,7 +100,7 @@ of the source code and create an editable installation. This will allow you to
 look at the source code to see what is going on inside the model. You can then
 also make (experimental) changes to the model and see how it affects the
 results.
-The source code for WAM2Layers is hosted on 
+The source code for WAM2Layers is hosted on
 GitHub. Creating a local copy requires git (tip: `which git`).
 
 Beware that the code on GitHub might include recent updates that have
