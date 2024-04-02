@@ -38,12 +38,12 @@ dependencies = [
     "distributed",
     "psutil",
     "regionmask",
+    "matplotlib",
+    "cmocean",
 ]
 
 [project.optional-dependencies]
 viz = [
-    "matplotlib",
-    "cmocean",
     "cartopy",
 ]
 dev = [
@@ -54,6 +54,7 @@ dev = [
     "pre-commit",
     "flake8",
     "mypy",
+    "wam2layers[viz]",  # So plotting tests won't fail
 ]
 docs = [
     "myst-nb",

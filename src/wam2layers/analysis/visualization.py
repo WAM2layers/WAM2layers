@@ -11,15 +11,13 @@ from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
 
+import cmocean
+
 logger = logging.getLogger(__name__)
 
 
 MISSING_CARTOPY_MSG = (
     "Cartopy is not available, plots may look different than expected.\n"
-    "To install the optional visualization packages do `pip install wam2layers[viz]`."
-)
-MISSING_CMOCEAN_MSG = (
-    "cmocean is not available, colors of plots may look different than expected.\n"
     "To install the optional visualization packages do `pip install wam2layers[viz]`."
 )
 
@@ -39,19 +37,6 @@ def get_projection():
     else:
         warnings.warn(MISSING_CARTOPY_MSG, UserWarning, stacklevel=1)
         return None
-
-
-def get_cmocean_cmap(name: str):
-    """Get a specific colormap from cmocean.
-    
-    If cmocean is not installed, this return viridis.
-    """
-    if package_available("cmocean"):
-        import cmocean
-        return getattr(cmocean.cm, name)
-    else:
-        warnings.warn(MISSING_CMOCEAN_MSG, UserWarning, stacklevel=1)
-        return "viridis"
 
 
 def polish(ax, region):
@@ -99,7 +84,7 @@ def _plot_input(config: Config, ax):
     # Make figure
     input.plot(
         ax=ax,
-        cmap=get_cmocean_cmap("rain"),
+        cmap=cmocean.cm.rain,
         cbar_kwargs=dict(fraction=0.05, shrink=0.5)
     )
     ax.set_title("Cumulative input during tagging [mm]", loc="left")
@@ -148,7 +133,7 @@ def _plot_output(config: Config, ax):
         ax=ax,
         vmin=0,
         robust=True,
-        cmap=get_cmocean_cmap("rain"),
+        cmap=cmocean.cm.rain,
         cbar_kwargs=dict(fraction=0.05, shrink=0.5),
     )
 

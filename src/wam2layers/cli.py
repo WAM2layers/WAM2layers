@@ -140,14 +140,7 @@ def era5(config_file):
 @click.group()
 def visualize_cli():
     """Visualize input or output data of a WAM2layers experiment"""
-    if not visualization.package_available("matplotlib"):
-        msg = (
-            "Visualization requires matplotlib at a minimum. Please install it with\n"
-            "    pip install matplotlib\n"
-            "or install all visualization dependencies with:\n"
-            "    pip install wam2layers[viz]"
-        )
-        raise ImportError(msg)
+    ...
 
 
 @visualize_cli.command()
