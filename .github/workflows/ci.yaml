@@ -39,7 +39,7 @@ jobs:
           python3 -m pip install .[dev]
       - name: Run unit tests
         run: |
-          python3 -m pytest
+          python3 -m pytest --basetemp=tmp/
       - name: Upload test figures
         uses: actions/upload-artifact@v4
         if: always()
