@@ -1,8 +1,9 @@
 import importlib
 import logging
-from pathlib import Path
 import warnings
+from pathlib import Path
 
+import cmocean
 import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
@@ -10,8 +11,6 @@ import xarray as xr
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import get_grid_info
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
-
-import cmocean
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ def get_projection():
     """Get the cartopy 'plate carree' projection if available, else return None"""
     if package_available("cartopy"):
         import cartopy.crs
+
         return cartopy.crs.PlateCarree()
     else:
         warnings.warn(MISSING_CARTOPY_MSG, UserWarning, stacklevel=1)
@@ -42,6 +42,7 @@ def get_projection():
 def polish(ax, region):
     if package_available("cartopy"):
         import cartopy.feature
+
         ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.8)
         ax.add_feature(cartopy.feature.BORDERS, linestyle="-", linewidth=0.2)
     else:
@@ -82,11 +83,7 @@ def _plot_input(config: Config, ax):
     input = (subset * region * 3600).sum("time").compute()
 
     # Make figure
-    input.plot(
-        ax=ax,
-        cmap=cmocean.cm.rain,
-        cbar_kwargs=dict(fraction=0.05, shrink=0.5)
-    )
+    input.plot(ax=ax, cmap=cmocean.cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
     ax.set_title("Cumulative input during tagging [mm]", loc="left")
     polish(ax, region.where(region > 0, drop=True))
 

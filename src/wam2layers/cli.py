@@ -83,6 +83,7 @@ def track(config_file):
     else:
         run_forwardtrack_experiment(config_file)
 
+
 @cli.command()
 def backtrack():
     msg = (
@@ -96,6 +97,7 @@ def backtrack():
     )
     raise ValueError(msg)
 
+
 @cli.command()
 def forwardtrack():
     msg = (
@@ -108,6 +110,7 @@ def forwardtrack():
         "\n    tracking_direction: forward"
     )
     raise ValueError(msg)
+
 
 # Command line setup for preprocess
 @click.group()
