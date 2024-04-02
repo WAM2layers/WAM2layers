@@ -234,8 +234,8 @@ wam2layers track config-file.yaml
 ```
 
 where `config-file.yaml` is the path to your configuration file. Among others,
-this file should have settings on the tracking direction (forward/backward), 
-the date range for which you want to run track, and also about the location where the 
+this file should have settings on the tracking direction (forward/backward),
+the date range for which you want to run track, and also about the location where the
 preprocessed data are stored and where the output will be stored.
 For more information, see [](./config) or have a look at the example config file
 [here](https://github.com/WAM2layers/WAM2layers/blob/main/example_config.yaml).

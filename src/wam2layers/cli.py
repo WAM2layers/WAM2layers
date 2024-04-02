@@ -83,6 +83,7 @@ def track(config_file):
     else:
         run_forwardtrack_experiment(config_file)
 
+
 @cli.command()
 def backtrack():
     msg = (
@@ -96,6 +97,7 @@ def backtrack():
     )
     raise ValueError(msg)
 
+
 @cli.command()
 def forwardtrack():
     msg = (
@@ -108,6 +110,7 @@ def forwardtrack():
         "\n    tracking_direction: forward"
     )
     raise ValueError(msg)
+
 
 # Command line setup for preprocess
 @click.group()
@@ -140,7 +143,7 @@ def era5(config_file):
 @click.group()
 def visualize_cli():
     """Visualize input or output data of a WAM2layers experiment"""
-    visualization.try_import_cartopy()
+    ...
 
 
 @visualize_cli.command()

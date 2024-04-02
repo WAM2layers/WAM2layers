@@ -29,7 +29,7 @@ dependencies = [
     "pyyaml",
     "scipy",
     "pandas",
-    "xarray",
+    "xarray<2024.3.0",  # causes different results
     "netcdf4",
     "scipy",
     "click",
@@ -37,27 +37,32 @@ dependencies = [
     "dask",
     "distributed",
     "psutil",
+    "regionmask",
     "matplotlib",
     "cmocean",
-    "regionmask",
 ]
 
 [project.optional-dependencies]
-develop = [
+viz = [
+    "cartopy",
+]
+dev = [
     "black",
     "cffconvert",
     "isort",
+    "pytest",
+    "pre-commit",
+    "flake8",
+    "mypy",
+    "wam2layers[viz]",  # So plotting tests won't fail
+]
+docs = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
     "myst-nb",
-    "pytest",
-    "pre-commit",
-    "flake8",
-    "build",
-    "twine",
-    "mypy",
 ]
+complete = ["wam2layers[viz,dev,docs]"]
 
 [project.urls]
 Documentation = "https://wam2layers.readthedocs.io/en/latest"

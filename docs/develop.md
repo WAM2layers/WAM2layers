@@ -94,14 +94,14 @@ You can install your local copy of the code by following the same steps as the
 additional dependencies are installed that are convenient for developing.
 
 ```
-pip install --editable .[develop]
+pip install --editable .[dev]
 ```
 
 The `--editable` flag means that any changes you make to the code will be
 "effective immediately". When you run the model again, the updated code is used.
 
-The `[develop]` option tells pip to install not just the code, but some
-additional packages that are listed under the "develop" header in the file
+The `[dev]` option tells pip to install not just the code, but some
+additional packages that are listed under the "dev" header in the file
 `pyproject.toml`. These packages help with linting (checking your code against
 syntax/style guides), automatic formatting, building documentation, running
 tests, and publising the package on PyPI.
@@ -422,7 +422,13 @@ repository is setup to integrate with readthedocs, such that the documentation
 automatically builds for all versions of the model, and also for pull requests.
 So you can always preview the documentation on GitHub.
 
-To build the documentation locally, from the base of the repository, type
+To build the documentation locally, make sure you have installed the docs dependencies:
+
+```bash
+pip install wam2layers[docs]
+```
+
+Then, from the base of the repository, type
 
 ```bash
 sphinx-build -nW --keep-going -b html docs docs/_build/html
@@ -458,10 +464,10 @@ A simple example:
 def add(a: int, b: int) -> float:
    return float(a+b)
 ```
-The `add` function requires two arguments of the integer type, and will return a 
+The `add` function requires two arguments of the integer type, and will return a
 floating point number.
-Adding types to code can help in detecting issues early, document what the function 
-inputs should be, as well as make it easier for a developer's IDE to give useful 
+Adding types to code can help in detecting issues early, document what the function
+inputs should be, as well as make it easier for a developer's IDE to give useful
 suggestions.
 More info on typing can be found [here](https://docs.python.org/3/library/typing.html).
 
