@@ -320,6 +320,7 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
 
 def convergence(fx, fy):
     # Note: latitude decreasing, hence positive fy gradient is convergence
+    logger.info(f"fx_min: {fx.min().item():.2e}, fx_max: {fx.max().item():.2e}")
     return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
 
 
@@ -387,11 +388,11 @@ def calculate_fz(F, S0, S1, dt, kvf):
         -convergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
     )
 
-    term = -convergence(F.fx_upper, F.fy_upper)
-    logger.info(
-        f"divergence min: {(term).min().item():.2e}, "
-        f"divergence max: {(term).max().item():.2e}"
-    )
+    # term = -convergence(F.fx_upper, F.fy_upper)
+    # logger.info(
+    #     f"divergence min: {(term).min().item():.2e}, "
+    #     f"divergence max: {(term).max().item():.2e}"
+    # )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
