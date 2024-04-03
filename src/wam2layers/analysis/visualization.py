@@ -7,7 +7,6 @@ import xarray as xr
 from cmocean import cm
 
 from wam2layers.config import Config
-from wam2layers.tracking.grid import get_grid_info
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
 
 logger = logging.getLogger(__name__)
@@ -79,7 +78,6 @@ def _plot_output(config: Config, ax):
     backtrack = evaporation
     """
     region = load_tagging_region(config)
-    a_gridcell, lx, ly = get_grid_info(region)
 
     # Load data
     dates = pd.date_range(
@@ -101,13 +99,9 @@ def _plot_output(config: Config, ax):
 
     ds = xr.open_mfdataset(output_files, combine="nested", concat_dim="time")
     if config.tracking_direction == "backward":
-        out_track = ds.e_track.sum("time") * 1000 / a_gridcell[:, None]
+        out_track = ds.e_track.sum("time")
     else:
-        out_track = (
-            (ds.p_track_lower.sum("time") + ds.p_track_upper.sum("time"))
-            * 1000
-            / a_gridcell[:, None]
-        )
+        out_track = ds.p_track_lower.sum("time") + ds.p_track_upper.sum("time")
 
     # Make figure
     out_track.plot(
@@ -201,7 +195,6 @@ def visualize_snapshots(config_file):
         inclusive="left",
     )
     region = load_tagging_region(config)
-    a_gridcell, lx, ly = get_grid_info(region)
 
     out_dir = Path(config.output_folder) / "figures"
     out_dir.mkdir(exist_ok=True, parents=True)
@@ -217,17 +210,17 @@ def visualize_snapshots(config_file):
         )
 
         ax1.set_title("Tagged moisture" + date.strftime("%Y%m%d"))
-        precip = ds_in.precip.sum("time") * region / a_gridcell[:, None] * 1000
+        precip = ds_in.precip.sum("time") * region
         precip.plot(ax=ax1, cmap="Blues")
         polish(ax1, region)
 
         ax2.set_title("Tracked moisture")
-        e_track = ds_out.e_track / a_gridcell[:, None] * 1000
+        e_track = ds_out.e_track
         e_track.plot(ax=ax2, cmap="GnBu")
         polish(ax2, region)
 
         ax3.set_title("S track upper layer")
-        s_track_upper = ds_out.s_track_upper_restart / a_gridcell[:, None] * 1000
+        s_track_upper = ds_out.s_track_upper_restart
         s_track_upper.plot(ax=ax3, cmap="YlOrRd")
         ds_in.mean("time").plot.streamplot(
             x="longitude",
@@ -240,7 +233,7 @@ def visualize_snapshots(config_file):
         polish(ax3, region)
 
         ax4.set_title("S track lower layer")
-        s_track_lower = ds_out.s_track_lower_restart / a_gridcell[:, None] * 1000
+        s_track_lower = ds_out.s_track_lower_restart
         s_track_lower.plot(ax=ax4, cmap="YlOrRd")
         ds_in.mean("time").plot.streamplot(
             x="longitude",
