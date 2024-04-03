@@ -6,6 +6,7 @@ import psutil
 import xarray as xr
 
 from wam2layers.config import Config
+from wam2layers.tracking.grid import get_grid_info
 
 logger = logging.getLogger(__name__)
 

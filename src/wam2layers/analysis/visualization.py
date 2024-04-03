@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Literal
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,7 +7,7 @@ import xarray as xr
 from cmocean import cm
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import get_grid_info
+from wam2layers.tracking.grid import get_grid_info
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
 
 logger = logging.getLogger(__name__)

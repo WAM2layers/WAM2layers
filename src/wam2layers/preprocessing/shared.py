@@ -6,6 +6,7 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 from wam2layers.config import Config
+from wam2layers.tracking.grid import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
 
 
@@ -38,35 +39,6 @@ def resample(variable, divt, count_time, method="interp"):
             raise ValueError(f"Unknown resample method {method}")
 
     return new_var
-
-
-def get_grid_info(ds):
-    """Return grid cell area and lenght of the sides."""
-    dg = 111089.56  # [m] length of 1 degree latitude
-    erad = 6.371e6  # [m] Earth radius
-
-    latitude = ds.latitude.values
-    longitude = ds.longitude.values
-    grid_spacing = np.abs(longitude[1] - longitude[0])  # [degrees]
-
-    # Calculate area TODO check this calculation!
-    lat_n = np.minimum(90.0, latitude + 0.5 * grid_spacing)
-    lat_s = np.maximum(-90.0, latitude - 0.5 * grid_spacing)
-
-    a = (
-        np.pi
-        / 180.0
-        * erad**2
-        * grid_spacing
-        * abs(np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0))
-    )
-
-    # Calculate faces
-    ly = grid_spacing * dg  # [m] length eastern/western boundary of a cell
-    lx_n_gridcell = ly * np.cos((latitude + grid_spacing / 2) * np.pi / 180)
-    lx_s_gridcell = ly * np.cos((latitude - grid_spacing / 2) * np.pi / 180)
-    lx = 0.5 * (lx_n_gridcell + lx_s_gridcell)
-    return a, ly, lx
 
 
 def join_levels(pressure_level_data, surface_level_data):
@@ -287,34 +259,6 @@ def accumulation_to_flux(data, input_frequency):
     return fluxdata
 
 
-def stagger_x(f):
-    """Interpolate f to the grid cell interfaces.
-
-    Only the values at the interior interfaces are returned
-
-    Arguments:
-        f: 2d array of shape [M, N]
-
-    Returns:
-        2d array of shape [M-2, N-1]
-    """
-    return 0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
-
-
-def stagger_y(f):
-    """Interpolate f to the grid cell interfaces.
-
-    Only the values at the interior interfaces are returned
-
-    Arguments:
-        f: 2d array of shape [M, N]
-
-    Returns:
-        2d array of shape [M-1, N-2]
-    """
-    return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
-
-
 def change_units(data):
     """Change units to kg or kg/s.
 
@@ -326,7 +270,7 @@ def change_units(data):
         if variable in ["fx_upper", "fx_lower"]:
             data[variable] *= ly
         elif variable in ["fy_upper", "fy_lower"]:
-            data[variable] *= lx[:, None]
+            data[variable] *= lx
         elif variable in ["evap", "precip", "s_upper", "s_lower"]:
             data[variable] *= a[:, None]
         else:

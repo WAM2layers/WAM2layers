@@ -6,18 +6,13 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import (
-    calculate_fz,
-    change_units,
-    stabilize_fluxes,
-    stagger_x,
-    stagger_y,
-)
+from wam2layers.preprocessing.shared import calculate_fz, change_units, stabilize_fluxes
 from wam2layers.tracking.core import (
     horizontal_advection,
     vertical_advection,
     vertical_dispersion,
 )
+from wam2layers.tracking.grid import get_grid_info, stagger_x, stagger_y
 from wam2layers.tracking.io import (
     load_data,
     load_tagging_region,
