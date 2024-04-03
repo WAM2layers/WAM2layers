@@ -32,6 +32,9 @@ interace (CLI), much like pip, conda, git, cdo, et cetera. It looks like this:
 wam2layers --help
 wam2layers track --help
 
+# Display the version of wam2layers you are using:
+wam2layers --version
+
 # Preprocess data (you need to have downloaded the data)
 wam2layers preprocess era5 floodcase_202107.yaml
 
