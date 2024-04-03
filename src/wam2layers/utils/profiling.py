@@ -48,7 +48,8 @@ class ProgressTracker:
         Intended for when the output fields are reset at write time, so we
         don't lose accumulations from previous outputs.
         """
-        totals = output.sum()
+        a, _, _ = get_grid_info(output.gains)
+        totals = (output * a[:, None]).sum()
 
         if self.mode == "backtrack":
             self.tracked += totals["e_track"]
@@ -58,7 +59,7 @@ class ProgressTracker:
             self.total_tagged_moisture += totals["tagged_evap"]
 
         # Don't include boundary losses in log messages
-        interior_losses = output.losses[1:-1, 1:-1].sum()
+        interior_losses = (output["losses"] * a[:, None])[1:-1, 1:-1].sum()
         boundary_transport = totals["losses"] - interior_losses
 
         self.lost_water += interior_losses
@@ -67,7 +68,8 @@ class ProgressTracker:
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
-        totals = output.sum()
+        a, _, _ = get_grid_info(output.gains)
+        totals = (output * a[:, None]).sum()
 
         if self.mode == "backtrack":
             tracked = self.tracked + totals["e_track"]
@@ -80,7 +82,7 @@ class ProgressTracker:
         )
 
         # Don't include boundary losses in log messages
-        interior_losses = output.losses[1:-1, 1:-1].sum()
+        interior_losses = (output["losses"] * a[:, None])[1:-1, 1:-1].sum()
         boundary_transport = totals["losses"] - interior_losses
 
         lost_water = self.lost_water + interior_losses
