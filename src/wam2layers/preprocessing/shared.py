@@ -387,15 +387,15 @@ def calculate_fz(F, S0, S1, dt, kvf):
         -convergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
     )
 
+    term = -convergence(F.fx_upper, F.fy_upper)
+    logger.info(
+        f"divergence min: {(term).min().item():.2e}, "
+        f"divergence max: {(term).max().item():.2e}"
+    )
+
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
     fz = foo_lower - S1.s_lower / (S1.s_lower + S1.s_upper) * (foo_upper + foo_lower)
-
-    logger.info(
-        "Before correction,   "
-        f"fv min: {(fz/dt).min().item():.2e}, "
-        f"fv max: {(fz/dt).max().item():.2e}"
-    )
 
     # TODO: verify that err_lower/s_lower = err_upper/s_upper is satisfied on debug log
 
