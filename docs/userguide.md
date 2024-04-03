@@ -32,6 +32,9 @@ interace (CLI), much like pip, conda, git, cdo, et cetera. It looks like this:
 wam2layers --help
 wam2layers track --help
 
+# Display the version of wam2layers you are using:
+wam2layers --version
+
 # Preprocess data (you need to have downloaded the data)
 wam2layers preprocess era5 floodcase_202107.yaml
 
@@ -234,8 +237,8 @@ wam2layers track config-file.yaml
 ```
 
 where `config-file.yaml` is the path to your configuration file. Among others,
-this file should have settings on the tracking direction (forward/backward), 
-the date range for which you want to run track, and also about the location where the 
+this file should have settings on the tracking direction (forward/backward),
+the date range for which you want to run track, and also about the location where the
 preprocessed data are stored and where the output will be stored.
 For more information, see [](./config) or have a look at the example config file
 [here](https://github.com/WAM2layers/WAM2layers/blob/main/example_config.yaml).

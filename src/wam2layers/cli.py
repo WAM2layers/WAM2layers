@@ -11,9 +11,11 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
+import sys
 
 import click
 
+from wam2layers import __version__
 from wam2layers.analysis import visualization
 from wam2layers.config import Config
 from wam2layers.preprocessing.era5 import prep_experiment
@@ -51,7 +53,17 @@ def _copy_config_yaml(yaml_path, target_path):
     shutil.copy(yaml_path, target_path)
 
 
+def get_wam_version():
+    """Get the version of WAM2layers"""
+    pkg_dir = Path(__file__).parent.absolute()
+    return (
+        f"wam2layers {__version__} from {pkg_dir} "
+        f"(python {sys.version_info.major}.{sys.version_info.minor})"
+    )
+
+
 @click.group()
+@click.version_option(message=get_wam_version())
 def cli():
     """Command line interface to WAM2layers."""
     pass
@@ -83,6 +95,7 @@ def track(config_file):
     else:
         run_forwardtrack_experiment(config_file)
 
+
 @cli.command()
 def backtrack():
     msg = (
@@ -96,6 +109,7 @@ def backtrack():
     )
     raise ValueError(msg)
 
+
 @cli.command()
 def forwardtrack():
     msg = (
@@ -108,6 +122,7 @@ def forwardtrack():
         "\n    tracking_direction: forward"
     )
     raise ValueError(msg)
+
 
 # Command line setup for preprocess
 @click.group()
@@ -140,7 +155,7 @@ def era5(config_file):
 @click.group()
 def visualize_cli():
     """Visualize input or output data of a WAM2layers experiment"""
-    visualization.try_import_cartopy()
+    ...
 
 
 @visualize_cli.command()

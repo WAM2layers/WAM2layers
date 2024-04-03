@@ -1,10 +1,12 @@
+import importlib
 import logging
+import warnings
 from pathlib import Path
 
+import cmocean
 import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
-from cmocean import cm
 
 from wam2layers.config import Config
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
@@ -12,24 +14,38 @@ from wam2layers.tracking.io import input_path, load_tagging_region, output_path
 logger = logging.getLogger(__name__)
 
 
-def try_import_cartopy():
-    """Import cartopy if it is available; else raise."""
-    from importlib import import_module
+MISSING_CARTOPY_MSG = (
+    "Cartopy is not available, plots may look different than expected.\n"
+    "To install the optional visualization packages do `pip install wam2layers[viz]`."
+)
 
-    global crs
-    global cfeature
 
-    try:
-        crs = import_module("cartopy.crs")
-        cfeature = import_module("cartopy.feature")
-    except ImportError as exec:
-        message = "This function requires cartopy. Cartopy is most easily installed with conda. Please refer to the documentation."
-        raise ImportError(message) from exec
+def package_available(package_name: str) -> bool:
+    """Return true if the specified package installed in the python kernel."""
+    if importlib.util.find_spec(package_name) is not None:
+        return True
+    return False
+
+
+def get_projection():
+    """Get the cartopy 'plate carree' projection if available, else return None"""
+    if package_available("cartopy"):
+        import cartopy.crs
+
+        return cartopy.crs.PlateCarree()
+    else:
+        warnings.warn(MISSING_CARTOPY_MSG, UserWarning, stacklevel=1)
+        return None
 
 
 def polish(ax, region):
-    ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
-    ax.add_feature(cfeature.BORDERS, linestyle="-", linewidth=0.2)
+    if package_available("cartopy"):
+        import cartopy.feature
+
+        ax.add_feature(cartopy.feature.COASTLINE, linewidth=0.8)
+        ax.add_feature(cartopy.feature.BORDERS, linestyle="-", linewidth=0.2)
+    else:
+        warnings.warn(MISSING_CARTOPY_MSG, UserWarning, stacklevel=1)
     ax.set_xlim(region.longitude.min(), region.longitude.max())
     ax.set_ylim(region.latitude.min(), region.latitude.max())
 
@@ -66,7 +82,7 @@ def _plot_input(config: Config, ax):
     input = (subset * region * 3600).sum("time").compute()
 
     # Make figure
-    input.plot(ax=ax, cmap=cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
+    input.plot(ax=ax, cmap=cmocean.cm.rain, cbar_kwargs=dict(fraction=0.05, shrink=0.5))
     ax.set_title("Cumulative input during tagging [mm]", loc="left")
     polish(ax, region.where(region > 0, drop=True))
 
@@ -108,7 +124,7 @@ def _plot_output(config: Config, ax):
         ax=ax,
         vmin=0,
         robust=True,
-        cmap=cm.rain,
+        cmap=cmocean.cm.rain,
         cbar_kwargs=dict(fraction=0.05, shrink=0.5),
     )
 
@@ -129,7 +145,7 @@ def visualize_input_data(config_file):
 
     # Make figure
     fig = plt.figure(figsize=(16, 10))
-    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+    ax = fig.add_subplot(111, projection=get_projection())
 
     _plot_input(config, ax)
 
@@ -151,7 +167,7 @@ def visualize_output_data(config_file):
 
     # Make figure
     fig = plt.figure(figsize=(16, 10))
-    ax = fig.add_subplot(111, projection=crs.PlateCarree())
+    ax = fig.add_subplot(111, projection=get_projection())
     _plot_output(config, ax)
 
     # Save
@@ -169,7 +185,7 @@ def visualize_both(config_file):
 
     # Make figure
     fig, [ax1, ax2] = plt.subplots(
-        2, 1, figsize=(16, 10), subplot_kw=dict(projection=crs.PlateCarree())
+        2, 1, figsize=(16, 10), subplot_kw=dict(projection=get_projection())
     )
 
     _plot_input(config, ax1)
@@ -206,7 +222,7 @@ def visualize_snapshots(config_file):
 
         # Make figure
         fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(
-            2, 2, subplot_kw=dict(projection=crs.PlateCarree()), figsize=(14, 8)
+            2, 2, subplot_kw=dict(projection=get_projection()), figsize=(14, 8)
         )
 
         ax1.set_title("Tagged moisture" + date.strftime("%Y%m%d"))
