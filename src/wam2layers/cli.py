@@ -96,7 +96,7 @@ def track(config_file):
         run_forwardtrack_experiment(config_file)
 
 
-@cli.command()
+@cli.command(hidden=True)
 def backtrack():
     msg = (
         "The `backtrack` and `forwardtrack` commands have been removed in favor of "
@@ -110,7 +110,7 @@ def backtrack():
     raise ValueError(msg)
 
 
-@cli.command()
+@cli.command(hidden=True)
 def forwardtrack():
     msg = (
         "The `backtrack` and `forwardtrack` commands have been removed in favor of "
