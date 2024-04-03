@@ -298,10 +298,10 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
         F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep * dy
 
 
-def convergence(fx, fy):
-    # Note: latitude decreasing, hence positive fy gradient is convergence
+def divergence(fx, fy):
+    # Note: latitude decreasing, hence negative fy gradient is divergence
     a, dy, dx = get_grid_info(fx)
-    return np.gradient(fy / dy, axis=-2) - np.gradient(fx / dx, axis=-1)
+    return np.gradient(fx / dx, axis=-1) - np.gradient(fy / dy, axis=-2)
 
 
 def calculate_fz(F, S0, S1, dt, kvf):
@@ -362,10 +362,10 @@ def calculate_fz(F, S0, S1, dt, kvf):
 
     # Evaluate all terms in the moisture balance execpt the unknown Fz and err
     foo_upper = (S1 - S0).s_upper + dt * (
-        -convergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
+        divergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
     )
     foo_lower = (S1 - S0).s_lower + dt * (
-        -convergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
+        divergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
     )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
