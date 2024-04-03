@@ -143,7 +143,7 @@ def plot_difference(
         figsize=(16, 10),
         subplot_kw=subplot_kw,
     )
-    ((output - expected_output) / expected_output * 100).plot.pcolormesh(
+    (output - expected_output).plot.pcolormesh(
         ax=ax,
         x="longitude",
         cmap="RdBu",
@@ -153,9 +153,7 @@ def plot_difference(
         ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
         ax.add_feature(cfeature.BORDERS, linestyle="-", linewidth=0.2)
 
-    ax.set_title(
-        f"Relative difference (%) between actual and expected '{output.name}' values."
-    )
+    ax.set_title(f"Difference (mm) between actual and expected '{output.name}' values.")
     fig.savefig(fpath, dpi=200)
 
 
