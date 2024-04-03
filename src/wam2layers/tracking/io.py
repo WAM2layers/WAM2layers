@@ -8,7 +8,6 @@ import xarray as xr
 import wam2layers
 from wam2layers.config import Config
 from wam2layers.reference.variables import DATA_ATTRIBUTES
-from wam2layers.tracking.grid import get_grid_info
 
 logger = logging.getLogger(__name__)
 
