@@ -6,7 +6,7 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import calculate_fz, change_units, stabilize_fluxes
+from wam2layers.preprocessing.shared import calculate_fz, stabilize_fluxes
 from wam2layers.tracking.core import (
     horizontal_advection,
     vertical_advection,
@@ -33,11 +33,13 @@ def backtrack(
     output,
     config,
 ):
+    a, dy, dx = get_grid_info(F)
+
     # Unpack input data
-    fx_upper = stagger_x(F["fx_upper"].values)
-    fy_upper = stagger_y(F["fy_upper"].values)
-    fx_lower = stagger_x(F["fx_lower"].values)
-    fy_lower = stagger_y(F["fy_lower"].values)
+    fx_upper = stagger_x(F["fx_upper"].values / dx)
+    fy_upper = stagger_y(F["fy_upper"].values / dy)
+    fx_lower = stagger_x(F["fx_lower"].values / dx)
+    fy_lower = stagger_y(F["fy_lower"].values / dy)
     evap = F["evap"].values
     precip = F["precip"].values
     f_vert = F["f_vert"].values
@@ -198,22 +200,11 @@ def run_experiment(config_file):
             else:
                 tagging_mask = load_tagging_region(config, t=t1)
 
-        # Convert data to volumes
-        change_units(S0)
-        change_units(F)
-        change_units(S1)
-
         # Apply a stability correction if needed
         stabilize_fluxes(F, S1, progress_tracker, config, t1)
 
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.timestep, config.kvf)
-
-        logging.info(
-            f"{t0}, "
-            f'fv min: {F["f_vert"].min().item():.2e}, '
-            f'fv max: {F["f_vert"].max().item():.2e}'
-        )  # TODO make debug
 
         # Inside backtrack the "output" dictionary is updated
         backtrack(F, S1, S0, tagging_mask, output, config)

@@ -263,37 +263,17 @@ def accumulation_to_flux(data, input_frequency):
     return fluxdata
 
 
-def change_units(data):
-    """Change units to kg or kg/s.
-
-    Multiply by edge length or area to get flux in kg/s and state in kg
-    """
-    a, ly, lx = get_grid_info(data)
-
-    for variable in data.data_vars:
-        if variable in ["fx_upper", "fx_lower"]:
-            data[variable] *= ly
-        elif variable in ["fy_upper", "fy_lower"]:
-            data[variable] *= lx
-        elif variable in ["evap", "precip", "s_upper", "s_lower"]:
-            data[variable] *= a[:, None]
-        else:
-            raise ValueError(f"Unrecognized variable {variable}")
-
-        if variable in ["s_upper", "s_lower"]:
-            data[variable] = data[variable].assign_attrs(units="kg")
-        else:
-            data[variable] = data[variable].assign_attrs(units="kg s-1")
-
-
 def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
     """
+    a, dy, dx = get_grid_info(F)
+
     for level in ["upper", "lower"]:
-        fx = F["fx_" + level] * config.timestep
-        fy = F["fy_" + level] * config.timestep
+        # Convert to accumulations for budget calculations
+        fx = F["fx_" + level] * config.timestep / dx
+        fy = F["fy_" + level] * config.timestep / dy
         s = S["s_" + level]
 
         fx_abs = np.abs(fx)
@@ -314,14 +294,14 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
         fy_stable.fillna(0)
 
         # Re-instate the sign and convert back to flux instead of accumulation
-        F["fx_" + level] = np.sign(fx) * fx_stable / config.timestep
-        F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep
+        F["fx_" + level] = np.sign(fx) * fx_stable / config.timestep * dx
+        F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep * dy
 
 
 def convergence(fx, fy):
     # Note: latitude decreasing, hence positive fy gradient is convergence
-    logger.info(f"fx_min: {fx.min().item():.2e}, fx_max: {fx.max().item():.2e}")
-    return np.gradient(fy, axis=-2) - np.gradient(fx, axis=-1)
+    a, dy, dx = get_grid_info(fx)
+    return np.gradient(fy / dy, axis=-2) - np.gradient(fx / dx, axis=-1)
 
 
 def calculate_fz(F, S0, S1, dt, kvf):
@@ -387,12 +367,6 @@ def calculate_fz(F, S0, S1, dt, kvf):
     foo_lower = (S1 - S0).s_lower + dt * (
         -convergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
     )
-
-    # term = -convergence(F.fx_upper, F.fy_upper)
-    # logger.info(
-    #     f"divergence min: {(term).min().item():.2e}, "
-    #     f"divergence max: {(term).max().item():.2e}"
-    # )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
