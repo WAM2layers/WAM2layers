@@ -9,9 +9,10 @@ et cetera. It is built with [click](https://click.palletsprojects.com/en/8.1.x/)
 """
 import logging
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
-import sys
+from typing import Union
 
 import click
 
@@ -27,11 +28,15 @@ from wam2layers.tracking.forwardtrack import (
 logger = logging.getLogger(__name__)
 
 
-def setup_logging(log_path):
+def setup_logging(log_path: Union[str, Path], debug: bool):
     """Configure logging behaviour.
 
-    Messages with logger.INFO (and higher) are written to stdout
-    Messages with logger.DEBUG (and higher) are written to wam2layers.log
+    Messages with logging.INFO (and higher) are written to stdout
+    Messages with logging.DEBUG (and higher) are written to wam2layers.log
+
+    Args:
+        log_path: Folder in which the logging file should be created.
+        debug: If DEBUG level messages should also be printed to the terminal.
     """
     # https://stackoverflow.com/a/58828499
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -40,7 +45,12 @@ def setup_logging(log_path):
         Path(log_path, f"wam2layers_{timestamp}.log"), mode="w"
     )
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
+
+    if debug:
+        stream_handler.setLevel(logging.DEBUG)
+    else:
+        stream_handler.setLevel(logging.INFO)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(message)s",
@@ -63,18 +73,20 @@ def get_wam_version():
 
 
 @click.group()
+@click.pass_context
 @click.version_option(message=get_wam_version())
-def cli():
+@click.option("--debug", is_flag=True, help="Print debug statements to terminal.")
+def cli(ctx, debug):
     """Command line interface to WAM2layers."""
-    pass
+    ctx.obj = dict()
+    ctx.obj["debug"] = debug
 
 
 # Command line setup for tracking
-
-
 @cli.command()
+@click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def track(config_file):
+def track(ctx, config_file):
     """Run WAM2layers tracking experiment.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
@@ -86,7 +98,7 @@ def track(config_file):
     """
     config = Config.from_yaml(config_file)
     log_path = config.output_folder
-    setup_logging(log_path)
+    setup_logging(log_path, ctx.obj["debug"])
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info(f"Starting {config.tracking_direction} tracking experiment.")
@@ -132,8 +144,9 @@ def preproc_cli():
 
 
 @preproc_cli.command()
+@click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def era5(config_file):
+def era5(ctx, config_file):
     """Preprocess ERA5 data for WAM2layers tracking experiments.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
@@ -144,7 +157,7 @@ def era5(config_file):
         - wam2layers preprocess era5 path/to/cases/era5_2021.yaml
     """
     log_path = Config.from_yaml(config_file).preprocessed_data_folder
-    setup_logging(log_path)
+    setup_logging(log_path, ctx.obj["debug"])
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting preprocessing ERA5 data.")
@@ -159,8 +172,9 @@ def visualize_cli():
 
 
 @visualize_cli.command()
+@click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def input(config_file):
+def input(ctx, config_file):
     """Visualize input data for experiment.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
@@ -171,7 +185,7 @@ def input(config_file):
         - wam2layers visualize input path/to/cases/era5_2021.yaml
     """
     log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path)
+    setup_logging(log_path, ctx.obj["debug"])
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing input data.")
@@ -179,8 +193,9 @@ def input(config_file):
 
 
 @visualize_cli.command()
+@click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def output(config_file):
+def output(ctx, config_file):
     """Visualize output data for experiment.
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
@@ -191,7 +206,7 @@ def output(config_file):
         - wam2layers visualize output path/to/cases/era5_2021.yaml
     """
     log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path)
+    setup_logging(log_path, ctx.obj["debug"])
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing output data.")
@@ -199,11 +214,12 @@ def output(config_file):
 
 
 @visualize_cli.command()
+@click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def both(config_file):
+def both(ctx, config_file):
     """Visualize both input and output data for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path)
+    setup_logging(log_path, ctx.obj["debug"])
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing both input and output data.")
@@ -211,11 +227,12 @@ def both(config_file):
 
 
 @visualize_cli.command()
+@click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def snapshots(config_file):
+def snapshots(ctx, config_file):
     """Visualize input and output snapshots for experiment."""
     log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path)
+    setup_logging(log_path, ctx.obj["debug"])
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing input and output snapshots.")
