@@ -11,7 +11,7 @@ on:
 jobs:
 
   build:
-    name: Unit tests on (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Run tests on (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,7 +37,7 @@ jobs:
       - name: Install WAM2Layers
         run: |
           python3 -m pip install .[dev]
-      - name: Run unit tests
+      - name: Run tests
         run: |
           python3 -m pytest --basetemp=tmp/
       - name: Upload test figures
