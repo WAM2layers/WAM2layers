@@ -209,6 +209,12 @@ def run_experiment(config_file):
         # Determine the vertical moisture flux
         F["f_vert"] = calculate_fz(F, S0, S1, config.timestep, config.kvf)
 
+        logging.info(
+            f"{t0}, "
+            f'fv min: {F["f_vert"].min().item():.2e}, '
+            f'fv max: {F["f_vert"].max().item():.2e}'
+        )  # TODO make debug
+
         # Inside backtrack the "output" dictionary is updated
         backtrack(F, S1, S0, tagging_mask, output, config)
         t1 -= dt
