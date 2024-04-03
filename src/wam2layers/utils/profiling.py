@@ -1,6 +1,7 @@
 import logging
 import time
 
+import numpy as np
 import pandas as pd
 import psutil
 import xarray as xr
@@ -9,6 +10,25 @@ from wam2layers.config import Config
 from wam2layers.tracking.grid import get_grid_info
 
 logger = logging.getLogger(__name__)
+
+# TODO: this is becoming more of a "checking/logging module than a profiler"
+
+
+def check_for_gains(field, reference):
+    """Check whether a given (moisture) field has negative values and remove them.
+
+    Warn if the negative values are excessive
+    """
+    # TODO: why divide by a reference? Perhaps you meant to subtract?
+    gains = np.where(field < 0, field / reference, 0)
+
+    if np.any(gains < -1e-5):
+        logger.warn(
+            "Negative values encountered tracked moisture. Check the gains output variable for details."
+        )
+
+    corrected_field = np.maximum(field, 0)
+    return corrected_field, gains
 
 
 class Profiler:
