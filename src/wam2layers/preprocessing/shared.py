@@ -1,5 +1,7 @@
 """Generic functions useful for preprocessing various input datasets."""
 
+import logging
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -8,6 +10,8 @@ from scipy.interpolate import interp1d
 from wam2layers.config import Config
 from wam2layers.tracking.grid import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
+
+logger = logging.getLogger(__name__)
 
 
 # old, keep only for reference and ecearth starting case
@@ -386,6 +390,12 @@ def calculate_fz(F, S0, S1, dt, kvf):
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
     fz = foo_lower - S1.s_lower / (S1.s_lower + S1.s_upper) * (foo_upper + foo_lower)
+
+    logger.info(
+        "Before correction,   "
+        f"fv min: {(fz/dt).min().item():.2e}, "
+        f"fv max: {(fz/dt).max().item():.2e}"
+    )
 
     # TODO: verify that err_lower/s_lower = err_upper/s_upper is satisfied on debug log
 
