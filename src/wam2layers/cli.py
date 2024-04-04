@@ -52,7 +52,7 @@ def setup_logging(log_path: Union[str, Path], debug: bool):
         stream_handler.setLevel(logging.INFO)
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(message)s",
         handlers=[file_handler, stream_handler],
     )
