@@ -14,21 +14,17 @@ logger = logging.getLogger(__name__)
 # TODO: this is becoming more of a "checking/logging module than a profiler"
 
 
-def check_for_gains(field, reference):
-    """Check whether a given (moisture) field has negative values and remove them.
+def warn_about_gains(*arrays):
+    """Check whether a given (moisture) field has negative values.
 
     Warn if the negative values are excessive
     """
-    # TODO: why divide by a reference? Perhaps you meant to subtract?
-    gains = np.where(field < 0, field / reference, 0)
-
-    if np.any(gains < -1e-5):
-        logger.warn(
-            "Negative values encountered tracked moisture. Check the gains output variable for details."
-        )
-
-    corrected_field = np.maximum(field, 0)
-    return corrected_field, gains
+    for array in arrays:
+        if np.any(array < -1e-5):
+            logger.warning(
+                "Negative values encountered tracked moisture. "
+                "Check the gains output variable for details."
+            )
 
 
 class Profiler:
