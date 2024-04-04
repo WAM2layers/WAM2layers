@@ -40,36 +40,6 @@ def resample(variable, divt, count_time, method="interp"):
     return new_var
 
 
-def get_grid_info(ds):
-    """Return grid cell area and lenght of the sides."""
-    dg = 111089.56  # [m] length of 1 degree latitude
-    erad = 6.371e6  # [m] Earth radius
-
-    latitude = ds.latitude.values
-    longitude = ds.longitude.values
-    dx_deg = np.abs(longitude[1] - longitude[0])  # [degrees]
-    dy_deg = np.abs(latitude[1] - latitude[0])  # [degrees]
-
-    # Calculate area TODO check this calculation!
-    lat_n = np.minimum(90.0, latitude + 0.5 * dx_deg)
-    lat_s = np.maximum(-90.0, latitude - 0.5 * dx_deg)
-
-    a = (
-        np.pi
-        / 180.0
-        * erad**2
-        * dx_deg
-        * abs(np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0))
-    )
-
-    # Calculate faces
-    dy = dy_deg * dg  # [m] grid spacing in meridional direction
-    dx_n_gridcell = dx_deg * dg * np.cos((latitude + dx_deg / 2) * np.pi / 180)
-    dx_s_gridcell = dx_deg * dg * np.cos((latitude - dx_deg / 2) * np.pi / 180)
-    dx = 0.5 * (dx_n_gridcell + dx_s_gridcell)  # [m] grid spacing in zonal direction
-    return a, dy, dx[:, None]
-
-
 def join_levels(pressure_level_data, surface_level_data):
     """Combine 3d pressure level and 2d surface level data.
 
