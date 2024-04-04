@@ -36,10 +36,10 @@ def forwardtrack(
     a, dy, dx = get_grid_info(F)
 
     # Unpack input data
-    fx_upper = stagger_x(F["fx_upper"].values / dx)
-    fy_upper = stagger_y(F["fy_upper"].values / dy)
-    fx_lower = stagger_x(F["fx_lower"].values / dx)
-    fy_lower = stagger_y(F["fy_lower"].values / dy)
+    fx_upper = stagger_x(F["fx_upper"].values)
+    fy_upper = stagger_y(F["fy_upper"].values)
+    fx_lower = stagger_x(F["fx_lower"].values)
+    fy_lower = stagger_y(F["fy_lower"].values)
     evap = F["evap"].values
     precip = F["precip"].values
     f_vert = F["f_vert"].values
@@ -196,6 +196,12 @@ def run_experiment(config_file):
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
+
+        a, dy, dx = get_grid_info(F)
+        for level in ["upper", "lower"]:
+            # Convert to accumulations for budget calculations
+            F["fx_" + level] /= dx
+            F["fy_" + level] /= dy
 
         # Load/update tagging mask
         tagging_mask = 0

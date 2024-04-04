@@ -268,12 +268,10 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
 
     CFL: Water cannot move further than one grid cell per timestep.
     """
-    a, dy, dx = get_grid_info(F)
-
     for level in ["upper", "lower"]:
         # Convert to accumulations for budget calculations
-        fx = F["fx_" + level] * config.timestep / dx
-        fy = F["fy_" + level] * config.timestep / dy
+        fx = F["fx_" + level] * config.timestep
+        fy = F["fy_" + level] * config.timestep
         s = S["s_" + level]
 
         fx_abs = np.abs(fx)
@@ -294,14 +292,13 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
         fy_stable.fillna(0)
 
         # Re-instate the sign and convert back to flux instead of accumulation
-        F["fx_" + level] = np.sign(fx) * fx_stable / config.timestep * dx
-        F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep * dy
+        F["fx_" + level] = np.sign(fx) * fx_stable / config.timestep
+        F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep
 
 
 def divergence(fx, fy):
     # Note: latitude decreasing, hence negative fy gradient is divergence
-    a, dy, dx = get_grid_info(fx)
-    return np.gradient(fx / dx, axis=-1) - np.gradient(fy / dy, axis=-2)
+    return np.gradient(fx, axis=-1) - np.gradient(fy, axis=-2)
 
 
 def calculate_fz(F, S0, S1, dt, kvf):
