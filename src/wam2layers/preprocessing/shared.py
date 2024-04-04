@@ -47,26 +47,27 @@ def get_grid_info(ds):
 
     latitude = ds.latitude.values
     longitude = ds.longitude.values
-    grid_spacing = np.abs(longitude[1] - longitude[0])  # [degrees]
+    dx_deg = np.abs(longitude[1] - longitude[0])  # [degrees]
+    dy_deg = np.abs(latitude[1] - latitude[0])  # [degrees]
 
     # Calculate area TODO check this calculation!
-    lat_n = np.minimum(90.0, latitude + 0.5 * grid_spacing)
-    lat_s = np.maximum(-90.0, latitude - 0.5 * grid_spacing)
+    lat_n = np.minimum(90.0, latitude + 0.5 * dx_deg)
+    lat_s = np.maximum(-90.0, latitude - 0.5 * dx_deg)
 
     a = (
         np.pi
         / 180.0
         * erad**2
-        * grid_spacing
+        * dx_deg
         * abs(np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0))
     )
 
     # Calculate faces
-    ly = grid_spacing * dg  # [m] length eastern/western boundary of a cell
-    lx_n_gridcell = ly * np.cos((latitude + grid_spacing / 2) * np.pi / 180)
-    lx_s_gridcell = ly * np.cos((latitude - grid_spacing / 2) * np.pi / 180)
-    lx = 0.5 * (lx_n_gridcell + lx_s_gridcell)
-    return a, ly, lx[:, None]
+    dy = dy_deg * dg  # [m] grid spacing in meridional direction
+    dx_n_gridcell = dx_deg * dg * np.cos((latitude + dx_deg / 2) * np.pi / 180)
+    dx_s_gridcell = dx_deg * dg * np.cos((latitude - dx_deg / 2) * np.pi / 180)
+    dx = 0.5 * (dx_n_gridcell + dx_s_gridcell)  # [m] grid spacing in zonal direction
+    return a, dy, dx[:, None]
 
 
 def join_levels(pressure_level_data, surface_level_data):
