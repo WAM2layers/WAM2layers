@@ -80,9 +80,8 @@ def forwardtrack(
     )
 
     # account for negative storages that are set to zero: "numerically gained water"
-    # TODO: why divide by S1? I think it should be absolute values
-    gains_lower = np.where(s_track_lower < 0, s_track_lower / S1["s_lower"], 0)
-    gains_upper = np.where(s_track_upper < 0, s_track_upper / S1["s_upper"], 0)
+    gains_lower = np.where(s_track_lower < 0, s_track_lower, 0)
+    gains_upper = np.where(s_track_upper < 0, s_track_upper, 0)
     gains = np.abs(gains_lower + gains_upper)
     s_track_lower = np.maximum(s_track_lower, 0)
     s_track_upper = np.maximum(s_track_upper, 0)
