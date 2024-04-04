@@ -66,7 +66,7 @@ def get_grid_info(ds):
     lx_n_gridcell = ly * np.cos((latitude + grid_spacing / 2) * np.pi / 180)
     lx_s_gridcell = ly * np.cos((latitude - grid_spacing / 2) * np.pi / 180)
     lx = 0.5 * (lx_n_gridcell + lx_s_gridcell)
-    return a, ly, lx
+    return a, ly, lx[:, None]
 
 
 def join_levels(pressure_level_data, surface_level_data):
