@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 def backtrack(
     F,
     S1,
-    S0,  # TODO: why is this not used but both are used in forwardtrack?
+    S0,
     tagging_mask,
     output,
     config,
@@ -80,22 +80,22 @@ def backtrack(
 
     # account for negative storages that are set to zero: "numerically gained water"
     # TODO: reference should be S0?
-    s_track_lower, gains_lower = check_for_gains(s_track_lower, reference=S1["s_lower"])
-    s_track_upper, gains_upper = check_for_gains(s_track_upper, reference=S1["s_upper"])
+    s_track_lower, gains_lower = check_for_gains(s_track_lower, reference=S0["s_lower"])
+    s_track_upper, gains_upper = check_for_gains(s_track_upper, reference=S0["s_upper"])
     gains = np.abs(gains_lower + gains_upper)
 
     # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
-    overshoot_lower = np.maximum(0, s_track_lower - S1["s_lower"])
-    overshoot_upper = np.maximum(0, s_track_upper - S1["s_upper"])
+    overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
+    overshoot_upper = np.maximum(0, s_track_upper - S0["s_upper"])
     s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
     s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
 
     # At this point any of the storages could still be overfull, thus stabilize and assigns losses
-    losses_lower = np.maximum(0, s_track_lower - S1["s_lower"])
-    losses_upper = np.maximum(0, s_track_upper - S1["s_upper"])
+    losses_lower = np.maximum(0, s_track_lower - S0["s_lower"])
+    losses_upper = np.maximum(0, s_track_upper - S0["s_upper"])
     losses = losses_lower + losses_upper
-    s_track_lower = np.minimum(s_track_lower, S1["s_lower"])
-    s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
+    s_track_lower = np.minimum(s_track_lower, S0["s_lower"])
+    s_track_upper = np.minimum(s_track_upper, S0["s_upper"])
 
     # Bookkeep boundary transport as "lost moisture at grid edges"
     losses[0, :] += (s_track_upper + s_track_lower)[0, :]
