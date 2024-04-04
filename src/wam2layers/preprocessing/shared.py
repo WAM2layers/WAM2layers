@@ -288,46 +288,6 @@ def accumulation_to_flux(data, input_frequency):
     return fluxdata
 
 
-def get_boundary(field, periodic=False):
-    """Return a mask with 1 along the boundary and 0 in the interior."""
-    boundary = xr.ones_like(field, dtype=bool)
-    # Mask interior
-    if periodic:
-        boundary[1:-1, 0] = 0
-    else:
-        boundary[1:-1, 1:-1] = 0
-
-    return boundary
-
-
-def stagger_x(f):
-    """Interpolate f to the grid cell interfaces.
-
-    Only the values at the interior interfaces are returned
-
-    Arguments:
-        f: 2d array of shape [M, N]
-
-    Returns:
-        2d array of shape [M-2, N-1]
-    """
-    return 0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
-
-
-def stagger_y(f):
-    """Interpolate f to the grid cell interfaces.
-
-    Only the values at the interior interfaces are returned
-
-    Arguments:
-        f: 2d array of shape [M, N]
-
-    Returns:
-        2d array of shape [M-1, N-2]
-    """
-    return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
-
-
 def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
     """Stabilize the outfluxes / influxes.
 

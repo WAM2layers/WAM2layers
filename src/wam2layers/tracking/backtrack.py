@@ -6,14 +6,7 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import (
-    calculate_fz,
-    get_boundary,
-    get_grid_info,
-    stabilize_fluxes,
-    stagger_x,
-    stagger_y,
-)
+from wam2layers.preprocessing.shared import calculate_fz, stabilize_fluxes
 from wam2layers.tracking.core import (
     horizontal_advection,
     vertical_advection,
@@ -26,6 +19,7 @@ from wam2layers.tracking.io import (
     write_output,
 )
 from wam2layers.tracking.shared import initialize_tagging_region, initialize_time
+from wam2layers.utils.grid import get_boundary, get_grid_info, stagger_x, stagger_y
 from wam2layers.utils.profiling import ProgressTracker, warn_about_gains
 
 logger = logging.getLogger(__name__)
