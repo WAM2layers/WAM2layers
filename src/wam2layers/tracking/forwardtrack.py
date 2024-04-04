@@ -9,6 +9,7 @@ from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     calculate_fz,
     change_units,
+    get_boundary,
     stabilize_fluxes,
     stagger_x,
     stagger_y,
@@ -100,20 +101,11 @@ def forwardtrack(
     s_track_lower = np.minimum(s_track_lower, S1["s_lower"])
     s_track_upper = np.minimum(s_track_upper, S1["s_upper"])
 
-    # Bookkeep boundary losses as "tracked moisture at grid edges"
-    losses[0, :] += s_track_lower[0, :] + s_track_upper[0, :]
-    losses[-1, :] += s_track_lower[-1, :] + s_track_upper[-1, :]
-    s_track_upper[0, :] = 0
-    s_track_upper[-1, :] = 0
-    s_track_lower[0, :] = 0
-    s_track_lower[-1, :] = 0
-    if config.periodic_boundary is False:  # bookkeep west and east losses
-        losses[:, 0] += s_track_lower[:, 0] + s_track_upper[:, 0]
-        losses[:, -1] += s_track_lower[:, -1] + s_track_upper[:, -1]
-        s_track_upper[:, 0] = 0
-        s_track_upper[:, -1] = 0
-        s_track_lower[:, 0] = 0
-        s_track_lower[:, -1] = 0
+    # Bookkeep boundary transport as "lost moisture at grid edges"
+    boundary = get_boundary(losses, periodic=config.periodic_boundary)
+    losses += xr.where(boundary, (s_track_upper + s_track_lower), 0)
+    s_track_upper = xr.where(boundary, 0, s_track_upper)
+    s_track_lower = xr.where(boundary, 0, s_track_lower)
 
     # Update output fields
     output["tagged_evap"] += region * evap * config.timestep

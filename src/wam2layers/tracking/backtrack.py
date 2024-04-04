@@ -9,6 +9,7 @@ from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     calculate_fz,
     change_units,
+    get_boundary,
     stabilize_fluxes,
     stagger_x,
     stagger_y,
@@ -100,19 +101,10 @@ def backtrack(
     s_track_upper = np.minimum(s_track_upper, S0["s_upper"])
 
     # Bookkeep boundary transport as "lost moisture at grid edges"
-    losses[0, :] += (s_track_upper + s_track_lower)[0, :]
-    losses[-1, :] += (s_track_upper + s_track_lower)[-1, :]
-    s_track_upper[0, :] = 0
-    s_track_upper[-1, :] = 0
-    s_track_lower[0, :] = 0
-    s_track_lower[-1, :] = 0
-    if config.periodic_boundary is False:  # bookkeep west and east transport
-        losses[:, 0] += (s_track_upper + s_track_lower)[:, 0]
-        losses[:, -1] += (s_track_upper + s_track_lower)[:, -1]
-        s_track_upper[:, 0] = 0
-        s_track_upper[:, -1] = 0
-        s_track_lower[:, 0] = 0
-        s_track_lower[:, -1] = 0
+    boundary = get_boundary(losses, periodic=config.periodic_boundary)
+    losses += xr.where(boundary, (s_track_upper + s_track_lower), 0)
+    s_track_upper = xr.where(boundary, 0, s_track_upper)
+    s_track_lower = xr.where(boundary, 0, s_track_lower)
 
     # Update output fields
     output["tagged_precip"] += tagging_mask * precip * config.timestep
