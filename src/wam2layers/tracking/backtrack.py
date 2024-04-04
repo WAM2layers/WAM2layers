@@ -6,9 +6,10 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import calculate_fz, stabilize_fluxes
 from wam2layers.tracking.core import (
+    calculate_fz,
     horizontal_advection,
+    stabilize_fluxes,
     vertical_advection,
     vertical_dispersion,
 )
