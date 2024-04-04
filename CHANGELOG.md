@@ -27,6 +27,8 @@ All notable changes to this project will be documented in this file.
 - Log message about "lost moisture" no longer includes boundary losses. Instead,
   there is a separate log message for "boundary transport"
   ([#343](https://github.com/WAM2layers/WAM2layers/pull/343))
+- Fixed a bug in the calculation of losses and gains for backtrack, where the moisture was compared to the wrong reference state ([#355](https://github.com/WAM2layers/WAM2layers/pull/355)).
+- The calculated gains are now absolute fields instead of relative to the reference field ([#355](https://github.com/WAM2layers/WAM2layers/pull/355)).
 
 ### Changed
 - The workflow tests use a temporary directory managed by pytest and the user's operating system, to avoid the `/tmp` folder polluting the workspace ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
