@@ -8,7 +8,6 @@ import xarray as xr
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     calculate_fz,
-    change_units,
     get_boundary,
     get_grid_info,
     stabilize_fluxes,

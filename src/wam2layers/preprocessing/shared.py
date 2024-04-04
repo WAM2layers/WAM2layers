@@ -328,29 +328,6 @@ def stagger_y(f):
     return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
 
 
-def change_units(data):
-    """Change units to kg or kg/s.
-
-    Multiply by edge length or area to get flux in kg/s and state in kg
-    """
-    a, ly, lx = get_grid_info(data)
-
-    for variable in data.data_vars:
-        if variable in ["fx_upper", "fx_lower"]:
-            data[variable] *= ly
-        elif variable in ["fy_upper", "fy_lower"]:
-            data[variable] *= lx[:, None]
-        elif variable in ["evap", "precip", "s_upper", "s_lower"]:
-            data[variable] *= a[:, None]
-        else:
-            raise ValueError(f"Unrecognized variable {variable}")
-
-        if variable in ["s_upper", "s_lower"]:
-            data[variable] = data[variable].assign_attrs(units="kg")
-        else:
-            data[variable] = data[variable].assign_attrs(units="kg s-1")
-
-
 def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
     """Stabilize the outfluxes / influxes.
 
