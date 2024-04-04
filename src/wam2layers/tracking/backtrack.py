@@ -25,7 +25,7 @@ from wam2layers.tracking.io import (
     write_output,
 )
 from wam2layers.tracking.shared import initialize_tagging_region, initialize_time
-from wam2layers.utils.profiling import ProgressTracker, check_for_gains
+from wam2layers.utils.profiling import ProgressTracker, warn_about_gains
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +79,13 @@ def backtrack(
     )
 
     # account for negative storages that are set to zero: "numerically gained water"
-    # TODO: reference should be S0?
-    s_track_lower, gains_lower = check_for_gains(s_track_lower, reference=S0["s_lower"])
-    s_track_upper, gains_upper = check_for_gains(s_track_upper, reference=S0["s_upper"])
+    # TODO: why divide by S1/S0? I think it should be absolute values
+    gains_lower = np.where(s_track_lower < 0, s_track_lower / S0["s_lower"], 0)
+    gains_upper = np.where(s_track_upper < 0, s_track_upper / S0["s_upper"], 0)
     gains = np.abs(gains_lower + gains_upper)
+    s_track_lower = np.maximum(s_track_lower, 0)
+    s_track_upper = np.maximum(s_track_upper, 0)
+    warn_about_gains(gains_lower, gains_upper)
 
     # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
