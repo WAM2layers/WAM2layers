@@ -79,6 +79,7 @@ def backtrack(
     )
 
     # account for negative storages that are set to zero: "numerically gained water"
+    # TODO: reference should be S0?
     s_track_lower, gains_lower = check_for_gains(s_track_lower, reference=S1["s_lower"])
     s_track_upper, gains_upper = check_for_gains(s_track_upper, reference=S1["s_upper"])
     gains = np.abs(gains_lower + gains_upper)
