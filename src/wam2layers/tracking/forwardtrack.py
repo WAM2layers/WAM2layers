@@ -80,8 +80,8 @@ def forwardtrack(
     )
 
     # account for negative storages that are set to zero: "numerically gained water"
-    gains_lower = np.where(s_track_lower < 0, s_track_lower, 0)
-    gains_upper = np.where(s_track_upper < 0, s_track_upper, 0)
+    gains_lower = np.where(s_track_lower < 0, -s_track_lower, 0)
+    gains_upper = np.where(s_track_upper < 0, -s_track_upper, 0)
     gains = np.abs(gains_lower + gains_upper)
     s_track_lower = np.maximum(s_track_lower, 0)
     s_track_upper = np.maximum(s_track_upper, 0)
