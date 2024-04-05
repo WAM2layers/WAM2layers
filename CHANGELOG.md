@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+
+## Release v3.0.0 (2024-04-05)
+
 ### Added
 
 - Updated the visualization: more generic for forward and backward tracking ([#318](https://github.com/WAM2layers/WAM2layers/pull/318)).
