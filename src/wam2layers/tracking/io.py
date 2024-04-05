@@ -1,14 +1,10 @@
 import logging
-from datetime import UTC
-from datetime import datetime
 from datetime import datetime as pydt
-from typing import Literal
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-import wam2layers
 from wam2layers import __version__
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import add_bounds
@@ -106,7 +102,7 @@ def add_time_bounds(ds: xr.Dataset, t: pd.Timestamp, config: Config):
 def get_main_attrs(attrs: dict, config: Config):
     """Create the main dataset attributes, including appending to the history."""
     new_history = (
-        f"created on {pydt.now(UTC):%Y-%m-%dT%H:%M:%SZ} "
+        f"created on {pydt.utcnow():%Y-%m-%dT%H:%M:%SZ} "
         f"using wam2layers version {__version__}; "
     )
     return {

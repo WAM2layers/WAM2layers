@@ -1,5 +1,4 @@
 import logging
-from datetime import UTC
 from datetime import datetime as pydt
 from functools import lru_cache
 from pathlib import Path
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 PREPROCESS_ATTRS = {
     "title": "ERA5 data preprocessed for use in WAM2layers",
     "history": (
-        f"created on {pydt.now(UTC):%Y-%m-%dT%H:%M:%SZ} "
+        f"created on {pydt.utcnow():%Y-%m-%dT%H:%M:%SZ} "
         f"using wam2layers version {__version__}."
     ),
     "source": (
