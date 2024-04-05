@@ -100,7 +100,7 @@ inside these scripts for instructions on how to use them.
 ```{note}
 It would be nice to collect more data download scripts over time. If you want to
 share your datascript, we will be happy to help you in adding it to our
-collection. Please see the [contributing](./contributing.md) chapter of this
+collection. Please see the [contributing](./develop.md) chapter of this
 documentation.
 ```
 
@@ -192,7 +192,7 @@ This pre-processed dataset adheres to the following requirements:
 If you need help in pre-processing your data, please don't hesitate to reach
 out, for example through
 [GitHub](https://github.com/WAM2layers/WAM2layers/issues/new). We would also be
-very grateful if you are willing to [contribute your code](./contributing.md) so
+very grateful if you are willing to [contribute your code](./develop.md) so
 others can benefit from it as well.
 ```
 
@@ -225,9 +225,9 @@ dataset and proceed with the next steps.
 (tracking)=
 ## Tracking
 
-The core of WAM2layers are the tracking routines. For the moment we only include
-backtracking, but forward tracking, time tracking, and moisture recycling will
-be added back once the code stabilizes.
+The core of WAM2layers are the tracking routines. The model includes forward and
+backward tracking. Time tracking, distance tracking, and moisture recycling can
+be added in future updates.
 
 Assuming you have a preprocessed dataset and prepared a configuration file for
 your experiment, running WAM2layers is as simple as:

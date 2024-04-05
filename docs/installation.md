@@ -7,7 +7,7 @@ of WAM2Layers and understand how you ended up there.
 
 If you want to make changes to the code and contribute them so that others can
 also benefit from you work (highly apreciated!), you may want to follow the
-instructions in the [contributing](./contributing) section of the documentation.
+instructions in the [contributing](./develop) section of the documentation.
 
 ## Quickstart
 
@@ -32,9 +32,9 @@ read on. We'll explain everything in detail.
 
 To run WAM2Layers you need a computer and some kind of command line, such as the
 default terminal included in Mac or Linux. On Windows we recommend using Ubuntu
-through [WSL](). If you're using existing infrastructure such as an managed
-JupyterLab environment or a supercomputer you will also typically have access to
-a terminal.
+through [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). If you're
+using existing infrastructure such as an managed JupyterLab environment or a
+supercomputer you will also typically have access to a terminal.
 
 ## Installation
 
@@ -110,7 +110,7 @@ but also a downside as it may be a bit more unstable.
 If you want to contribute your changes, raise an issue, request new features, et
 cetera, you may also want to sign up for a free GitHub account if you don't have
 one already. For more information on contributing code, see the [contribution
-guidelines](./contributing) chapter of the documentation.
+guidelines](./develop) chapter of the documentation.
 
 First, obtain a copy of the source code from GitHub and enter the new directory:
 
@@ -152,4 +152,4 @@ pip show wam2layers
 wam2layers --help
 ```
 
-Now you are ready to proceed to the [user guide](./howtouse).
+Now you are ready to proceed to the [user guide](./userguide).
