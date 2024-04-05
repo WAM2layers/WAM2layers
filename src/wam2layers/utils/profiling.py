@@ -10,21 +10,6 @@ from wam2layers.config import Config
 
 logger = logging.getLogger(__name__)
 
-# TODO: this is becoming more of a "checking/logging module than a profiler"
-
-
-def warn_about_gains(*arrays):
-    """Check whether a given (moisture) field has negative values.
-
-    Warn if the negative values are excessive
-    """
-    for array in arrays:
-        if np.any(array < -1e-5):
-            logger.warning(
-                "Negative values encountered tracked moisture. "
-                "Check the gains output variable for details."
-            )
-
 
 class Profiler:
     def __init__(self):

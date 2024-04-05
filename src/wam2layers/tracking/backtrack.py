@@ -26,7 +26,7 @@ from wam2layers.tracking.io import (
     write_output,
 )
 from wam2layers.tracking.shared import initialize_tagging_region, initialize_time
-from wam2layers.utils.profiling import ProgressTracker, warn_about_gains
+from wam2layers.utils.profiling import ProgressTracker
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,6 @@ def backtrack(
     gains = np.abs(gains_lower + gains_upper)
     s_track_lower = np.maximum(s_track_lower, 0)
     s_track_upper = np.maximum(s_track_upper, 0)
-    warn_about_gains(gains_lower, gains_upper)
 
     # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
