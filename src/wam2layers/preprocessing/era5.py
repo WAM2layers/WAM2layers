@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime as pydt
 from functools import lru_cache
 from pathlib import Path
 
@@ -6,17 +7,35 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from wam2layers import __version__
 from wam2layers.config import Config
 from wam2layers.preprocessing.shared import (
     accumulation_to_flux,
+    add_bounds,
     calculate_humidity,
     insert_level,
     interpolate,
     sortby_ndarray,
 )
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
+from wam2layers.reference.variables import ERA5_INPUT_DATA_ATTRIBUTES
 
 logger = logging.getLogger(__name__)
+
+
+PREPROCESS_ATTRS = {
+    "title": "ERA5 data preprocessed for use in WAM2layers",
+    "history": (
+        f"created on {pydt.utcnow():%Y-%m-%dT%H:%M:%SZ} "
+        f"using wam2layers version {__version__}."
+    ),
+    "source": (
+        "ECMWF Reanalysis v5 (ERA5), "
+        "www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5"
+    ),
+    "references": "doi.org/10.5281/zenodo.7010594, doi.org/10.5194/esd-5-471-2014",
+    "Conventions": "CF-1.6",
+}
 
 
 @lru_cache(10)
@@ -274,7 +293,7 @@ def prep_experiment(config_file):
             # Fluxes will be calculated based on the column water vapour
             cw = cwv
             log_once(
-                logger, f"Total column water not available; using water vapour only"
+                logger, "Total column water not available; using water vapour only"
             )
 
         # Integrate fluxes and states to upper and lower layer
@@ -325,10 +344,25 @@ def prep_experiment(config_file):
         # Verify that the data meets all the requirements for the model
         # check_input(ds)
 
+        add_bounds(ds)
+
+        # Add attributes
+        for var in ERA5_INPUT_DATA_ATTRIBUTES:
+            ds[var].attrs.update(ERA5_INPUT_DATA_ATTRIBUTES[var])
+        ds.attrs.update(PREPROCESS_ATTRS)
+
         # Save preprocessed data
         filename = f"{datetime.strftime('%Y-%m-%d')}_fluxes_storages.nc"
         output_path = config.preprocessed_data_folder / filename
+
         if is_new_day:
-            ds.to_netcdf(output_path, unlimited_dims=["time"], mode="w")
+            comp = dict(zlib=True, complevel=8)
+            encoding = {var: comp for var in ds.data_vars}
+            time_encoding = {"units": "seconds since 1900-01-01"}
+            encoding["time"] = time_encoding
+            ds.to_netcdf(
+                output_path, unlimited_dims=["time"], mode="w", encoding=encoding
+            )
+
         else:
             append_to_netcdf(output_path, ds, expanding_dim="time")

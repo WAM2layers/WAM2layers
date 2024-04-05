@@ -42,6 +42,8 @@ All notable changes to this project will be documented in this file.
 - The configuration parameter "target_frequency" has been renamed to "timestep". Also, under the hood, it is applied in a different location, closer to the core computations. This makes it easier to see the relation between the formula "on paper" and the implementation in the code ([#346](https://github.com/WAM2layers/WAM2layers/pull/346)).
 - The tests on Github Actions now use base python, not micromamba ([#351](https://github.com/WAM2layers/WAM2layers/pull/351)).
 - The units with which WAM2layers calculates internally are changed from m3 to kg/m2. This saves some unit conversions, makes it easier to see the relation between the equations and the code, and makes it easier to interpret the output and intermediate states. Visualization functions no longer need to convert back to kg/m2 ([#356](https://github.com/WAM2layers/WAM2layers/pull/356)).
+- The preprocessed data now mostly follows the CF-1.6 convention for netCDF files ([#363](https://github.com/WAM2layers/WAM2layers/pull/363)).
+- The output data now follows the CF-1.6 convention for netCDF files ([#363](https://github.com/WAM2layers/WAM2layers/pull/363)).
 
 ## Release v3.0.0-beta.6 (2023-12-22)
 

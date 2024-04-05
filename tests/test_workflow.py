@@ -252,7 +252,8 @@ class TestBacktrack:
     def test_variable_attrs(self, output_path: Path, attr: str):
         output = xr.open_dataset(output_path)
         for var in output.data_vars:
-            assert attr in output[var].attrs
+            if var not in ["latitude_bnds", "longitude_bnds", "time_bnds"]:
+                assert attr in output[var].attrs
 
     def test_log_file(self, output_dir_backtrack):
         log_files = [i for i in output_dir_backtrack.glob("wam2layers_*.log")]
@@ -308,7 +309,8 @@ class TestForwardtrack:
     def test_variable_attrs(self, output_path: Path, attr: str):
         output = xr.open_dataset(output_path)
         for var in output.data_vars:
-            assert attr in output[var].attrs
+            if var not in ["latitude_bnds", "longitude_bnds", "time_bnds"]:
+                assert attr in output[var].attrs
 
     def test_log_file(self, output_dir_forwardtrack):
         log_files = [i for i in output_dir_forwardtrack.glob("wam2layers_*.log")]

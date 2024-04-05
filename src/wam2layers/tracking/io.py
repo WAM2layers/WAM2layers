@@ -1,13 +1,13 @@
 import logging
-from datetime import datetime
-from typing import Literal
+from datetime import datetime as pydt
 
+import numpy as np
 import pandas as pd
 import xarray as xr
-import yaml
 
-import wam2layers
+from wam2layers import __version__
 from wam2layers.config import Config
+from wam2layers.preprocessing.shared import add_bounds
 from wam2layers.reference.variables import DATA_ATTRIBUTES
 
 logger = logging.getLogger(__name__)
@@ -90,11 +90,40 @@ def load_tagging_region(config, t=None):
     return tagging_region
 
 
+def add_time_bounds(ds: xr.Dataset, t: pd.Timestamp, config: Config):
+    """Compute the time bounds and add them to the output dataset."""
+    dt = pd.Timedelta(config.output_frequency)
+    if config.tracking_direction == "forward":
+        ds["time_bnds"] = (("time", "bnds"), np.array(((t - dt, t),)))
+    else:
+        ds["time_bnds"] = (("time", "bnds"), np.array(((t + dt, t),)))
+
+
+def get_main_attrs(attrs: dict, config: Config):
+    """Create the main dataset attributes, including appending to the history."""
+    new_history = (
+        f"created on {pydt.utcnow():%Y-%m-%dT%H:%M:%SZ} "
+        f"using wam2layers version {__version__}; "
+    )
+    return {
+        "title": f"WAM2Layers {config.tracking_direction}tracking output file",
+        "history": new_history + attrs["history"]
+        if "history" in attrs
+        else new_history,
+        "source": (
+            "Moisture tracking applied to ERA5 dataset: ECMWF Reanalysis v5 (ERA5), "
+            "www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5"
+        ),
+        "references": "doi.org/10.5281/zenodo.7010594, doi.org/10.5194/esd-5-471-2014",
+        "Conventions": "CF-1.6",
+        "WAM2Layers_config": config.model_dump_json(),
+    }
+
+
 def write_output(
     output: xr.Dataset,
     t: pd.Timestamp,
     config: Config,
-    mode: Literal["forwardtrack", "backtrack"],
 ) -> None:
     # TODO: add back (and cleanup) coordinates and units
     path = output_path(t, config)
@@ -106,14 +135,17 @@ def write_output(
     for var in output.data_vars:
         output[var].attrs.update(DATA_ATTRIBUTES[str(var)])
 
-    output.attrs.update(
-        {
-            "history": (
-                f"created on {datetime.utcnow():%Y-%m-%dT%H:%M:%S}Z using WAM2Layers "
-                f"version {wam2layers.__version__}"
-            ),
-            "title": f"WAM2Layers {mode} output file",
-            "WAM2Layers_config": config.model_dump_json(),
-        }
-    )
-    output.astype("float32").to_netcdf(path)
+    add_bounds(output)
+    add_time_bounds(output, t, config)
+    output.attrs = get_main_attrs(output.attrs, config)
+
+    comp = dict(zlib=True, complevel=8)
+    encoding = {var: comp for var in output.data_vars}
+    time_encoding = {"units": "seconds since 1900-01-01"}
+    encoding["time"] = time_encoding
+    encoding["time_bnds"] = time_encoding
+
+    for var in output.data_vars:
+        if var != "time_bnds":
+            output[var] = output[var].astype("float32")
+    output.to_netcdf(path, encoding=encoding)
