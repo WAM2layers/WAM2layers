@@ -222,3 +222,20 @@ def accumulation_to_flux(data, input_frequency):
     # Extrapolation introduces a small inconsistency at the last midnight...
     # data.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
     return fluxdata
+
+
+def add_bounds(ds: xr.Dataset) -> None:
+    """Infer the lat and lon bounds and add to the dataset (in-place)."""
+    lats = ds["latitude"].to_numpy()
+    lons = ds["longitude"].to_numpy()
+    res_lat = np.median((np.diff(lats)))  # infer resolution
+    res_lon = np.median((np.diff(lons)))
+
+    ds["latitude_bnds"] = (
+        ("latitude", "bnds"),
+        np.array((lats - res_lat / 2, lats + res_lat / 2)).T,
+    )
+    ds["longitude_bnds"] = (
+        ("longitude", "bnds"),
+        np.array((lons - res_lon / 2, lons + res_lon / 2)).T,
+    )
