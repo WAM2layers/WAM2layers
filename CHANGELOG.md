@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 ### Removed
 
 - Support for Python 3.8 has been removed. This is in line with the new policy ([following NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html)) ([#333](https://github.com/WAM2layers/WAM2layers/pull/333)).
+- The CLI command to generate snapshots was removed. This was deemed to unstable for a V3 release ([#362](https://github.com/WAM2layers/WAM2layers/pull/362)).
 
 ### Fixed
 
