@@ -79,18 +79,18 @@ def backtrack(
         + tagging_mask * precip * s_upper / (s_upper + s_lower)
     )
 
+    # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
+    overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
+    overshoot_upper = np.maximum(0, s_track_upper - S0["s_upper"])
+    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
+    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
+
     # account for negative storages that are set to zero: "numerically gained water"
     gains_lower = np.where(s_track_lower < 0, -s_track_lower, 0)
     gains_upper = np.where(s_track_upper < 0, -s_track_upper, 0)
     gains = np.abs(gains_lower + gains_upper)
     s_track_lower = np.maximum(s_track_lower, 0)
     s_track_upper = np.maximum(s_track_upper, 0)
-
-    # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
-    overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
-    overshoot_upper = np.maximum(0, s_track_upper - S0["s_upper"])
-    s_track_lower = s_track_lower - overshoot_lower + overshoot_upper
-    s_track_upper = s_track_upper - overshoot_upper + overshoot_lower
 
     # At this point any of the storages could still be overfull, thus stabilize and assigns losses
     losses_lower = np.maximum(0, s_track_lower - S0["s_lower"])
