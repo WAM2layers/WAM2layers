@@ -67,16 +67,16 @@ If you are less experienced with setting up Python virtual environments,
 it can be more convenient to use Conda.
 Additionally, some packages might not be available from pip on all systems.
 
-Again, you can use `which conda` to see if conda is available on your system.
-If it's not, [here](https://docs.anaconda.com/free/miniconda/index.html) is a
-really nice walkthrough for installing miniconda.
+You can use `which conda` to see if conda is available on your system. If it's
+not, [here](https://docs.anaconda.com/free/miniconda/index.html) is a really
+nice walkthrough for installing miniconda.
 
 If you have conda installed, to set up a dedicated environment for your
 moisture tracking experiments do:
 
 ```
 # Create a fresh conda environment
-conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy matplotlib
+conda create --name wamenv -c conda-forge python=3.11 jupyterlab cartopy
 
 # Activate the environment
 conda activate wamenv
@@ -92,6 +92,9 @@ pip install wam2layers
 # You can also install a specific version:
 pip install wam2layers=3.0.0-beta5
 ```
+
+The available versions are listed
+[here](https://pypi.org/project/wam2layers/#history).
 
 ### Requirements for modifying the source code: git
 In principle, the previous steps are enough to start using WAM2Layers.
