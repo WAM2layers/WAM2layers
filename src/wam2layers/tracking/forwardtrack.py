@@ -207,7 +207,7 @@ def run_experiment(config_file):
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t0, output)
             progress_tracker.store_intermediate_states(output)
-            write_output(output, t0, config, mode="forwardtrack")
+            write_output(output, t0, config)
             # Flush previous outputs
             output[
                 ["p_track_upper", "p_track_lower", "tagged_evap", "losses", "gains"]
