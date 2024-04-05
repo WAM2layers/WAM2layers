@@ -23,6 +23,8 @@ Chris Weijenborg (Wageningen University)
 Peter Kalverla (Netherlands eScienceCenter)
 Bart Schilperoort (Netherlands eScience Center)
 
+We are proudly part of [open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology).
+
 # How to use
 See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description.
 Are you relatively new to setting up Python environments, command line interfaces etc.? Try this [video](https://youtu.be/QudlILlZnOg)
