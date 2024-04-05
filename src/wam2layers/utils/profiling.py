@@ -159,7 +159,7 @@ class ProgressTracker:
             correction_factor.name = "correction_factor"
             correction_factor.to_netcdf(filename)
 
-            logger.warn(
+            logger.warning(
                 f"Warning: stability correction applied to {corrected_percent:.1f}% of "
                 "grid.\n"
                 f"    Average correction factor was {correction_factor.mean():.2f}, "

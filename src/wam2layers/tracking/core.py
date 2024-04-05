@@ -2,6 +2,9 @@ from functools import partial
 
 import numpy as np
 
+from wam2layers.config import Config
+from wam2layers.utils.profiling import ProgressTracker
+
 
 def pad_boundaries(*args, periodic=False):
     """Add boundary padding to all input arrays.
@@ -123,3 +126,129 @@ def vertical_dispersion(fv, s_lower, s_upper, kvf):
     dispersion = kvf * |Fv| * dS/dz
     """
     return kvf * np.abs(fv) * (s_upper - s_lower)
+
+
+def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t):
+    """Stabilize the outfluxes / influxes.
+
+    CFL: Water cannot move further than one grid cell per timestep.
+
+    Arguments:
+        F: xr.Dataset holding the fluxes
+        S: xr.Dataset holding the states
+        progress_tracker: ProgressTracker object for writing log messages
+        config: Config object with the configuration for this experiment
+        t: current time (for writing output)
+    """
+    for level in ["upper", "lower"]:
+        fx = F["fx_" + level] * config.timestep
+        fy = F["fy_" + level] * config.timestep
+        s = S["s_" + level]
+
+        fx_abs = np.abs(fx)
+        fy_abs = np.abs(fy)
+        ft_abs = fx_abs + fy_abs
+
+        # TODO: make 1/2 configurable?
+        fx_limit = 1 / 2 * fx_abs / ft_abs * s.values
+        fx_stable = np.minimum(fx_abs, fx_limit)
+
+        fy_limit = 1 / 2 * fy_abs / ft_abs * s.values
+        fy_stable = np.minimum(fy_abs, fy_limit)
+
+        progress_tracker.track_stability_correction(fy_stable, fy_abs, config, t)
+
+        # Get rid of any nan values
+        fx_stable.fillna(0)
+        fy_stable.fillna(0)
+
+        # Re-instate the sign and convert back to flux instead of accumulation
+        F["fx_" + level] = np.sign(fx) * fx_stable / config.timestep
+        F["fy_" + level] = np.sign(fy) * fy_stable / config.timestep
+
+
+def divergence(fx, fy):
+    # Note: latitude decreasing, hence negative fy gradient is divergence
+    return np.gradient(fx, axis=-1) - np.gradient(fy, axis=-2)
+
+
+def calculate_fz(F, S0, S1, dt, kvf):
+    """Calculate the vertical fluxes.
+
+    The vertical flux is calculated as a closure term. Residuals are distributed
+    proportionally to the amount of moisture in each layer.
+
+    The flux is constrained such that it can never exceed
+
+    Arguments:
+        F: xarray dataset with fluxes evaluated at temporal midpoints between states
+        S0: xarray dataset with states at current time t
+        S1: xarray dataset with states at updated time t+1 (always forward looking)
+        dt: timestep
+        kvf: net to gross vertical flux multiplication parameter. With the a value of 0,
+            the net and gross fluxes are equal.
+
+    Returns:
+        fz: vertical flux, positive downward
+
+    Examples:
+
+        Create dummy input data. In the absence of any horizontal fluxes and
+        sources or sinks, this result can be verified manually.
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> from wam2layers.preprocessing.shared import calculate_fz
+        >>>
+        >>> F = xr.Dataset({
+        ...     'precip': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'evap': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fx_upper': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fy_upper': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fx_lower': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ...     'fy_lower': xr.DataArray(np.zeros(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> S0 = xr.Dataset({
+        ...     's_upper': 10 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ...     's_lower': 6 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> S1 = xr.Dataset({
+        ...     's_upper': 8 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ...     's_lower': 7 * xr.DataArray(np.ones(((3, 3))), dims=['lat', 'lon']),
+        ... })
+        >>> calculate_fz(F, S0, S1, dt=1)
+        <xarray.DataArray (lat: 3, lon: 3)>
+        array([[1.46666667, 1.46666667, 1.46666667],
+               [1.46666667, 1.46666667, 1.46666667],
+               [1.46666667, 1.46666667, 1.46666667]])
+        Dimensions without coordinates: lat, lon
+
+    """
+    s_mean = (S1 + S0) / 2
+    s_total = s_mean.s_upper + s_mean.s_lower
+    s_rel = s_mean / s_total
+
+    # Evaluate all terms in the moisture balance execpt the unknown Fz and err
+    foo_upper = (S1 - S0).s_upper + dt * (
+        divergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
+    )
+    foo_lower = (S1 - S0).s_lower + dt * (
+        divergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
+    )
+
+    # compute the resulting vertical moisture flux; the vertical velocity so
+    # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
+    fz = foo_lower - S1.s_lower / (S1.s_lower + S1.s_upper) * (foo_upper + foo_lower)
+
+    # TODO: verify that err_lower/s_lower = err_upper/s_upper is satisfied on debug log
+
+    # stabilize the outfluxes / influxes; during the reduced timestep the
+    # vertical flux can maximally empty/fill 1/x of the top or down storage
+    stab = 1.0 / (kvf + 1.0)
+    flux_limit = np.minimum(
+        s_mean.s_upper, s_mean.s_lower
+    )  # TODO why is this not 'just' the upstream bucket?
+    fz_stable = np.minimum(np.abs(fz), stab * flux_limit)
+
+    # Reinstate the sign and convert accumulation back to flux
+    return np.sign(fz) * fz_stable / dt
