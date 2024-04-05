@@ -114,7 +114,7 @@ def get_main_attrs(attrs: dict, config: Config):
             "Moisture tracking applied to ERA5 dataset: ECMWF Reanalysis v5 (ERA5), "
             "www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5"
         ),
-        "references": "doi.org/10.5194/esd-5-471-2014",
+        "references": "doi.org/10.5281/zenodo.7010594, doi.org/10.5194/esd-5-471-2014",
         "Conventions": "CF-1.6",
         "WAM2Layers_config": config.model_dump_json(),
     }
