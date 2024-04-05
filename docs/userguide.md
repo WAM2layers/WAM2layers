@@ -299,7 +299,7 @@ wam2layers.tracking.backtrack.run_experiment(config_file)
 You can also import specific functions. However, you should be conscious that
 the code was not designed to be used in this way, so it might not be the most
 intuitive, and you might run into unexpected behaviour. Moreover, in maintaining
-the model, we cannot guarentee backward compatibility for this type of use. So
+the model, we cannot guarantee backward compatibility for this type of use. So
 use it at your own risk.
 
 Perhaps, at some point, it would be nice to build a more user-friendly Python
