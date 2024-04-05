@@ -132,6 +132,13 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
     """Stabilize the outfluxes / influxes.
 
     CFL: Water cannot move further than one grid cell per timestep.
+
+    Arguments:
+        F: xr.Dataset holding the fluxes
+        S: xr.Dataset holding the states
+        progress_tracker: ProgressTracker object for writing log messages
+        config: Config object with the configuration for this experiment
+        t: current time (for writing output)
     """
     for level in ["upper", "lower"]:
         fx = F["fx_" + level] * config.timestep
