@@ -7,6 +7,7 @@ This module contains all the functionality that makes it possible to run wam2lay
 
 et cetera. It is built with [click](https://click.palletsprojects.com/en/8.1.x/).
 """
+
 import logging
 import shutil
 import sys
@@ -224,19 +225,6 @@ def both(ctx, config_file):
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting visualizing both input and output data.")
     visualization.visualize_both(config_file)
-
-
-@visualize_cli.command()
-@click.pass_context
-@click.argument("config_file", type=click.Path(exists=True))
-def snapshots(ctx, config_file):
-    """Visualize input and output snapshots for experiment."""
-    log_path = Config.from_yaml(config_file).output_folder
-    setup_logging(log_path, ctx.obj["debug"])
-    _copy_config_yaml(config_file, log_path)
-    logger.info("Welcome to WAM2layers.")
-    logger.info("Starting visualizing input and output snapshots.")
-    visualization.visualize_snapshots(config_file)
 
 
 cli.add_command(preproc_cli, name="preprocess")
