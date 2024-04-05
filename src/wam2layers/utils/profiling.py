@@ -96,7 +96,7 @@ class ProgressTracker:
             tracked_percentage
             + in_atmos_percentage
             + lost_percentage
-            - gained_percentage
+            + gained_percentage
             + boundary_percentage
         )
 
