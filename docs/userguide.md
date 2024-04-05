@@ -100,7 +100,7 @@ inside these scripts for instructions on how to use them.
 ```{note}
 It would be nice to collect more data download scripts over time. If you want to
 share your datascript, we will be happy to help you in adding it to our
-collection. Please see the [contributing](./contributing.md) chapter of this
+collection. Please see the [contributing](./develop.md) chapter of this
 documentation.
 ```
 
@@ -192,7 +192,7 @@ This pre-processed dataset adheres to the following requirements:
 If you need help in pre-processing your data, please don't hesitate to reach
 out, for example through
 [GitHub](https://github.com/WAM2layers/WAM2layers/issues/new). We would also be
-very grateful if you are willing to [contribute your code](./contributing.md) so
+very grateful if you are willing to [contribute your code](./develop.md) so
 others can benefit from it as well.
 ```
 
@@ -225,9 +225,14 @@ dataset and proceed with the next steps.
 (tracking)=
 ## Tracking
 
-The core of WAM2layers are the tracking routines. For the moment we only include
-backtracking, but forward tracking, time tracking, and moisture recycling will
-be added back once the code stabilizes.
+The core of WAM2layers are the tracking routines. The model includes forward and
+backward tracking. Forward tracking takes evaporation over the tagging region as
+input and generates tracked precipitation as output. Backward tracking takes
+precipitation over the tagging region as input and generates tracked evaporation
+as output.
+
+Time tracking, distance tracking, and moisture recycling can
+be added in future updates.
 
 Assuming you have a preprocessed dataset and prepared a configuration file for
 your experiment, running WAM2layers is as simple as:
@@ -299,7 +304,7 @@ wam2layers.tracking.backtrack.run_experiment(config_file)
 You can also import specific functions. However, you should be conscious that
 the code was not designed to be used in this way, so it might not be the most
 intuitive, and you might run into unexpected behaviour. Moreover, in maintaining
-the model, we cannot guarentee backward compatibility for this type of use. So
+the model, we cannot guarantee backward compatibility for this type of use. So
 use it at your own risk.
 
 Perhaps, at some point, it would be nice to build a more user-friendly Python
