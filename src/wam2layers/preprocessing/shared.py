@@ -287,6 +287,18 @@ def accumulation_to_flux(data, input_frequency):
     return fluxdata
 
 
+def get_boundary(field, periodic=False):
+    """Return a mask with 1 along the boundary and 0 in the interior."""
+    boundary = xr.ones_like(field, dtype=bool)
+    # Mask interior
+    if periodic:
+        boundary[1:-1, 0] = 0
+    else:
+        boundary[1:-1, 1:-1] = 0
+
+    return boundary
+
+
 def stagger_x(f):
     """Interpolate f to the grid cell interfaces.
 
