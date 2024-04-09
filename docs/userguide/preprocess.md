@@ -1,6 +1,6 @@
 
 (pre-processing)=
-## Pre-processing
+# Pre-processing
 
 During the pre-processing step we make sure to convert the raw data into
 something that the tracking script understands. This typically involves
@@ -9,7 +9,7 @@ typically not included in standard model output) from variables that are
 commonly available, and converting the data to the right units and a regular
 grid if that isn't the case already.
 
-### Built-in preprocessing functionality
+## Built-in preprocessing functionality
 
 WAM2layers comes with built-in preprocessing functionality for ERA5 data. You can
 use the following command:
@@ -31,7 +31,7 @@ For now WAM2layers only contains preprocessing code for era5. We think it would
 be nice to add preprocessing functionality for more datasets over time.
 ```
 
-### Preprocessing other datasets
+## Preprocessing other datasets
 
 If you want to use another dataset, you need to make sure that it follows the
 same standards. To give you an impression, here is an example structure of a
@@ -71,7 +71,7 @@ very grateful if you are willing to [contribute your code](../develop.md) so
 others can benefit from it as well.
 ```
 
-### Data checking utilities
+## Data checking utilities
 
 To aid in pre-processing, WAM2layers comes with some basic data checking
 utilities. Specifically, the function `check_input` takes a single input file

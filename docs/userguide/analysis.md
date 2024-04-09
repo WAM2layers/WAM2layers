@@ -1,6 +1,6 @@
 
 (analysis)=
-## Analysis and visualization
+# Analysis and visualization
 
 It can be useful to quickly make some standard plots of the input and output.
 To this end, WAM2layers includes a few visualization scripts.

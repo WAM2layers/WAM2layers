@@ -1,14 +1,12 @@
 
 (tracking)=
-## Tracking
+# Tracking
 
 The core of WAM2layers are the tracking routines. The model includes forward and
 backward tracking. Forward tracking takes evaporation over the tagging region as
 input and generates tracked precipitation as output. Backward tracking takes
 precipitation over the tagging region as input and generates tracked evaporation
-as output.
-
-Time tracking, distance tracking, and moisture recycling can
+as output. Time tracking, distance tracking, and moisture recycling can
 be added in future updates.
 
 Assuming you have a preprocessed dataset and prepared a configuration file for

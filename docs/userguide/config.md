@@ -8,6 +8,9 @@ you run WAM2layers, these settings are loaded into a `Config` object. The
 options in your yaml file should correspond to the attributes of the `Config`
 class listed below.
 
+<!-- TODO: update links -->
+Configuration files for the two example cases are available under []().
+
 
 <!-- This generates automatic documentation based on docstrings in src/wam2layers/config.py -->
 ```{eval-rst}
