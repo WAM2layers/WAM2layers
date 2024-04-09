@@ -10,14 +10,10 @@ quickly find some specific information.
 If you are looking for a quick, high-level overview of all the steps, you may
 prefer to visit our [quickstart](./quickstart) instead.
 
-(cli)=
-## WAM2layers' command line interface
-
-WAM2layers is written in Python, but unlike many popular Python packages, it is
-not primarily intended as a library that you can import like numpy. While it is
-possible to import and [use wam2layers in an interactive session](interactive), this is
-probably not the best experience at the moment. Instead, we offer a command line
-interace (CLI), much like pip, conda, git, cdo, et cetera. It looks like this:
+```{toctree}
+:hidden:
+self
+installation
 
 ```
 # Get help

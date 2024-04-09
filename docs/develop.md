@@ -89,22 +89,15 @@ git clone git@github.com:WAM2layers/WAM2layers.git
 
 ### Development installation - additional tooling
 
-You can install your local copy of the code by following the same steps as the
-[regular installation](./installation.md). However, by adding `[develop]`, some
-additional dependencies are installed that are convenient for developing.
-
-```
-pip install --editable .[dev]
-```
+You can install your local copy of the code by following the steps for the
+[source installation](./installation.md).
 
 The `--editable` flag means that any changes you make to the code will be
 "effective immediately". When you run the model again, the updated code is used.
-
-The `[dev]` option tells pip to install not just the code, but some
-additional packages that are listed under the "dev" header in the file
-`pyproject.toml`. These packages help with linting (checking your code against
-syntax/style guides), automatic formatting, building documentation, running
-tests, and publising the package on PyPI.
+By adding `[dev]` or `[complete]`, some additional dependencies are installed
+that are convenient for developing. These packages help with linting (checking
+your code against syntax/style guides), automatic formatting, building
+documentation, running tests, and publising the package on PyPI.
 
 ### Create a new branch
 

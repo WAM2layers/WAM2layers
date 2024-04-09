@@ -26,7 +26,6 @@ more stable version of the code in the course of 2022.
 self
 theory
 quickstart
-installation
 userguide
 config
 develop
