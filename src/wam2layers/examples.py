@@ -29,7 +29,7 @@ def extract_from_4TU_archive(download_link, target_dir):
     z.extractall(target_dir)
 
 
-# TODO move to test suite once actual example cases work
+# TODO move to test suite once actual example cases work?
 def download_random() -> None:
     """Download random example dataset for testing."""
     download_link = "https://data.4tu.nl/ndownloader/items/4e291b8f-a37e-4378-8ca6-954a44fdc8fb/versions/2"
@@ -63,7 +63,7 @@ def download_eiffel() -> None:
 
 
 AVAILABLE_CASES: dict[str, Callable[[], None]] = {
-    "example-volta": download_volta,
-    "example-eiffel": download_eiffel,
-    "example-random": download_random,
+    "example-input-volta": download_volta,
+    "example-input-eiffel": download_eiffel,
+    "example-input-random": download_random,
 }
