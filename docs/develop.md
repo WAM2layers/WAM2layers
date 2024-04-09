@@ -340,13 +340,6 @@ If you look at that function, you will see that it prints a welcome message and
 then calls the function `run_experiment`. Note that it takes `config_file` an
 input argument.
 
-```{note}
-It might be easier if all the methods related to the CLI are grouped together in
-a single `cli.py` file. The reason why this is not done, is that by keeping a
-`cli` function in each file, we can also run them as standalone scripts, e.g.
-`python backtrack.py example-config.yaml`.
-```
-
 ### Config file
 
 The configuration file is written in [YAML](https://yaml.org/). YAML is a
