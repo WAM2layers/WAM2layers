@@ -11,7 +11,7 @@ If you are looking for a quick, high-level overview of all the steps, you may
 prefer to visit our [quickstart](../quickstart) instead.
 
 ```{toctree}
-:hidden:
+:maxdepth: 1
 installation
 overview
 input
