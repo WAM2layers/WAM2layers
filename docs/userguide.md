@@ -1,22 +1,14 @@
 # User guide
 
-In this section we will guide you through an example of how we are using
-WAM2layers in practice. By the end of this page, you will be familiar with the
+In this section we provide detailed information about all the steps involved in
+running WAM2layers. By the end of this page, you will be familiar with the
 different functionalities of WAM2layers, and have a basic understanding of how
 the program works. Moreover, you will understand how you can set up your own
 experiments with WAM2layers. This guide can also be used as a reference to
 quickly find some specific information.
 
-A typical experiment may consist of the following steps:
-
-1. [Obtain input data](input-data)
-1. [Pre-process the data](pre-processing)
-1. [Perform the actual tracking](tracking)
-1. [Analyse the outputs](analysis)
-
-Not all of these steps require WAM2layers. We describe them nonetheless as they
-provide a lot of relevant context on how WAM2layers is used in practice.
-
+If you are looking for a quick, high-level overview of all the steps, you may
+prefer to visit our [quickstart](./quickstart) instead.
 
 (cli)=
 ## WAM2layers' command line interface
