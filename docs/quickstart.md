@@ -24,17 +24,18 @@ wam2layers --version
 wam2layers --help
 wam2layers track --help
 
-# Download example input data
-wam2layers download-example data/
+# Download example input data (pick one)
+wam2layers download example-input-eiffel
+wam2layers download example-input-volta
 
 # Prepare the data for a tracking experiment
-wam2layers preprocess data/config.yaml
+wam2layers preprocess example-input-eiffel/config_eiffel.yaml  # or volta
 
 # Run the tracking experiment
-wam2layers track data/config.yaml
+wam2layers track example-input-eiffel/config_eiffel.yaml  # or volta
 
 # Make a default plot of the results
-wam2layers visualize output data/config.yaml
+wam2layers visualize output example-input-eiffel/config_eiffel.yaml  # or volta
 ```
 
 A detailed explanation for each of these steps is available in the [user guide](./userguide/index).

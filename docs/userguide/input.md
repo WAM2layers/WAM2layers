@@ -34,8 +34,15 @@ To help you get started, we provide two example cases:
 2. A forward tracking case of evaporation over the Volta region in
    Ghana for July and August 1998.
 
-ERA5 data for these regions/periods are available on 4TU and example
-configuration and tracking_region files are shipped with the package.
+ERA5 data for these regions/periods are available on 4TU
+([Eiffel](https://data.4tu.nl/private_datasets/21w70N3rU2txJbm-l6bHA4hEi6I1ox2DFFoazYJCnR8);
+[Volta](https://data.4tu.nl/private_datasets/JdOEDHiTlNrnrU34bTS699NSA3vUHVhU9iDdzevjm5U))
+and can easily be downloaded with WAM2layers:
+
+```sh
+wam2layers download example-input-eiffel
+wam2layers download example-input-volta
+```
 
 ## File structure
 
