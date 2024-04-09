@@ -20,6 +20,7 @@ import click
 from wam2layers import __version__
 from wam2layers.analysis import visualization
 from wam2layers.config import Config
+from wam2layers.examples import AVAILABLE_CASES, download_eiffel, download_volta
 from wam2layers.preprocessing.era5 import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
 from wam2layers.tracking.forwardtrack import (
@@ -229,6 +230,22 @@ def both(ctx, config_file):
 
 cli.add_command(preproc_cli, name="preprocess")
 cli.add_command(visualize_cli, name="visualize")
+
+
+# Command line setup for downloading input data
+@cli.command()
+@click.pass_context
+@click.argument("case", type=click.Choice(AVAILABLE_CASES.keys()))
+def download(ctx, case):
+    """Download input data for (example) cases."""
+    download_function = AVAILABLE_CASES.get(case, None)
+
+    if download_function is None:
+        raise ValueError(
+            f"Cannot download input data for {case}. Choose from {AVAILABLE_CASES.keys()}"
+        )
+
+    download_function()
 
 
 if __name__ == "__main__":
