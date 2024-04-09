@@ -90,7 +90,7 @@ git clone git@github.com:WAM2layers/WAM2layers.git
 ### Development installation - additional tooling
 
 You can install your local copy of the code by following the steps for the
-[source installation](./installation.md).
+[source installation](./userguide/installation.md).
 
 The `--editable` flag means that any changes you make to the code will be
 "effective immediately". When you run the model again, the updated code is used.

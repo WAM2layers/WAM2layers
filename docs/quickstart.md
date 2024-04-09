@@ -9,7 +9,6 @@ available on 4TU and example configuration files are shipped with the package.
 This quickstart gives a good impression of all the steps needed to run these
 example cases.
 
-
 ```sh
 # Optional: Create a new conda environment for WAM2layers and activate it
 conda create --name wamenv python=3.11
@@ -38,4 +37,4 @@ wam2layers track data/config.yaml
 wam2layers visualize output data/config.yaml
 ```
 
-A detailed explanation for each of these steps is available in the [user guide](/userguide).
+A detailed explanation for each of these steps is available in the [user guide](./userguide/index).

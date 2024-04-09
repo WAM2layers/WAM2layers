@@ -103,7 +103,7 @@ Now, if you edit the source code of WAM2layers, the model will run with your
 updated code.
 
 If you want to contribute your changes, raise an issue, request new features, et
-cetera (highly encouraged!), check out the [contribution guidelines](./develop)
+cetera (highly encouraged!), check out the [contribution guidelines](../develop)
 chapter of the documentation.
 
 ## Verify your installation
