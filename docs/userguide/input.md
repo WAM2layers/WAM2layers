@@ -4,11 +4,19 @@
 
 Every tracking experiment requires data, which you might need to download.
 
-**Meteorogical data**
+* **Meteorogical data**
 
-Typically you will need wind speed in both directions and humidity at multiple
-(pressure) levels and evaporation and precipitation. If the data comes at model
-levels, you also need the corresponding pressure.
+    Typically you will need wind speed in both directions and humidity at multiple
+    (pressure) levels and evaporation and precipitation. If the data comes at model
+    levels, you also need the corresponding pressure.
+
+
+* **Tracking region**
+
+    In addition to the time-dependent forcing data, WAM2layers also needs a
+    netcdf-file containing a variable called `tagging_region`, with values between 0
+    and 1. It must have the same lat/lon coordinates as the other input data. This
+    file is used to define the tagging region from where to track moisture.
 
 At this stage, the format of the data is not very strict yet. In the
 [pre-processing step](./preprocess) we make sure that the data is ready for
@@ -16,21 +24,18 @@ tracking. However, if you want to use the pre-processing scripts that come
 bundled with WAM2layers out-of-the-box, you need to make sure the data follows
 the same structure as the [example data](example-data).
 
-**Tracking region**
-
-In addition to the time-dependent forcing data, WAM2layers also needs a
-netcdf-file containing a variable called `tagging_region`, with values between 0
-and 1. It must have the same lat/lon coordinates as the other input data. This
-file is used to define the tagging region from where to track moisture.
-
 (example-data)=
 ## Example data
 
-To help you get started, we provide two example cases: 1) a backward tracking
-case for an extreme precipitation event over the Eifel region in July 2021 and
-2) a forward tracking case of tracking evaporation over the Volta region in
-Ghana for July and August 1998. ERA5 data for these regions/periods are
-available on 4TU and example configuration files are shipped with the package.
+To help you get started, we provide two example cases:
+
+1. A backward tracking case for an extreme precipitation event over the Eifel
+   region in July 2021.
+2. A forward tracking case of evaporation over the Volta region in
+   Ghana for July and August 1998.
+
+ERA5 data for these regions/periods are available on 4TU and example
+configuration and tracking_region files are shipped with the package.
 
 ## File structure
 

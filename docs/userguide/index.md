@@ -13,11 +13,10 @@ prefer to visit our [quickstart](../quickstart) instead.
 ```{toctree}
 :maxdepth: 1
 installation
-overview
+using
 input
 config
 preprocess
 tracking
 analysis
-interactive
 ```
