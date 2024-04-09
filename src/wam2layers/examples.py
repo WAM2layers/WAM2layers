@@ -1,15 +1,4 @@
-"""Functions for preparing example cases.
-
-
-Each prepare function should:
-
-* Create a new directory in the current working directory
-* Add a configuration file (may be shipped with the repo or fetched from elsewhere)
-* Add meteorological input data (download from external repository)
-* Add a tracking_region file (may be shipped with the repo or fetched from elsewhere)
-
-Sources should be persistent (ideally with DOI)
-"""
+"""Functions for downloading example cases."""
 
 import io
 import zipfile
@@ -30,7 +19,7 @@ def extract_from_4TU_archive(download_link, target_dir):
 
 
 # TODO move to test suite once actual example cases work?
-def download_random() -> None:
+def test_4tu_extract() -> None:
     """Download random example dataset for testing."""
     download_link = "https://data.4tu.nl/ndownloader/items/4e291b8f-a37e-4378-8ca6-954a44fdc8fb/versions/2"
     target_directory = Path.cwd() / "example_random"
@@ -39,7 +28,7 @@ def download_random() -> None:
     extract_from_4TU_archive(download_link, target_directory)
 
 
-def download_volta() -> None:
+def download_input_volta() -> None:
     # TODO: replace with published link
     download_link = "https://data.4tu.nl/ndownloader/items/bbe10a2a-39dc-4098-a69f-0f677d06ecdd/versions/draft"
     target_directory = Path.cwd() / "example_volta"
@@ -50,7 +39,7 @@ def download_volta() -> None:
     extract_from_4TU_archive(download_link, target_directory)
 
 
-def download_eiffel() -> None:
+def download_input_eiffel() -> None:
     # TODO: replace with published link
     download_link = "https://data.4tu.nl/ndownloader/items/f9572240-f179-4338-9e1b-82c5598529e2/versions/draft"
     target_directory = Path.cwd() / "example_eiffel"
@@ -63,7 +52,7 @@ def download_eiffel() -> None:
 
 
 AVAILABLE_CASES: dict[str, Callable[[], None]] = {
-    "example-input-volta": download_volta,
-    "example-input-eiffel": download_eiffel,
-    "example-input-random": download_random,
+    "example-input-volta": download_input_volta,
+    "example-input-eiffel": download_input_eiffel,
+    "example-input-random": test_4tu_extract,
 }
