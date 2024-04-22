@@ -1,10 +1,9 @@
 # General
-log_level: info
-preprocessed_data_folder: tests/tmp/preprocessed_data
-output_folder: tests/tmp/output_data
+preprocessed_data_folder: ./preprocessed_data
+output_folder: ./output_data
 
 # Preprocessing
-filename_template: tests/test_data/era5/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+filename_template: ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
 preprocess_start_date: "2021-07-01T00:00"
 preprocess_end_date: "2021-07-15T00:00"
 level_type: model_levels
@@ -18,7 +17,7 @@ tracking_start_date: "2021-07-01T00:00"
 tracking_end_date: "2021-07-15T00:00"
 
 # Tagging
-tagging_region: tests/test_data/region_rhine.nc
+tagging_region: region_rhine.nc
 # tagging_region: [0, 50, 10, 55]  # alternative to mask file; west south east north
 tagging_start_date: "2021-07-13T00:00"
 tagging_end_date: "2021-07-15T00:00"
