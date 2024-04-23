@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Literal, NamedTuple, Optional, Union
+from typing import List, Literal, NamedTuple, Optional, Union
 
 import yaml
 from pydantic import (
