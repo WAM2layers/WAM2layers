@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## Release v3.0.1 (2024-04-22)
+
+### Changed
+
+- updated example config
 
 ## Release v3.0.0 (2024-04-05)
 
