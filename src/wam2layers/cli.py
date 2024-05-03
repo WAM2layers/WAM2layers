@@ -20,7 +20,8 @@ import click
 from wam2layers import __version__
 from wam2layers.analysis import visualization
 from wam2layers.config import Config
-from wam2layers.download import AVAILABLE_CASES, download_from_doi
+from wam2layers.download import download_from_doi
+from wam2layers.example_cases import AVAILABLE_CASES
 from wam2layers.preprocessing.era5 import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
 from wam2layers.tracking.forwardtrack import (
