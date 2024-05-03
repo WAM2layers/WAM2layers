@@ -14,8 +14,6 @@ wam2layers visualize input config-file.yaml
 
 # Visualize the output data after tracking
 wam2layers visualize output config-file.yaml
-
-TODO: explain the visualize both and snapshots options
 ```
 
 The configuration file is used to find the path to the data.

@@ -35,8 +35,8 @@ To help you get started, we provide two example cases:
    Ghana for July and August 1998.
 
 ERA5 data for these regions/periods are available on 4TU
-([Eiffel](https://data.4tu.nl/private_datasets/21w70N3rU2txJbm-l6bHA4hEi6I1ox2DFFoazYJCnR8);
-[Volta](https://data.4tu.nl/private_datasets/JdOEDHiTlNrnrU34bTS699NSA3vUHVhU9iDdzevjm5U))
+([Eiffel](https://doi.org/10.4121/f9572240-f179-4338-9e1b-82c5598529e2);
+[Volta](https://doi.org/10.4121/bbe10a2a-39dc-4098-a69f-0f677d06ecdd))
 and can easily be downloaded with WAM2layers:
 
 ```sh
