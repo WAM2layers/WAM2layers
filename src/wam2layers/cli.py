@@ -20,7 +20,7 @@ import click
 from wam2layers import __version__
 from wam2layers.analysis import visualization
 from wam2layers.config import Config
-from wam2layers.examples import AVAILABLE_CASES, download_from_4TU
+from wam2layers.download import AVAILABLE_CASES, download_from_doi
 from wam2layers.preprocessing.era5 import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
 from wam2layers.tracking.forwardtrack import (
@@ -246,7 +246,7 @@ def download(ctx, case):
             f"Cannot download input data for {case}. Choose from {AVAILABLE_CASES.keys()}"
         )
 
-    download_from_4TU(doi, name=case)
+    download_from_doi(doi, name=case)
 
 
 if __name__ == "__main__":
