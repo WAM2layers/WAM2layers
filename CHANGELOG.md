@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - updated example config
 
+### Fixed
+
+- Fixed bug in treatment of periodic boundaries ([#379](https://github.com/WAM2layers/WAM2layers/pull/379)).
+
 ## Release v3.0.0 (2024-04-05)
 
 ### Added
