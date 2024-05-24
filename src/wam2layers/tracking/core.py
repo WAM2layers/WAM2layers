@@ -101,7 +101,7 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     # Donor cell upwind scheme (2 directions seperately)
     uq = np.where(up > 0, up * qp[inner, west], up * qp[inner, east])  # [M, N+1]
 
-    vq = np.where(vp > 0, vp * qp[south, inner], vp * qp[north, inner])  # [M, N+2]
+    vq = np.where(vp > 0, vp * qp[south, inner], vp * qp[north, inner])  # [M+1, N]
 
     adv_x = uq[:, west] - uq[:, east]  # [M, N]
     adv_y = vq[south, :] - vq[north, :]  # [M, N]
