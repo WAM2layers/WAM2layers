@@ -29,7 +29,7 @@ wam2layers download example-input-eiffel
 wam2layers download example-input-volta
 
 # Prepare the data for a tracking experiment
-wam2layers preprocess example-input-eiffel/config_eiffel.yaml  # or volta
+wam2layers preprocess era5 example-input-eiffel/config_eiffel.yaml  # or volta
 
 # Run the tracking experiment
 wam2layers track example-input-eiffel/config_eiffel.yaml  # or volta
