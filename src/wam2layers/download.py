@@ -147,7 +147,7 @@ def download_from_4TU(doi, name):
 
     # Extract additional files from file listing
     additional_files = get_4tu_files(id_4tu)
-    for filename, url in additional_files:
+    for filename, url in additional_files.items():
         download(url, target_dir, filename)
 
 
