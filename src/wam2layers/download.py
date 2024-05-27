@@ -60,9 +60,11 @@ def create_target_directory(name):
     return target_directory
 
 
-def download(url, destination):
+def download(url, destination, local_filename=None):
     """Download file from url to destination."""
-    local_filename = url.split("/")[-1]
+    if local_filename is None:
+        local_filename = url.split("/")[-1]
+
     local_path = destination / local_filename
 
     logging.info(f"Downloading {local_filename}")
@@ -106,6 +108,25 @@ def get_4tu_catalog(uuid):
     return catalog_url_xml
 
 
+def get_4tu_files(uuid):
+    """Retrieve file names and download links for files.
+
+    This concerns any (additional) files that are not available via OpenDAP
+    (e.g. config.yaml).
+    """
+    response = requests.get(f"https://data.4tu.nl/v2/articles/{uuid}")
+    response.raise_for_status()
+    dataset_info = response.json()
+
+    files = {}
+    for file_info in dataset_info["files"]:
+        name = file_info["name"]
+        url = file_info["download_url"]
+        files[name] = url
+
+    return files
+
+
 def download_from_4TU(doi, name):
     """Download each file using threddsclient as crawler.
 
@@ -123,6 +144,11 @@ def download_from_4TU(doi, name):
     file_urls = threddsclient.download_urls(catalog_url)
     for file_url in file_urls:
         download(file_url, target_dir)
+
+    # Extract additional files from file listing
+    additional_files = get_4tu_files(id_4tu)
+    for filename, url in additional_files:
+        download(url, target_dir, filename)
 
 
 def download_from_doi(doi, name):
