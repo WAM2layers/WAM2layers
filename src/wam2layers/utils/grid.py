@@ -61,7 +61,7 @@ def get_boundary(field, periodic=False):
     boundary = xr.ones_like(field, dtype=bool)
     # Mask interior
     if periodic:
-        boundary[1:-1, 0] = 0
+        boundary[1:-1, :] = 0
     else:
         boundary[1:-1, 1:-1] = 0
 
