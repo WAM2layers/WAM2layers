@@ -420,6 +420,25 @@ Then, from the base of the repository, type
 sphinx-build -nW --keep-going -b html docs docs/_build/html
 ```
 
+### Example cases
+
+To add more example cases, input data must be uploaded to a data repository.
+Currently, download functionality is only implemented for
+[4TU](https://data.4tu.nl/), although we could add it for other data
+repositories in the future. In case of 4TU, nc-files are uploaded as opendap
+files, whereas the config file is added to the standard file listing.
+
+Your data needs to be structured as a flat list of input files. Against best
+practices, the configuration and region files should live in the same folder as
+the input data, and the output should be generated as subfolders of that
+directory. Avoid absolute paths because that breaks the portability of the
+example cases.
+
+Once uploaded, add the example case to the list in
+`src/wam2layers/example_cases.py`. All you need to add there is a descriptive
+key (i.e. name) for your dataset, as well as the DOI. Then, open a pull request
+to add the example case for other users as well.
+
 ### Tests
 
 The folder tests is intended for test code. Currently the content is very
