@@ -53,7 +53,7 @@ def create_target_directory(name):
         target_directory.mkdir(exist_ok=False)
     except FileExistsError as exc:
         raise FileExistsError(
-            "Target directory exists. Stopping download to prevent overwriting your files. "
+            f"Target directory {name} exists. Stopping download to prevent overwriting your files. "
             "If you want to replace your files, first (re)move the directory manually."
         ) from exc
 
@@ -127,7 +127,7 @@ def get_4tu_files(uuid):
     return files
 
 
-def download_from_4TU(doi, name):
+def download_from_4tu(doi, name):
     """Download each file using threddsclient as crawler.
 
     Args:
@@ -161,8 +161,10 @@ def download_from_doi(doi, name):
     prefix, _ = parse_doi(doi)
 
     if prefix == "10.4121":  # 4TU
-        download_from_4TU(doi, name)
+        download_from_4tu(doi, name)
     elif prefix == "10.5281":  # Zenodo
-        "Download utility for Zenodo has not been implemented."
+        raise NotImplementedError(
+            "Download utility for Zenodo has not been implemented."
+        )
     else:
         raise ValueError(f"Unknown provider with doi prefix {prefix}, cannot download.")
