@@ -40,6 +40,7 @@ dependencies = [
     "regionmask",
     "matplotlib",
     "cmocean",
+    "threddsclient",
 ]
 
 [project.optional-dependencies]
