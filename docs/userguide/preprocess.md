@@ -71,9 +71,11 @@ very grateful if you are willing to [contribute your code](../develop.md) so
 others can benefit from it as well.
 ```
 
-## Data checking utilities
+
+<!-- TODO: update this and make it work and look nice(r) -->
+<!-- ## Data checking utilities
 
 To aid in pre-processing, WAM2layers comes with some basic data checking
 utilities. Specifically, the function `check_input` takes a single input file
 (opened with `xarray`) as input and checks it against most of the requirements
-enumerated above. You can use this to get some reassurance (or detect issues).
+enumerated above. You can use this to get some reassurance (or detect issues). -->

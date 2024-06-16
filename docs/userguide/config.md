@@ -8,8 +8,11 @@ you run WAM2layers, these settings are loaded into a `Config` object. The
 options in your yaml file should correspond to the attributes of the `Config`
 class listed below.
 
-<!-- TODO: update links -->
-Configuration files for the two example cases are available under []().
+An example configuration file is available
+[here](https://github.com/WAM2layers/WAM2layers/blob/main/example_config.yaml).
+Alternatively, checkout the configuration files for the example cases for
+[Volta](https://data.4tu.nl/datasets/bbe10a2a-39dc-4098-a69f-0f677d06ecdd) and
+[Eiffel](https://data.4tu.nl/datasets/f9572240-f179-4338-9e1b-82c5598529e2).
 
 
 <!-- This generates automatic documentation based on docstrings in src/wam2layers/config.py -->

@@ -1,9 +1,13 @@
 # Quickstart
 
-To help you get started, we provide two example cases: 1) a backward tracking
-case for an extreme precipitation event over the Eifel region in July 2021 and
-2) a forward tracking case of tracking evaporation over the Volta region in
-Ghana for July and August 1998. ERA5 data for these regions/periods are
+To help you get started, we provide two example cases:
+
+- a backward tracking case for an extreme precipitation event over the Eifel
+  region in July 2021
+- a forward tracking case of tracking evaporation over the Volta region in Ghana
+  for July and August 1998.
+
+ERA5 data for these regions/periods are
 available on 4TU and example configuration files are shipped with the package.
 
 This quickstart gives a good impression of all the steps needed to run these
@@ -28,14 +32,17 @@ wam2layers track --help
 wam2layers download example-input-eiffel
 wam2layers download example-input-volta
 
+cd example-input-eiffel  # or example-input-volta
+
 # Prepare the data for a tracking experiment
-wam2layers preprocess era5 example-input-eiffel/config_eiffel.yaml  # or volta
+wam2layers preprocess era5 config_eiffel.yaml  # or example-config-volta
 
 # Run the tracking experiment
-wam2layers track example-input-eiffel/config_eiffel.yaml  # or volta
+wam2layers track config_eiffel.yaml  # or example-config-volta
 
 # Make a default plot of the results
-wam2layers visualize output example-input-eiffel/config_eiffel.yaml  # or volta
+wam2layers visualize output config_eiffel.yaml  # or example-config-volta
 ```
 
-A detailed explanation for each of these steps is available in the [user guide](./userguide/index).
+A detailed explanation for each of these steps is available in the [user
+guide](./userguide/index).
