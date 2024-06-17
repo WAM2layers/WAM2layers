@@ -24,4 +24,3 @@ for variable in variable_list:
     ] = "Generated using Copernicus Climate Change Service information [2023]."
     encoding = {var: ds[var].encoding.update(zlib=True) for var in ds.data_vars}
     cutout.to_netcdf(f"{era5_name_pattern}_{variable}.nc")
-
