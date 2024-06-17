@@ -158,8 +158,37 @@ def get_dp_modellevels(sp, levels):
 
 
 def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
-    """Get dp with consistent u, v, q for ERA5 pressure level data."""
-    p = u.level.broadcast_like(u) * 100  # Pa
+    """Prepare data to allow for integration to two layers.
+
+    The input data does not have data at the surface and
+    and the top of atmosphere. The input data is extended to
+    these edges.
+
+    For proper integration, extra layers have to be inserted
+    near the 2-layer boundary. This boundary level is hard
+    coded as a function of surface pressure and not customizable.
+
+    Args:
+        q: Specific humidity at pressure levels
+        u: Eastward horizontal wind speed at pressure levels
+        v: Northward horizontal wind speed at pressure levels
+        ps: Air pressure at the surface
+        qs: Specific humidity at the surface
+        us: Eastward horizontal wind speed at the surface
+        vs: Northward horizontal wind speed at the surface
+
+    Returns:
+        Pressure difference between the new pressure level bounds,
+        p interpolated to new pressure levels,
+        q interpolated to new pressure levels,
+        u interpolated to new pressure levels,
+        v interpolated to new pressure levels,
+        Pressure at the division between the two layers
+    """
+    assert u.dims[0] == "level"  # move to better location
+
+    p = u["level"].broadcast_like(u) * 100  # Pa
+    p.attrs["units"] = "Pa"
 
     # Insert top of atmosphere values
     # Assume wind at top same as values at lowest pressure, humidity at top 0
@@ -175,23 +204,23 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
     p = insert_level(p, ps, 110000)
 
     # Sort arrays by pressure (ascending)
-    u.values = sortby_ndarray(u.values, p.values, axis=1)
-    v.values = sortby_ndarray(v.values, p.values, axis=1)
-    q.values = sortby_ndarray(q.values, p.values, axis=1)
-    p.values = sortby_ndarray(p.values, p.values, axis=1)
+    u.values = sortby_ndarray(u.values, p.values, axis=0)
+    v.values = sortby_ndarray(v.values, p.values, axis=0)
+    q.values = sortby_ndarray(q.values, p.values, axis=0)
+    p.values = sortby_ndarray(p.values, p.values, axis=0)
 
-    # Insert boundary level values (at a ridiculous dummy pressure value)
+    # Insert boundary level values (at a dummy pressure value)
     p_boundary = 0.72878581 * np.array(ps) + 7438.803223
-    u = insert_level(u, interpolate(p_boundary, p, u), 150000)
-    v = insert_level(v, interpolate(p_boundary, p, v), 150000)
-    q = insert_level(q, interpolate(p_boundary, p, q), 150000)
-    p = insert_level(p, p_boundary, 150000)
+    u = insert_level(u, interpolate(p_boundary, p, u, axis=0), -999)  # x, xp
+    v = insert_level(v, interpolate(p_boundary, p, v, axis=0), -999)
+    q = insert_level(q, interpolate(p_boundary, p, q, axis=0), -999)
+    p = insert_level(p, p_boundary, -999)
 
     # Sort arrays by pressure once more (ascending)
-    u.values = sortby_ndarray(u.values, p.values, axis=1)
-    v.values = sortby_ndarray(v.values, p.values, axis=1)
-    q.values = sortby_ndarray(q.values, p.values, axis=1)
-    p.values = sortby_ndarray(p.values, p.values, axis=1)
+    u.values = sortby_ndarray(u.values, p.values, axis=0)
+    v.values = sortby_ndarray(v.values, p.values, axis=0)
+    q.values = sortby_ndarray(q.values, p.values, axis=0)
+    p.values = sortby_ndarray(p.values, p.values, axis=0)
 
     # Reset level coordinate as its values have become meaningless
     nlev = u.level.size
@@ -205,7 +234,7 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
     assert np.all(dp >= 0), "Pressure levels should increase monotonically"
 
     # Interpolate to midpoints
-    midpoints = 0.5 * (u.level.values[1:] + u.level.values[:-1])
+    midpoints = 0.5 * (u["level"].to_numpy()[1:] + u["level"].to_numpy()[:-1])
     dp = dp.assign_coords(level=midpoints)
     u = u.interp(level=midpoints)
     v = v.interp(level=midpoints)
@@ -213,7 +242,7 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
     p = p.interp(level=midpoints)
 
     # mask values below surface
-    above_surface = p < np.array(ps)[:, None, :, :]
+    above_surface = p < np.array(ps)[None, :, :]
     u = u.where(above_surface)
     v = v.where(above_surface)
     q = q.where(above_surface)
@@ -306,8 +335,8 @@ def prep_experiment(config_file):
             upper_layer = ~lower_layer
 
         if config.level_type == "pressure_levels":
-            upper_layer = p < pb[:, None, :, :]
-            lower_layer = pb[:, None, :, :] < p
+            upper_layer = p < pb[None, :, :]
+            lower_layer = pb[None, :, :] < p
 
         # Vertically integrate state over two layers
         s_lower = cw.where(lower_layer).sum(dim="level")

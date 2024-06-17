@@ -91,13 +91,20 @@ def interpolate_old(old_var, old_pressure_levels, new_pressure_levels, type="lin
     return new_var
 
 
-def interpolate(x, xp, fp, axis=1, descending=False):
+def interpolate(x, xp, fp, axis, descending=False):
     """Linearly interpolate along an axis of an N-dimensional array.
 
     This function interpolates one slice at a time, i.e. if xp and fp are 4d
     arrays, x should be a 3d array and the function will return a 3d array.
 
     It is assumed that the input array is monotonic along the axis.
+
+    Args:
+        x: The coordinate to which you want to interpolate your data to.
+        xp: The coordinates of the original data.
+        fp: The original data.
+        axis: The axis which should be interpolated over.
+        descending: If the coordinates are in descending order (defaults to False)
     """
     # Cast input to numpy arrays
     x = np.asarray(x)
@@ -118,12 +125,12 @@ def interpolate(x, xp, fp, axis=1, descending=False):
     else:
         assert (
             np.diff(xp, axis=0).min() >= 0
-        ), "with desciending=True, xp must be monotonically increasing"
+        ), "with descending=True, xp must be monotonically increasing"
 
     # Check for out of bounds values
-    if np.any(x[None, ...] < xp[0, ...]):
+    if np.any(x < xp[0, ...]):
         raise ValueError("one or more x are below the lowest value of xp")
-    if np.any(x[None, ...] > xp[-1, ...]):
+    if np.any(x > xp[-1, ...]):
         raise ValueError("one or more x are above the highest value of xp")
 
     # Find indices such that xp[lower] < x < xp[upper]
@@ -138,7 +145,12 @@ def interpolate(x, xp, fp, axis=1, descending=False):
     return fy
 
 
-def insert_level(pressure_level_data, new_level, coord_value, dim_name="level"):
+def insert_level(
+    pressure_level_data: xr.DataArray,
+    new_level: xr.DataArray | np.ndarray | int | float,
+    coord_value: int | float,
+    dim_name: str = "level",
+) -> xr.DataArray:
     """Insert a new level in the pressure level data.
 
     Note: new levels are inserted at the end of the dimension.
