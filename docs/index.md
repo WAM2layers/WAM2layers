@@ -14,19 +14,15 @@ with configuration script that can be edited in your favorite editor.
 * For a reference publication, see [this paper](https://doi.org/10.5194/esd-5-471-2014)
 * To cite the code, use the software citation information [for the appropriate
   version of the code](https://doi.org/10.5281/zenodo.7010594)
+* Visit the [quickstart](./quickstart.md) page for a high-level overview of how
+  to use wam2layers.
 * For more information on how to use, browse this documentation.
-
-```{attention}
-WAM2layers is currently under heavy development. We are hoping to arrive at a
-more stable version of the code in the course of 2022.
-```
 
 ```{toctree}
 :hidden:
 self
 theory
-installation
-userguide
-config
+quickstart
+userguide/index
 develop
 ```

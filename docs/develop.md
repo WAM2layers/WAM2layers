@@ -89,22 +89,15 @@ git clone git@github.com:WAM2layers/WAM2layers.git
 
 ### Development installation - additional tooling
 
-You can install your local copy of the code by following the same steps as the
-[regular installation](./installation.md). However, by adding `[develop]`, some
-additional dependencies are installed that are convenient for developing.
-
-```
-pip install --editable .[dev]
-```
+You can install your local copy of the code by following the steps for the
+[source installation](./userguide/installation.md).
 
 The `--editable` flag means that any changes you make to the code will be
 "effective immediately". When you run the model again, the updated code is used.
-
-The `[dev]` option tells pip to install not just the code, but some
-additional packages that are listed under the "dev" header in the file
-`pyproject.toml`. These packages help with linting (checking your code against
-syntax/style guides), automatic formatting, building documentation, running
-tests, and publising the package on PyPI.
+By adding `[dev]` or `[complete]`, some additional dependencies are installed
+that are convenient for developing. These packages help with linting (checking
+your code against syntax/style guides), automatic formatting, building
+documentation, running tests, and publising the package on PyPI.
 
 ### Create a new branch
 
@@ -340,13 +333,6 @@ If you look at that function, you will see that it prints a welcome message and
 then calls the function `run_experiment`. Note that it takes `config_file` an
 input argument.
 
-```{note}
-It might be easier if all the methods related to the CLI are grouped together in
-a single `cli.py` file. The reason why this is not done, is that by keeping a
-`cli` function in each file, we can also run them as standalone scripts, e.g.
-`python backtrack.py example-config.yaml`.
-```
-
 ### Config file
 
 The configuration file is written in [YAML](https://yaml.org/). YAML is a
@@ -433,6 +419,25 @@ Then, from the base of the repository, type
 ```bash
 sphinx-build -nW --keep-going -b html docs docs/_build/html
 ```
+
+### Example cases
+
+To add more example cases, input data must be uploaded to a data repository.
+Currently, download functionality is only implemented for
+[4TU](https://data.4tu.nl/), although we could add it for other data
+repositories in the future. In case of 4TU, nc-files are uploaded as opendap
+files, whereas the config file is added to the standard file listing.
+
+Your data needs to be structured as a flat list of input files. Against best
+practices, the configuration and region files should live in the same folder as
+the input data, and the output should be generated as subfolders of that
+directory. Avoid absolute paths because that breaks the portability of the
+example cases.
+
+Once uploaded, add the example case to the list in
+`src/wam2layers/example_cases.py`. All you need to add there is a descriptive
+key (i.e. name) for your dataset, as well as the DOI. Then, open a pull request
+to add the example case for other users as well.
 
 ### Tests
 
