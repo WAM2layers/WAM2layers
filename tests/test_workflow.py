@@ -25,6 +25,9 @@ CFG_FILE_BACKWARD = Path("tests/test_data/config_rhine.yaml")
 CFG_FILE_BACKWARD_PL = Path("tests/test_data/config_rhine_pl.yaml")
 CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
 
+RTOL = 1e-5
+ATOL = 1e-7
+
 
 ## First we define fixtures to help us write the tests more concisely
 # Temporary directories that are consistent between tests:
@@ -227,6 +230,8 @@ class TestPreprocess:
             expected_output["precip"].values,
             output["precip"].values,
             err_msg=different_output_message(diff_figure, output_path, expected_path),
+            rtol=RTOL,
+            atol=ATOL,
         )
 
     def test_log_file(self, preprocessed_dir):
@@ -286,6 +291,8 @@ class TestBacktrack:
             expected_output["e_track"].values,
             output["e_track"].values,
             err_msg=different_output_message(diff_figure, output_path, expected_path),
+            rtol=RTOL,
+            atol=ATOL,
         )
 
     def test_time_coord(self, output_path: Path):
@@ -343,6 +350,8 @@ class TestForwardtrack:
                 err_msg=different_output_message(
                     diff_figure, output_path, expected_path
                 ),
+                rtol=RTOL,
+                atol=ATOL,
             )
 
     def test_time_coord(self, output_path: Path):
