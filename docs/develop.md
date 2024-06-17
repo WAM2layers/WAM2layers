@@ -243,6 +243,7 @@ These instructions are intended for core developers.
 - Make sure the changelog is up to date; update the "Unreleased" header with the
   new version, and add a new "Unreleased" header above
 - Review and merge the release branch
+- Check on Zenodo whether the Zenodo integration with WAM2layers/WAM2layers is switched to ON. In case the switch is OFF, do not turn it ON, but contact @ruudvdent to turn it ON for you. This is in order to avoid creating multiple Webhooks and thus multiple releases.
 - [Make a release on GitHub](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
 - Upon release, the Github Actions workflow for publishing will run. The publishing step requires manual approval, so go to the [workflow overview](https://github.com/WAM2layers/WAM2layers/actions) and approve the run. More extensive documentation on publishing is available [here](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/).
 - Check that the new release is successfully rendered on Zenodo and PyPI.
