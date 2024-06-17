@@ -286,7 +286,9 @@ def prep_experiment(config_file):
             cw = correction * cwv  # column water (kg/m2)
             if is_new_day:
                 logger.info(
-                    f"Total column water correction: mean over grid for this timestep {correction.mean().item():.4f}"
+                    "Total column water correction:\n"
+                    "    ratio total column water / computed integrated water vapour\n"
+                    f"    mean over grid for this timestep {correction.mean().item():.4f}"
                 )
 
         except FileNotFoundError:
