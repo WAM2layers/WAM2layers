@@ -1,5 +1,6 @@
 """Generic functions useful for preprocessing various input datasets."""
 
+from typing import Union
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -147,8 +148,8 @@ def interpolate(x, xp, fp, axis, descending=False):
 
 def insert_level(
     pressure_level_data: xr.DataArray,
-    new_level: xr.DataArray | np.ndarray | int | float,
-    coord_value: int | float,
+    new_level: Union[xr.DataArray, np.ndarray, int, float],
+    coord_value: Union[int, float],
     dim_name: str = "level",
 ) -> xr.DataArray:
     """Insert a new level in the pressure level data.
