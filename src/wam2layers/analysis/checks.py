@@ -5,7 +5,7 @@ import numpy as np
 import yaml
 
 
-def _warning_on_one_line(message, category, filename, lineno, file=None, line=None):
+def _warning_on_one_line(message, category, filename, lineno, line=None):
     """A more compact warning format.
 
     https://stackoverflow.com/a/26433913

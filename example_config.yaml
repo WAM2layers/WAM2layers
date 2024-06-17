@@ -1,24 +1,29 @@
 # General
-log_level: info
-preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
-output_folder: ~/floodcase_202107/output_data
-chunks: null
+preprocessed_data_folder: ./preprocessed_data
+output_folder: ./output_data
+tracking_direction: backward
 
 # Preprocessing
-filename_template: /ERA5data/{year}/{month:02}/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+filename_template: ./ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
 preprocess_start_date: "2021-07-01T00:00"
 preprocess_end_date: "2021-07-15T00:00"
 level_type: model_levels
 levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
 
 # Tracking
-region: /data/volume_2/era5_2021/source_region_global.nc
-track_start_date: "2021-07-01T00:00"
-track_end_date: "2021-07-15T00:00"
-event_start_date: "2021-07-13T00:00"
-event_end_date: "2021-07-15T00:00"
+tracking_domain: null  # use full domain of preprocessed data
+# tracking_domain: [0, 50, 10, 55]  # use subdomain of preprocessed data; west south east north
+tracking_start_date: "2021-07-01T00:00"
+tracking_end_date: "2021-07-15T00:00"
+
+# Tagging
+tagging_region: tests/test_data/region_rhine.nc  # path must exist
+# tagging_region: [0, 50, 10, 55]  # alternative to mask file; west south east north
+tagging_start_date: "2021-07-13T00:00"
+tagging_end_date: "2021-07-15T00:00"
+
 input_frequency: "1h"
-target_frequency: "10min"
+timestep: 600  # timestep in seconds
 output_frequency: "1d"
 restart: False
 periodic_boundary: false

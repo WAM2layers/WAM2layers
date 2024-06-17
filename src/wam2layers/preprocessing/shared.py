@@ -6,66 +6,6 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 
-# old, keep only for reference and ecearth starting case
-def resample(variable, divt, count_time, method="interp"):
-    """Resample the variable to a given number of timesteps."""
-
-    _, nlat, nlon = variable.shape
-    ntime = count_time * divt
-    shape = (ntime, nlat, nlon)
-    new_var = np.nan * np.zeros(shape)
-
-    oddvector = np.zeros(ntime)
-    partvector = np.zeros(ntime)
-    for o in np.arange(0, ntime, divt):
-        for i in range(1, divt):
-            oddvector[o + i - 1] = (divt - i) / divt
-            partvector[o + i] = i / divt
-
-    for t in range(ntime):
-        idx = int((t + 1) / divt + oddvector[t])
-
-        if method == "bfill":
-            new_var[t] = (1 / divt) * variable[idx - 1]
-        elif method == "interp":
-            new_var[t] = variable[idx - 1] + partvector[t] * (
-                variable[idx] - variable[idx - 1]
-            )
-        else:
-            raise ValueError(f"Unknown resample method {method}")
-
-    return new_var
-
-
-def get_grid_info(ds):
-    """Return grid cell area and lenght of the sides."""
-    dg = 111089.56  # [m] length of 1 degree latitude
-    erad = 6.371e6  # [m] Earth radius
-
-    latitude = ds.latitude.values
-    longitude = ds.longitude.values
-    grid_spacing = np.abs(longitude[1] - longitude[0])  # [degrees]
-
-    # Calculate area TODO check this calculation!
-    lat_n = np.minimum(90.0, latitude + 0.5 * grid_spacing)
-    lat_s = np.maximum(-90.0, latitude - 0.5 * grid_spacing)
-
-    a = (
-        np.pi
-        / 180.0
-        * erad**2
-        * grid_spacing
-        * abs(np.sin(lat_s * np.pi / 180.0) - np.sin(lat_n * np.pi / 180.0))
-    )
-
-    # Calculate faces
-    ly = grid_spacing * dg  # [m] length eastern/western boundary of a cell
-    lx_n_gridcell = ly * np.cos((latitude + grid_spacing / 2) * np.pi / 180)
-    lx_s_gridcell = ly * np.cos((latitude - grid_spacing / 2) * np.pi / 180)
-    lx = 0.5 * (lx_n_gridcell + lx_s_gridcell)
-    return a, ly, lx
-
-
 def join_levels(pressure_level_data, surface_level_data):
     """Combine 3d pressure level and 2d surface level data.
 
@@ -260,7 +200,7 @@ def calculate_humidity(dewpoint, pressure):
     return spec_hum
 
 
-def accumulation_to_flux(data):
+def accumulation_to_flux(data, input_frequency):
     """Convert precip and evap from accumulations to fluxes.
 
     Incoming data should have units of "m"
@@ -269,7 +209,7 @@ def accumulation_to_flux(data):
     that the times should be shifted. A good fix for this is welcome.
     """
     density = 1000  # [kg/m3]
-    timestep = pd.Timedelta(data.time.diff("time")[0].values)
+    timestep = pd.Timedelta(input_frequency)
     nseconds = timestep.total_seconds()
 
     fluxdata = (density * data / nseconds).assign_attrs(units="kg m-2 s-1")
@@ -282,3 +222,20 @@ def accumulation_to_flux(data):
     # Extrapolation introduces a small inconsistency at the last midnight...
     # data.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
     return fluxdata
+
+
+def add_bounds(ds: xr.Dataset) -> None:
+    """Infer the lat and lon bounds and add to the dataset (in-place)."""
+    lats = ds["latitude"].to_numpy()
+    lons = ds["longitude"].to_numpy()
+    res_lat = np.median((np.diff(lats)))  # infer resolution
+    res_lon = np.median((np.diff(lons)))
+
+    ds["latitude_bnds"] = (
+        ("latitude", "bnds"),
+        np.array((lats - res_lat / 2, lats + res_lat / 2)).T,
+    )
+    ds["longitude_bnds"] = (
+        ("longitude", "bnds"),
+        np.array((lons - res_lon / 2, lons + res_lon / 2)).T,
+    )

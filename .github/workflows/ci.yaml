@@ -1,27 +1,52 @@
-name: Python package
+name: Unit tests
 
-on: [push]
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
 
 jobs:
-  build:
 
-    runs-on: ubuntu-latest
+  build:
+    name: Run tests on (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: ["ubuntu-latest"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    env:
+      MPLBACKEND: Agg  # https://github.com/orgs/community/discussions/26434
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install requirements
+      - name: Python info
+        shell: bash -l {0}
         run: |
-          python -m pip install --upgrade pip
-          pip install gdown
-      - name: Test installation
+          which python3
+          python3 --version
+      - name: Upgrade pip
         run: |
-          pip install .[develop]
-          wam2layers --help
-      - name: Test workflow # TODO: Run all the tests
-        run: pytest tests/test_workflow.py
+          python3 -m pip install --upgrade pip
+      - name: Install WAM2Layers
+        run: |
+          python3 -m pip install .[dev]
+      - name: Run tests
+        run: |
+          python3 -m pytest --basetemp=tmp/
+      - name: Upload test figures
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diff-plots_py${{ matrix.python-version }}-${{ matrix.os }}
+          path: |
+            tmp/data[0-9]/figures/*.png
+            tmp/data[0-9]/output_*/figures/*.png
+          if-no-files-found: error
+          retention-days: 14

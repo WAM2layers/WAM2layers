@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wam2layers"
 description = "Atmospheric moisture tracking model"
-version = "3.0.0-beta.5"
 readme = "README.md"
+dynamic = ["version"]
 license = { text = "Apache 2.0" }
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -23,13 +23,13 @@ keywords = [
   "moisture recycling",
   "moisture tracking",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9, <3.13"
 dependencies = [
     "numpy",
     "pyyaml",
     "scipy",
     "pandas",
-    "xarray",
+    "xarray<2024.3.0",  # causes different results
     "netcdf4",
     "scipy",
     "click",
@@ -37,25 +37,33 @@ dependencies = [
     "dask",
     "distributed",
     "psutil",
+    "regionmask",
     "matplotlib",
     "cmocean",
-    "regionmask",
+    "threddsclient",
 ]
 
 [project.optional-dependencies]
-develop = [
+viz = [
+    "cartopy",
+]
+dev = [
     "black",
     "cffconvert",
     "isort",
+    "pytest",
+    "pre-commit",
+    "flake8",
+    "mypy",
+    "wam2layers[viz]",  # So plotting tests won't fail
+]
+docs = [
     "myst-nb",
     "sphinx_rtd_theme",
     "sphinx",
     "myst-nb",
-    "pytest",
-    "flake8",
-    "build",
-    "twine",
 ]
+complete = ["wam2layers[viz,dev,docs]"]
 
 [project.urls]
 Documentation = "https://wam2layers.readthedocs.io/en/latest"
@@ -66,3 +74,12 @@ wam2layers = "wam2layers.cli:cli"
 
 [tool.setuptools.package-data]
 "wam2layers.preprocessing" = ["*.csv"]
+
+[tool.setuptools.dynamic]
+version = {attr = "wam2layers.__version__"}
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+ignore_missing_imports = true

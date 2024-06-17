@@ -89,22 +89,15 @@ git clone git@github.com:WAM2layers/WAM2layers.git
 
 ### Development installation - additional tooling
 
-You can install your local copy of the code by following the same steps as the
-[regular installation](./installation.md). However, by adding `[develop]`, some
-additional dependencies are installed that are convenient for developing.
-
-```
-pip install --editable .[develop]
-```
+You can install your local copy of the code by following the steps for the
+[source installation](./userguide/installation.md).
 
 The `--editable` flag means that any changes you make to the code will be
 "effective immediately". When you run the model again, the updated code is used.
-
-The `[develop]` option tells pip to install not just the code, but some
-additional packages that are listed under the "develop" header in the file
-`pyproject.toml`. These packages help with linting (checking your code against
-syntax/style guides), automatic formatting, building documentation, running
-tests, and publising the package on PyPI.
+By adding `[dev]` or `[complete]`, some additional dependencies are installed
+that are convenient for developing. These packages help with linting (checking
+your code against syntax/style guides), automatic formatting, building
+documentation, running tests, and publising the package on PyPI.
 
 ### Create a new branch
 
@@ -149,6 +142,16 @@ isort .
 black .
 ```
 
+### Verify your changes
+
+When you make changes to the code, you can easily verify the outputs by running the tests for the `preprocess`, `backtrack` and `visualize` workflows by executing the following command:
+
+```py
+pytest tests/test_workflow.py
+```
+
+If the outputs changed, you will receive an error message. It also provides you the instruction about how to update the reference files if you want to keep the new results.
+
 ### Commit and push your changes
 
 Next, you can commit them and push your branch to the remote:
@@ -183,6 +186,14 @@ extension](https://code.visualstudio.com/docs/sourcecontrol/overview). It
 provides a more visual experience. Similarly, you could also use [Github
 desktop](https://desktop.github.com/).
 ```
+
+#### Pre-commit
+
+To help you make clean commits, we have configured this repository with pre-commit.
+This is completely optional, but we recommend you to give it a try. You can run
+pre-commit once by typing `pre-commit run` before committing some changes. If you
+like this, and you want to do it automatically with each commit, you can type
+`pre-commit install`.
 
 ### Open a (draft) pull request
 
@@ -225,25 +236,15 @@ publications.
 
 These instructions are intended for core developers.
 
-You need an [account on PyPI](https://pypi.org/account/register/) with owner
-rights on WAM2layers.
-
 - Create a new branch, e.g. `prep_release_vXXX`
-- Update "version" in pyproject.toml and in citation.cff (use [semantic
+- Update "version" in `src/wam2layers/__init__.py` and in `citation.cff` (use [semantic
   versioning](https://semver.org/))
 - Make sure the code is neatly formatted (see above)
 - Make sure the changelog is up to date; update the "Unreleased" header with the
   new version, and add a new "Unreleased" header above
 - Review and merge the release branch
 - [Make a release on GitHub](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
-- Make sure to pull the latest changes to main in your local copy of the repo.
-- Publish to PyPI. In your terminal, in the base path of the repository, type:
-
-  ```bash
-  python -m build
-  twine upload dist/*
-  ```
-
+- Upon release, the Github Actions workflow for publishing will run. The publishing step requires manual approval, so go to the [workflow overview](https://github.com/WAM2layers/WAM2layers/actions) and approve the run. More extensive documentation on publishing is available [here](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/).
 - Check that the new release is successfully rendered on Zenodo and PyPI.
 - Verify that you can install the new version with pip.
 
@@ -332,13 +333,6 @@ If you look at that function, you will see that it prints a welcome message and
 then calls the function `run_experiment`. Note that it takes `config_file` an
 input argument.
 
-```{note}
-It might be easier if all the methods related to the CLI are grouped together in
-a single `cli.py` file. The reason why this is not done, is that by keeping a
-`cli` function in each file, we can also run them as standalone scripts, e.g.
-`python backtrack.py example-config.yaml`.
-```
-
 ### Config file
 
 The configuration file is written in [YAML](https://yaml.org/). YAML is a
@@ -414,11 +408,36 @@ repository is setup to integrate with readthedocs, such that the documentation
 automatically builds for all versions of the model, and also for pull requests.
 So you can always preview the documentation on GitHub.
 
-To build the documentation locally, from the base of the repository, type
+To build the documentation locally, make sure you have installed the docs dependencies:
+
+```bash
+pip install wam2layers[docs]
+```
+
+Then, from the base of the repository, type
 
 ```bash
 sphinx-build -nW --keep-going -b html docs docs/_build/html
 ```
+
+### Example cases
+
+To add more example cases, input data must be uploaded to a data repository.
+Currently, download functionality is only implemented for
+[4TU](https://data.4tu.nl/), although we could add it for other data
+repositories in the future. In case of 4TU, nc-files are uploaded as opendap
+files, whereas the config file is added to the standard file listing.
+
+Your data needs to be structured as a flat list of input files. Against best
+practices, the configuration and region files should live in the same folder as
+the input data, and the output should be generated as subfolders of that
+directory. Avoid absolute paths because that breaks the portability of the
+example cases.
+
+Once uploaded, add the example case to the list in
+`src/wam2layers/example_cases.py`. All you need to add there is a descriptive
+key (i.e. name) for your dataset, as well as the DOI. Then, open a pull request
+to add the example case for other users as well.
 
 ### Tests
 
@@ -433,4 +452,45 @@ unrelated) changes. They can be set up to be run automatically when you make a p
 pytest tests/
 ```
 
+It is possible to run a single test (for example, when debugging). For example:
+```
+pytest tests/test_workflow.py::TestBacktrack::test_backtrack
+```
+
 For more information, please have a look at the documentation of pytest.
+
+### Typing
+
+Since Python 3.5 type hints can be added to Python code.
+These denote what the types of objects and function arguments should be.
+A simple example:
+
+```py
+def add(a: int, b: int) -> float:
+   return float(a+b)
+```
+The `add` function requires two arguments of the integer type, and will return a
+floating point number.
+Adding types to code can help in detecting issues early, document what the function
+inputs should be, as well as make it easier for a developer's IDE to give useful
+suggestions.
+More info on typing can be found [here](https://docs.python.org/3/library/typing.html).
+
+To check if types are defined correctly, we use ["mypy"](https://mypy-lang.org/).
+Mypy will go through all the source files, as well as imported packages, and check for
+errors.
+To run mypy do:
+
+```sh
+mypy src/ --install-types --ignore-missing-imports
+```
+
+`install-types` only needs to be run the first time, afterwards this is not needed.
+
+If you are unsure about adding types, it is not required so you can leave them out.
+
+### Python version support
+
+In WAM2layers we follow Numpy's version support policy ([NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html)).
+
+This means that new releases will only support minor Python versions (e.g. 3.9, 3.10) which have been released within the last 42 months.
