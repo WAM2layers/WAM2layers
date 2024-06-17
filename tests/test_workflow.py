@@ -22,6 +22,7 @@ except ImportError:
 
 
 CFG_FILE_BACKWARD = Path("tests/test_data/config_rhine.yaml")
+CFG_FILE_BACKWARD_PL = Path("tests/test_data/config_rhine_pl.yaml")
 CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
 
 
@@ -52,6 +53,11 @@ def preprocessed_dir(temp_directory: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def preprocessed_dir_pl(temp_directory: Path) -> Path:
+    return temp_directory / "preprocessed_pl"
+
+
+@pytest.fixture(scope="session")
 def figures_directory(temp_directory: Path) -> Path:
     fig_dir = temp_directory / "figures"
     fig_dir.mkdir()
@@ -71,6 +77,23 @@ def test_config_backward(
     cfg.preprocessed_data_folder = preprocessed_dir
     cfg.output_folder = output_dir_backtrack
     tmp_config = temp_directory / "config_rhine.yaml"
+    cfg.to_file(tmp_config)
+    return str(tmp_config)
+
+
+@pytest.fixture(scope="session")
+def test_config_backward_pl(
+    temp_directory: Path, preprocessed_dir_pl: Path, output_dir_backtrack: Path
+) -> str:
+    """Return the path to the config for the preprocess, backward, and visualize tests.
+
+    The processed and output data folders of this config are modified to use temporary
+    directories.
+    """
+    cfg = Config.from_yaml(CFG_FILE_BACKWARD_PL)
+    cfg.preprocessed_data_folder = preprocessed_dir_pl
+    cfg.output_folder = output_dir_backtrack
+    tmp_config = temp_directory / "config_rhine_pl.yaml"
     cfg.to_file(tmp_config)
     return str(tmp_config)
 
@@ -96,6 +119,14 @@ def preprocess(test_config_backward: str) -> None:
     runner = CliRunner()
     runner.invoke(
         cli, ["preprocess", "era5", test_config_backward], catch_exceptions=False
+    )
+
+
+@pytest.fixture(scope="session")
+def preprocess_pl(test_config_backward_pl: str) -> None:
+    runner = CliRunner()
+    runner.invoke(
+        cli, ["preprocess", "era5", test_config_backward_pl], catch_exceptions=False
     )
 
 
@@ -204,6 +235,24 @@ class TestPreprocess:
 
     def test_config(self, preprocessed_dir):
         config_path = preprocessed_dir / "config_rhine.yaml"
+        assert config_path.exists()
+
+
+class TestPreprocessPl:
+    @pytest.fixture(autouse=True)
+    def run_preprocess(self, preprocess_pl):
+        pass
+
+    def test_preprocess(self, preprocessed_dir_pl: Path):
+        output_path = preprocessed_dir_pl / "2020-01-01_fluxes_storages.nc"
+        assert output_path.exists()
+
+    def test_log_file(self, preprocessed_dir_pl):
+        log_files = [i for i in preprocessed_dir_pl.glob("wam2layers_*.log")]
+        assert len(log_files) >= 1
+
+    def test_config(self, preprocessed_dir_pl):
+        config_path = preprocessed_dir_pl / "config_rhine_pl.yaml"
         assert config_path.exists()
 
 
