@@ -5,6 +5,8 @@ Visualisation Functions WAM-2Layers
 
 Version 2.0 | 14-07-2023
 
+Updated on 17-06-2024
+
 @author: Vincent de Feiter (vincent.defeiter@wur.nl) | GitHub: vincentdefeiter
 
 Welcome to this visualisation script. It provides an overview of functions that can
@@ -36,8 +38,8 @@ from cartopy import crs
 from cartopy import feature as cfeature
 from cmocean import cm
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import get_grid_info
-from wam2layers.tracking.backtrack import input_path, load_region, output_path
+from wam2layers.utils.grid import get_grid_info
+from wam2layers.tracking.io import input_path, load_tagging_region, output_path
 from scipy.interpolate import griddata
 import netCDF4 as nc
 import numpy as np
@@ -69,13 +71,13 @@ def logfile(config_file,filename,outdir):
         
     #Load general data
     config = Config.from_yaml(config_file)
-    region = load_region(config)
+    region = load_tagging_region(config)
     
     #Load precipitation
     input_files = f"{config.preprocessed_data_folder}/*.nc"
     ds_p = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
-    start = config.event_start_date
-    end = config.event_end_date
+    start = config.tagging_start_date
+    end = config.tagging_end_date
     subset = ds_p.precip.sel(time=slice(start, end))
     precip = (subset * region * 3600).sum('time').compute()
     
@@ -90,8 +92,8 @@ def logfile(config_file,filename,outdir):
     path_input = f"{config.preprocessed_data_folder}/*.nc"
     ds = xr.open_mfdataset(path_input)
     
-    start = config.track_start_date
-    end = config.track_end_date
+    start = config.tracking_start_date
+    end = config.tracking_end_date
     subset = ds.sel(time=slice(start, end))
     
     mean_subset = ds.sum(dim='time')
@@ -146,12 +148,12 @@ def precipitation(config_file,filename,outdir,step, fontsizes, pads):
     
     #Load data
     config = Config.from_yaml(config_file)
-    region = load_region(config)
+    region = load_tagging_region(config)
     
     input_files = f"{config.preprocessed_data_folder}/*.nc"
     ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
-    start = config.event_start_date
-    end = config.event_end_date
+    start = config.tagging_start_date
+    end = config.tagging_end_date
         
     #Load precipitaiton
     subset = ds.precip.sel(time=slice(start, end))
@@ -212,7 +214,9 @@ def precipitation(config_file,filename,outdir,step, fontsizes, pads):
     cmap_own = LinearSegmentedColormap.from_list(cmap_name, colors, N=bin)
     
     
-    ax_mini = fig.add_axes([0.15, 0.15, 0.12, 0.2], projection=crs.PlateCarree(),facecolor='None') #x,y,w,h
+    #ax_mini = fig.add_axes([0.01, 0.01, 0.12, 0.2], projection=crs.PlateCarree(),facecolor='None') #x,y,w,h
+    ax_mini = fig.add_axes([0.1, 0.1, 0.12, 0.2], projection=crs.PlateCarree(),facecolor='None') #x,y,w,h
+
     ax_mini.set_extent([np.nanmin(converted_longitudes)-50,np.nanmax(converted_longitudes)+50, np.nanmin(latitude)-50,np.nanmax(latitude)+50], crs=crs.PlateCarree())
     ax_mini.coastlines(alpha=0.5)
     ax_mini.add_feature(cfeature.COASTLINE,alpha=0.5)
@@ -258,17 +262,17 @@ def evaporation(config_file,filename,data_path,outdir,step, fontsizes, pads):
 
     #Load data
     config = Config.from_yaml(config_file)
-    region = load_region(config)
+    region = load_tagging_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
     output_files = f"{config.output_folder}/*.nc"
     ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
     
-    start = config.track_start_date
-    end = config.track_end_date
+    start = config.tracking_start_date
+    end = config.tracking_end_date
     
     #Load evaporation
-    e_track = ds.e_track.sum('time').compute() * 1000 / a_gridcell [:, None]
-    e_track = np.where(e_track>1,e_track,np.nan)
+    e_track = ds.e_track.sum('time').compute() #* 1000 / a_gridcell [:, None]
+    e_track = np.where(e_track>0.1,e_track,np.nan)
         
     #Background data - isobars, wind field etc. 
    
@@ -348,8 +352,8 @@ def evaporation(config_file,filename,data_path,outdir,step, fontsizes, pads):
     path_input = f"{config.preprocessed_data_folder}/*.nc"
     ds = xr.open_mfdataset(path_input)
     
-    start = config.track_start_date
-    end = config.track_end_date
+    #start = config.track_start_date
+    #end = config.track_end_date
     subset = ds.sel(time=slice(start, end))
       
     mean_subset = subset.mean(dim='time')
@@ -461,13 +465,13 @@ def moisture_fluxes(config_file,filename,data_path,outdir,step, fontsizes, pads)
 
     #Load data
     config = Config.from_yaml(config_file)
-    region = load_region(config)
+    region = load_tagging_region(config)
     a_gridcell, lx, ly = get_grid_info(region)
     output_files = f"{config.output_folder}/*.nc"
     ds = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
     
-    start = config.track_start_date
-    end = config.track_end_date
+    start = config.tracking_start_date
+    end = config.tracking_end_date
             
     #Background data - isobars, wind field etc. 
     
@@ -549,8 +553,8 @@ def moisture_fluxes(config_file,filename,data_path,outdir,step, fontsizes, pads)
     path_input = f"{config.preprocessed_data_folder}/*.nc"
     ds = xr.open_mfdataset(path_input)
     
-    start = config.track_start_date
-    end = config.track_end_date
+    start = config.tracking_start_date
+    end = config.tracking_end_date
     subset = ds.sel(time=slice(start, end))
       
     mean_subset = subset.mean(dim='time')
@@ -704,12 +708,12 @@ def moisture_fluxes(config_file,filename,data_path,outdir,step, fontsizes, pads)
     fig.savefig(outdir+"/Moisture_flux_upper_"+filename+".png", bbox_inches='tight', dpi=200)
     
 #RUN
-config_file = '/home/vdefeiter/Config_Case.yaml'    #Location of the configuration '.yaml' file, in the file everything should be specified accordingly. 
-outdir = '/home/vdefeiter/WAM2layers/Visualisation/'                                   #Location where the output is stored e.g. a visualistion folder. 
+config_file = '/home/WUR/weije043/virtual_envs/src/WAM2layers/Scotland_config_new.yaml'    #Location of the configuration '.yaml' file, in the file everything should be specified accordingly. 
+outdir = '/home/WUR/weije043/virtual_envs/src/WAM2layers/Visualisation'                                   #Location where the output is stored e.g. a visualistion folder. 
 filename = 'CloudRoots_Amazon'
 data_path = '/scratch/vdefeiter/ERA5/ml/'
 
 #logfile(config_file,filename,outdir)
 #precipitation(config_file,filename,outdir, step = 20, fontsizes = 20, pads = 40)
 #evaporation(config_file,filename,data_path,outdir, step = 4, fontsizes = 20, pads = 40)
-moisture_fluxes(config_file,filename,data_path,outdir, step = 60, fontsizes = 20, pads = 40)
+#moisture_fluxes(config_file,filename,data_path,outdir, step = 60, fontsizes = 20, pads = 40)
