@@ -92,13 +92,6 @@ git clone git@github.com:WAM2layers/WAM2layers.git
 You can install your local copy of the code by following the steps for the
 [source installation](./userguide/installation.md).
 
-The `--editable` flag means that any changes you make to the code will be
-"effective immediately". When you run the model again, the updated code is used.
-By adding `[dev]` or `[complete]`, some additional dependencies are installed
-that are convenient for developing. These packages help with linting (checking
-your code against syntax/style guides), automatic formatting, building
-documentation, running tests, and publising the package on PyPI.
-
 ### Create a new branch
 
 It is good practice to create a new "branch" for each feature you are adding.
