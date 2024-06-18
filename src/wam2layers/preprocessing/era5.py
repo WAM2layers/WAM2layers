@@ -157,7 +157,15 @@ def get_dp_modellevels(sp, levels):
     return dp
 
 
-def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
+def get_dp_pressurelevels(
+    q: xr.DataArray,
+    u: xr.DataArray,
+    v: xr.DataArray,
+    ps,
+    qs,
+    us,
+    vs,
+):
     """Prepare data to allow for integration to two layers.
 
     The input data does not have data at the surface and
@@ -185,45 +193,63 @@ def get_dp_pressurelevels(q, u, v, ps, qs, us, vs):
         v interpolated to new pressure levels,
         Pressure at the division between the two layers
     """
-    assert u.dims[0] == "level"  # move to better location
+    level_ax: int = u.get_axis_num("level")  # type: ignore
+    spatial_axes = u.get_axis_num(("latitude", "longitude"))
 
     p = u["level"].broadcast_like(u) * 100  # Pa
     p.attrs["units"] = "Pa"
 
-    # Insert top of atmosphere values
-    # Assume wind at top same as values at lowest pressure, humidity at top 0
-    u = insert_level(u, u.isel(level=0), 0)
-    v = insert_level(v, v.isel(level=0), 0)
-    q = insert_level(q, 0, 0)
-    p = insert_level(p, 0, 0)
+    _p = p.to_numpy()
+    _u = u.to_numpy()
+    _v = v.to_numpy()
+    _q = q.to_numpy()
 
-    # Insert surface level values (at a high dummy pressure value)
-    u = insert_level(u, us, 110000)
-    v = insert_level(v, vs, 110000)
-    q = insert_level(q, qs, 110000)
-    p = insert_level(p, ps, 110000)
+    # Insert top of atmosphere values
+    # Assume wind at top same as values at lowest pressure, humidity at top = 0
+    p0 = _p.mean(axis=spatial_axes).argmin()  # should be a cleaner way to do this.
+    _p = np.insert(_p, 0, 0.0, axis=level_ax)
+    _q = np.insert(_q, 0, 0.0, axis=level_ax)
+    _v = np.insert(_v, 0, np.take(_v, p0, axis=level_ax), axis=level_ax)
+    _u = np.insert(_u, 0, np.take(_u, p0, axis=level_ax), axis=level_ax)
+
+    # Insert surface level values
+    _p = np.insert(_p, 0, ps, axis=level_ax)
+    _q = np.insert(_q, 0, qs, axis=level_ax)
+    _v = np.insert(_v, 0, vs, axis=level_ax)
+    _u = np.insert(_u, 0, us, axis=level_ax)
 
     # Sort arrays by pressure (ascending)
-    u.values = sortby_ndarray(u.values, p.values, axis=0)
-    v.values = sortby_ndarray(v.values, p.values, axis=0)
-    q.values = sortby_ndarray(q.values, p.values, axis=0)
-    p.values = sortby_ndarray(p.values, p.values, axis=0)
+    _u = sortby_ndarray(_u, _p, axis=level_ax)
+    _v = sortby_ndarray(_v, _p, axis=level_ax)
+    _q = sortby_ndarray(_q, _p, axis=level_ax)
+    _p = sortby_ndarray(_p, _p, axis=level_ax)
 
     # Insert boundary level values (at a dummy pressure value)
     p_boundary = 0.72878581 * np.array(ps) + 7438.803223
-    u = insert_level(u, interpolate(p_boundary, p, u, axis=0), -999)  # x, xp
-    v = insert_level(v, interpolate(p_boundary, p, v, axis=0), -999)
-    q = insert_level(q, interpolate(p_boundary, p, q, axis=0), -999)
-    p = insert_level(p, p_boundary, -999)
+    _u = np.insert(_u, 0, interpolate(p_boundary, _p, _u, axis=level_ax), axis=level_ax)
+    _v = np.insert(_v, 0, interpolate(p_boundary, _p, _v, axis=level_ax), axis=level_ax)
+    _q = np.insert(_q, 0, interpolate(p_boundary, _p, _q, axis=level_ax), axis=level_ax)
+    _p = np.insert(_p, 0, p_boundary, axis=level_ax)
 
     # Sort arrays by pressure once more (ascending)
-    u.values = sortby_ndarray(u.values, p.values, axis=0)
-    v.values = sortby_ndarray(v.values, p.values, axis=0)
-    q.values = sortby_ndarray(q.values, p.values, axis=0)
-    p.values = sortby_ndarray(p.values, p.values, axis=0)
+    _u = sortby_ndarray(_u, _p, axis=level_ax)
+    _v = sortby_ndarray(_v, _p, axis=level_ax)
+    _q = sortby_ndarray(_q, _p, axis=level_ax)
+    _p = sortby_ndarray(_p, _p, axis=level_ax)
 
     # Reset level coordinate as its values have become meaningless
-    nlev = u.level.size
+    nlev = np.size(_u, axis=level_ax)
+    levs = np.arange(nlev)
+
+    # reconstruct dataarrays
+    coords = dict(u.coords)
+    coords["level"] = levs
+    u = xr.DataArray(data=_u, dims=u.dims, coords=coords, attrs=u.attrs)
+    v = xr.DataArray(data=_v, dims=v.dims, coords=coords, attrs=v.attrs)
+    q = xr.DataArray(data=_q, dims=q.dims, coords=coords, attrs=q.attrs)
+    p = xr.DataArray(data=_p, dims=p.dims, coords=coords, attrs=p.attrs)
+
+    nlev = u["level"].size
     u = u.assign_coords(level=np.arange(nlev))
     v = v.assign_coords(level=np.arange(nlev))
     q = q.assign_coords(level=np.arange(nlev))
@@ -302,7 +328,9 @@ def prep_experiment(config_file):
             q2m = calculate_humidity(d2m, sp)  # kg kg-1
             u10 = load_data("u10", datetime, config)  # in m/s
             v10 = load_data("v10", datetime, config)  # in m/s
+            t0 = time()
             dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
+            print(time() - t0)
 
         # Calculate column water vapour
         g = 9.80665  # gravitational accelleration [m/s2]
