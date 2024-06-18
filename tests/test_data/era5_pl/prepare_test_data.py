@@ -1,9 +1,9 @@
 """Prepare test data using ERA5 model level fields.
 
-This script processes daily ERA5 field on multiple model levels.
+This script processes daily ERA5 field on multiple pressure levels.
 The data can be downloaded via CDS. More information about the
 variables and fields that are needed for tests can be found in
-our example ERA5 data downloading script in "scripts/download_era5_ml.py".
+our example ERA5 data downloading script in "scripts/download_era5_pl.py".
 """
 
 from pathlib import Path
