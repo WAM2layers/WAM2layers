@@ -328,9 +328,7 @@ def prep_experiment(config_file):
             q2m = calculate_humidity(d2m, sp)  # kg kg-1
             u10 = load_data("u10", datetime, config)  # in m/s
             v10 = load_data("v10", datetime, config)  # in m/s
-            t0 = time()
             dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
-            print(time() - t0)
 
         # Calculate column water vapour
         g = 9.80665  # gravitational accelleration [m/s2]
