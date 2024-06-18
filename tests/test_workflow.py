@@ -252,6 +252,22 @@ class TestPreprocessPl:
         output_path = preprocessed_dir_pl / "2020-01-01_fluxes_storages.nc"
         assert output_path.exists()
 
+        # verify outputs
+        expected_path = Path(
+            "tests/test_data/verify_output/preprocessed_data/2020-01-01_fluxes_storages.nc"
+        )
+        expected_output = xr.open_dataset(expected_path)
+        output = xr.open_dataset(output_path)
+
+        for var in expected_output.data_vars:
+            numpy.testing.assert_allclose(
+                expected_output[var].values,
+                output[var].values,
+                err_msg=f"{var} not close enough.",
+                rtol=RTOL,
+                atol=ATOL,
+            )
+
     def test_log_file(self, preprocessed_dir_pl):
         log_files = [i for i in preprocessed_dir_pl.glob("wam2layers_*.log")]
         assert len(log_files) >= 1
