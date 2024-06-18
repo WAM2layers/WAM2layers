@@ -13,7 +13,6 @@ from wam2layers.preprocessing.shared import (
     accumulation_to_flux,
     add_bounds,
     calculate_humidity,
-    insert_level,
     interpolate,
     sortby_ndarray,
 )
@@ -157,16 +156,16 @@ def get_dp_modellevels(sp, levels):
     return dp
 
 
-def get_dp_pressurelevels(
+def extend_pressurelevels(
     q: xr.DataArray,
     u: xr.DataArray,
     v: xr.DataArray,
-    ps,
-    qs,
-    us,
-    vs,
-):
-    """Prepare data to allow for integration to two layers.
+    ps: xr.DataArray,
+    qs: xr.DataArray,
+    us: xr.DataArray,
+    vs: xr.DataArray,
+) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray]:
+    """Extend the levels to top of atmosphere, surface and 2-layer boundary level.
 
     The input data does not have data at the surface and
     and the top of atmosphere. The input data is extended to
@@ -186,7 +185,6 @@ def get_dp_pressurelevels(
         vs: Northward horizontal wind speed at the surface
 
     Returns:
-        Pressure difference between the new pressure level bounds,
         p interpolated to new pressure levels,
         q interpolated to new pressure levels,
         u interpolated to new pressure levels,
@@ -194,7 +192,6 @@ def get_dp_pressurelevels(
         Pressure at the division between the two layers
     """
     level_ax: int = u.get_axis_num("level")  # type: ignore
-    spatial_axes = u.get_axis_num(("latitude", "longitude"))
 
     p = u["level"].broadcast_like(u) * 100  # Pa
     p.attrs["units"] = "Pa"
@@ -206,7 +203,9 @@ def get_dp_pressurelevels(
 
     # Insert top of atmosphere values
     # Assume wind at top same as values at lowest pressure, humidity at top = 0
-    p0 = _p.mean(axis=spatial_axes).argmin()  # should be a cleaner way to do this.
+    p0 = _p.argmin(axis=level_ax).flatten()[
+        0
+    ]  # index along level axis of minimum pressure
     _p = np.insert(_p, 0, 0.0, axis=level_ax)
     _q = np.insert(_q, 0, 0.0, axis=level_ax)
     _v = np.insert(_v, 0, np.take(_v, p0, axis=level_ax), axis=level_ax)
@@ -248,12 +247,41 @@ def get_dp_pressurelevels(
     v = xr.DataArray(data=_v, dims=v.dims, coords=coords, attrs=v.attrs)
     q = xr.DataArray(data=_q, dims=q.dims, coords=coords, attrs=q.attrs)
     p = xr.DataArray(data=_p, dims=p.dims, coords=coords, attrs=p.attrs)
+    pb = xr.DataArray(data=p_boundary, dims=ps.dims, coords=ps.coords)
 
+    # Give the level dim new indexes (just ordered numbers)
     nlev = u["level"].size
     u = u.assign_coords(level=np.arange(nlev))
     v = v.assign_coords(level=np.arange(nlev))
     q = q.assign_coords(level=np.arange(nlev))
     p = p.assign_coords(level=np.arange(nlev))
+
+    return q, u, v, p, pb
+
+
+def interp_dp_midpoints(
+    q: xr.DataArray,
+    u: xr.DataArray,
+    v: xr.DataArray,
+    p: xr.DataArray,
+    ps: xr.DataArray,
+):
+    """Interpolate the data to midpoints to allow for integration to two layers.
+
+    Args:
+        q: Specific humidity at levels
+        u: Eastward horizontal wind speed at levels
+        v: Northward horizontal wind speed at levels
+        p: Air pressure at levels
+        ps: Air pressure at the surface
+
+    Returns:
+        Pressure difference between the pressure level bounds,
+        p interpolated to midpoints of pressure levels,
+        q interpolated to midpoints of pressure levels,
+        u interpolated to midpoints of pressure levels,
+        v interpolated to midpoints of pressure levels,
+    """
 
     # Calculate pressure jump
     dp = p.diff("level")
@@ -274,7 +302,7 @@ def get_dp_pressurelevels(
     q = q.where(above_surface)
     p = p.where(above_surface)
 
-    return dp, p, q, u, v, p_boundary
+    return dp, q, u, v, p
 
 
 def get_input_dates(config):
@@ -328,7 +356,9 @@ def prep_experiment(config_file):
             q2m = calculate_humidity(d2m, sp)  # kg kg-1
             u10 = load_data("u10", datetime, config)  # in m/s
             v10 = load_data("v10", datetime, config)  # in m/s
-            dp, p, q, u, v, pb = get_dp_pressurelevels(q, u, v, sp, q2m, u10, v10)
+
+            q, u, v, p, pb = extend_pressurelevels(q, u, v, sp, q2m, u10, v10)
+            dp, q, u, v, p = interp_dp_midpoints(q, u, v, p, sp)
 
         # Calculate column water vapour
         g = 9.80665  # gravitational accelleration [m/s2]
@@ -357,12 +387,12 @@ def prep_experiment(config_file):
         if config.level_type == "model_levels":
             # TODO: Check if this is a reasonable choice for boundary
             boundary = 111
-            lower_layer = dp.level > boundary
+            lower_layer = dp["level"] > boundary
             upper_layer = ~lower_layer
 
         if config.level_type == "pressure_levels":
-            upper_layer = p < pb[None, :, :]
-            lower_layer = pb[None, :, :] < p
+            upper_layer = p < pb.broadcast_like(p)
+            lower_layer = pb.broadcast_like(p) < p
 
         # Vertically integrate state over two layers
         s_lower = cw.where(lower_layer).sum(dim="level")
