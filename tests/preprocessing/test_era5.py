@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal, assert_array_equal
 
-from wam2layers.preprocessing.era5 import get_edges, load_era5_ab, midpoints
+from wam2layers.preprocessing.era5 import get_edges, load_era5_ab
+from wam2layers.preprocessing.utils import midpoints
 
 
 def test_midpoints():
