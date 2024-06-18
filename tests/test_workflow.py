@@ -26,7 +26,7 @@ CFG_FILE_BACKWARD_PL = Path("tests/test_data/config_rhine_pl.yaml")
 CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
 
 RTOL = 1e-5  # 0.001 %
-ATOL = 1e-7  # kg/m2/s. Approx 0.009 mm/day?
+ATOL = 1e-7  # kg/m2 == 1e-7 mm (accumulated per timestep)
 
 
 ## First we define fixtures to help us write the tests more concisely
