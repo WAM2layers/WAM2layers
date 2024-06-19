@@ -164,7 +164,7 @@ def era5(ctx, config_file):
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting preprocessing ERA5 data.")
-    prep_experiment(config_file)
+    prep_experiment(config_file, data_source="ERA5")
 
 
 # Command line setup for visualization

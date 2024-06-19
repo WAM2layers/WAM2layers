@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pandas as pd
 import xarray as xr
 
@@ -24,7 +26,7 @@ def get_input_dates(config: Config) -> pd.DatetimeIndex:
 
 
 def get_input_data(
-    datetime: pd.Timestamp, config: Config, source: str = "ERA5"
+    datetime: pd.Timestamp, config: Config, source: str
 ) -> tuple[xr.Dataset, dict[str, str]]:
     """Retrieve input data from a specified source (e.g. ERA5, CMIP6).
 
@@ -60,7 +62,7 @@ def get_input_data(
     return data, input_data_attrs
 
 
-def prep_experiment(config_file):
+def prep_experiment(config_file: Config, data_source: str):
     """Pre-process all data for a given config file.
 
     This function expects the following configuration settings:
@@ -90,12 +92,16 @@ def prep_experiment(config_file):
         # 4d fields
         levels = config.levels
 
-        input_data, input_data_attrs = get_input_data(datetime, config)
+        input_data, input_data_attrs = get_input_data(datetime, config, data_source)
         surface_data = input_data.drop_dims("level")
         level_data = input_data[["q", "u", "v"]]
 
         if config.level_type == "model_levels":
-            dp = get_dp_modellevels(surface_data["ps"], levels)
+            if data_source == "ERA5":
+                dp = get_dp_modellevels(surface_data["ps"], levels)
+            else:
+                msg = "Model level processing has only been implemented for ERA5."
+                raise NotImplementedError(msg)
 
         if config.level_type == "pressure_levels":
             level_data, pb = extend_pressurelevels(level_data, surface_data)
