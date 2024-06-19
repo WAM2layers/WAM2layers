@@ -19,7 +19,7 @@ def extend_pressurelevels(
     coded as a function of surface pressure and not customizable.
 
     Args:
-        input_data: Dataset with the following variables:
+        level_data: Dataset with the following variables:
             q: Specific humidity at pressure levels
             u: Eastward horizontal wind speed at pressure levels
             v: Northward horizontal wind speed at pressure levels
@@ -96,13 +96,13 @@ def extend_pressurelevels(
 
 
 def interp_dp_midpoints(
-    extended_data: xr.Dataset,
+    level_data: xr.Dataset,
     ps: xr.DataArray,
 ):
     """Interpolate the data to midpoints to allow for integration to two layers.
 
     Args:
-        Dataset with the following variables:
+        level_data: Dataset with the following variables:
             q: Specific humidity at levels
             u: Eastward horizontal wind speed at levels
             v: Northward horizontal wind speed at levels
@@ -110,24 +110,25 @@ def interp_dp_midpoints(
         ps: Air pressure at the surface
 
     Returns:
+        Dataset with the following variables:
+            p interpolated to midpoints of pressure levels,
+            q interpolated to midpoints of pressure levels,
+            u interpolated to midpoints of pressure levels,
+            v interpolated to midpoints of pressure levels,
         Pressure difference between the pressure level bounds,
-        p interpolated to midpoints of pressure levels,
-        q interpolated to midpoints of pressure levels,
-        u interpolated to midpoints of pressure levels,
-        v interpolated to midpoints of pressure levels,
     """
 
     # Calculate pressure jump
-    dp = extended_data["p"].diff("level")
+    dp = level_data["p"].diff("level")
     assert np.all(dp >= 0), "Pressure levels should increase monotonically"
 
     # Interpolate to midpoints
     midpoints = 0.5 * (
-        extended_data["level"].to_numpy()[1:] + extended_data["level"].to_numpy()[:-1]
+        level_data["level"].to_numpy()[1:] + level_data["level"].to_numpy()[:-1]
     )
     dp = dp.assign_coords(level=midpoints)
     # from IPython import embed; embed(); quit()
-    interped_data = extended_data.interp(level=midpoints)
+    interped_data = level_data.interp(level=midpoints)
 
     # mask values below surface
     above_surface = interped_data["p"] < ps.broadcast_like(interped_data["p"])
