@@ -1,13 +1,12 @@
-from wam2layers.preprocessing.utils import interpolate, sortby_ndarray
-
-
 import numpy as np
 import xarray as xr
 
+from wam2layers.preprocessing.utils import interpolate, sortby_ndarray
+
 
 def extend_pressurelevels(
-    input: xr.Dataset,
-    surface: xr.Dataset,
+    level_data: xr.Dataset,
+    surface_data: xr.Dataset,
 ) -> tuple[xr.Dataset, xr.DataArray]:
     """Extend the levels to top of atmosphere, surface and 2-layer boundary level.
 
@@ -35,31 +34,29 @@ def extend_pressurelevels(
             p, q, u, v
         The pressure at the division between the two layers
     """
-    level_ax: int = input["u"].get_axis_num("level")  # type: ignore
+    level_ax: int = level_data["u"].get_axis_num("level")  # type: ignore
 
-    da_p = input["level"].broadcast_like(input["u"]) * 100  # Pa
+    da_p = level_data["level"].broadcast_like(level_data["u"]) * 100  # Pa
     da_p.attrs["units"] = "Pa"
 
     p = da_p.to_numpy()
-    u = input["u"].to_numpy()
-    v = input["v"].to_numpy()
-    q = input["q"].to_numpy()
+    u = level_data["u"].to_numpy()
+    v = level_data["v"].to_numpy()
+    q = level_data["q"].to_numpy()
 
     # Insert top of atmosphere values
     # Assume wind at top same as values at lowest pressure, humidity at top = 0
-    p0 = p.argmin(axis=level_ax).flatten()[
-        0
-    ]  # index along level axis of minimum pressure
+    p0 = p.argmin(axis=level_ax).flatten()[0]
     p = np.insert(p, 0, 0.0, axis=level_ax)
     q = np.insert(q, 0, 0.0, axis=level_ax)
     v = np.insert(v, 0, np.take(v, p0, axis=level_ax), axis=level_ax)
     u = np.insert(u, 0, np.take(u, p0, axis=level_ax), axis=level_ax)
 
     # Insert surface level values
-    p = np.insert(p, 0, surface["ps"], axis=level_ax)
-    q = np.insert(q, 0, surface["qs"], axis=level_ax)
-    v = np.insert(v, 0, surface["vs"], axis=level_ax)
-    u = np.insert(u, 0, surface["us"], axis=level_ax)
+    p = np.insert(p, 0, surface_data["ps"], axis=level_ax)
+    q = np.insert(q, 0, surface_data["qs"], axis=level_ax)
+    v = np.insert(v, 0, surface_data["vs"], axis=level_ax)
+    u = np.insert(u, 0, surface_data["us"], axis=level_ax)
 
     # Sort arrays by pressure (ascending)
     u = sortby_ndarray(u, p, axis=level_ax)
@@ -68,7 +65,7 @@ def extend_pressurelevels(
     p = sortby_ndarray(p, p, axis=level_ax)
 
     # Insert boundary level values (at a dummy pressure value)
-    p_boundary = 0.72878581 * np.array(surface["ps"]) + 7438.803223
+    p_boundary = 0.72878581 * np.array(surface_data["ps"]) + 7438.803223
     u = np.insert(u, 0, interpolate(p_boundary, p, u, axis=level_ax), axis=level_ax)
     v = np.insert(v, 0, interpolate(p_boundary, p, v, axis=level_ax), axis=level_ax)
     q = np.insert(q, 0, interpolate(p_boundary, p, q, axis=level_ax), axis=level_ax)
@@ -85,15 +82,15 @@ def extend_pressurelevels(
     levs = np.arange(nlev)
 
     # reconstruct dataarrays
-    coords = dict(input["u"].coords)
+    coords = dict(level_data["u"].coords)
     coords["level"] = levs
 
-    output = xr.Dataset()
-    output["u"] = xr.DataArray(u, coords, input["u"].dims, attrs=input["u"].attrs)
-    output["v"] = xr.DataArray(v, coords, input["v"].dims, attrs=input["v"].attrs)
-    output["q"] = xr.DataArray(q, coords, input["q"].dims, attrs=input["q"].attrs)
-    output["p"] = xr.DataArray(p, coords, input["u"].dims, attrs=surface["ps"].attrs)
-    pb = xr.DataArray(p_boundary, surface["ps"].coords, surface["ps"].dims)
+    output = xr.Dataset()  # New dataset as the coordinate size has changed
+    output["u"] = xr.DataArray(u, coords, level_data["u"].dims)
+    output["v"] = xr.DataArray(v, coords, level_data["v"].dims)
+    output["q"] = xr.DataArray(q, coords, level_data["q"].dims)
+    output["p"] = xr.DataArray(p, coords, level_data["u"].dims)
+    pb = xr.DataArray(p_boundary, surface_data["ps"].coords, surface_data["ps"].dims)
 
     return output, pb
 
@@ -110,7 +107,7 @@ def interp_dp_midpoints(
             u: Eastward horizontal wind speed at levels
             v: Northward horizontal wind speed at levels
             p: Air pressure at levels
-            ps: Air pressure at the surface
+        ps: Air pressure at the surface
 
     Returns:
         Pressure difference between the pressure level bounds,
@@ -126,14 +123,16 @@ def interp_dp_midpoints(
 
     # Interpolate to midpoints
     midpoints = 0.5 * (
-        extended_data["level"].to_numpy()[1:] + 
-        extended_data["level"].to_numpy()[:-1]
+        extended_data["level"].to_numpy()[1:] + extended_data["level"].to_numpy()[:-1]
     )
     dp = dp.assign_coords(level=midpoints)
+    # from IPython import embed; embed(); quit()
     interped_data = extended_data.interp(level=midpoints)
-    
+
     # mask values below surface
     above_surface = interped_data["p"] < ps.broadcast_like(interped_data["p"])
     interped_data = interped_data.where(above_surface)
+    output = interped_data.drop_dims("level")
+    output
 
     return interped_data, dp

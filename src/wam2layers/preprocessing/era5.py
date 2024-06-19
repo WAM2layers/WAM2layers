@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime as pydt
-from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -8,8 +7,11 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers import __version__
+from wam2layers.config import Config
 from wam2layers.preprocessing.utils import (
     accumulation_to_flux,
+    calculate_humidity,
+    log_once,
     midpoints,
 )
 
@@ -31,15 +33,30 @@ PREPROCESS_ATTRS = {
 }
 
 
-@lru_cache(10)
-def log_once(logger, msg: str):
-    """Keep track of 10 different messages and then warn again.
+def get_input_data(datetime: pd.Timestamp, config: Config):
+    data = xr.Dataset()
+    data["q"] = load_data("q", datetime, config)  # in kg kg-1
+    data["u"] = load_data("u", datetime, config)  # in m/s
+    data["v"] = load_data("v", datetime, config)  # in m/s
+    data["ps"] = load_data("sp", datetime, config)  # in Pa
+    if config.level_type == "pressure_levels":
+        d2m = load_data("d2m", datetime, config)  # Dew point in K
+        data["qs"] = calculate_humidity(d2m, data["ps"])  # kg kg-1
+        data["us"] = load_data("u10", datetime, config)  # in m/s
+        data["vs"] = load_data("v10", datetime, config)  # in m/s
 
-    Adapted from: https://stackoverflow.com/a/66062313"""
-    logger.info(msg)
+    data["precip"], data["evap"] = preprocess_precip_and_evap(datetime, config)
+    try:
+        data["tcw"] = load_data("tcw", datetime, config)
+    except FileNotFoundError:
+        log_once(
+            logger,
+            "Total column water input data not available; using water vapour only",
+        )
+    return data, PREPROCESS_ATTRS
 
 
-def load_data(variable, datetime, config):
+def load_data(variable: str, datetime: pd.Timestamp, config: Config) -> xr.DataArray:
     """Load data for given variable and date."""
     template = config.filename_template
 
@@ -75,7 +92,9 @@ def load_data(variable, datetime, config):
     return da
 
 
-def preprocess_precip_and_evap(datetime, config):
+def preprocess_precip_and_evap(
+    datetime: pd.Timestamp, config: Config
+) -> tuple[xr.DataArray, xr.DataArray]:
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
     evap = load_data("e", datetime, config)

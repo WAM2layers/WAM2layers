@@ -1,5 +1,7 @@
 """Generic functions useful for preprocessing various input datasets."""
 
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -219,3 +221,11 @@ def add_bounds(ds: xr.Dataset) -> None:
 def midpoints(x):
     """Linearly interpolate between the values of an array."""
     return (x[1:] + x[:-1]) / 2
+
+
+@lru_cache(10)
+def log_once(logger, msg: str):
+    """Keep track of 10 different messages and then warn again.
+
+    Adapted from: https://stackoverflow.com/a/66062313"""
+    logger.info(msg)
