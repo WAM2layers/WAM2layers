@@ -8,10 +8,11 @@ of WAM2Layers and understand how you ended up there.
 ## Requirements
 
 To run WAM2Layers you need a computer and some kind of command line, such as the
-default terminal included in Mac or Linux. On Windows we recommend using Ubuntu
-through [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). If you're
-using existing infrastructure such as an managed JupyterLab environment or a
-supercomputer you will also typically have access to a terminal.
+default terminal included in Mac or Linux. On Windows you can either use Ubuntu
+through [WSL](https://learn.microsoft.com/en-us/windows/wsl/install),
+or use Powershell (which comes with Windows) as terminal.
+If you're using existing infrastructure such as an managed JupyterLab environment 
+or a supercomputer you will also typically have access to a terminal.
 
 You also need an existing Python environment with pip (the default installer for
 Python packages; often it comes included with Python), or conda/mamba to create
@@ -31,6 +32,10 @@ installing Python with conda. Use `which conda` to see if conda available on
 your system. If it's not,
 [here](https://docs.anaconda.com/free/miniconda/index.html) is a really nice
 walkthrough for installing miniconda.
+
+Alternatively, you can install Python by downloading it from [python.org](https://www.python.org).
+Note that if you are using Windows, do check "add python to PATH" in the installer.
+We recommend using [virtual environments](https://docs.python.org/3/library/venv.html).
 
 (pip-install)=
 ## Install WAM2layers in an existing Python environment
