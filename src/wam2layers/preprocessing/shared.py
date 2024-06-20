@@ -1,218 +1,186 @@
-"""Generic functions useful for preprocessing various input datasets."""
-
-from typing import Union
-
-import numpy as np
+"""General preprocessing routine."""
 import pandas as pd
 import xarray as xr
-from scipy.interpolate import interp1d
+
+from wam2layers.config import Config
+from wam2layers.preprocessing import era5, logger
+from wam2layers.preprocessing.input_validation import validate_input
+from wam2layers.preprocessing.pressure_levels import (
+    extend_pressurelevels,
+    interp_dp_midpoints,
+    mask_below_surface_data,
+)
+from wam2layers.preprocessing.utils import add_bounds
+from wam2layers.preprocessing.xarray_append import append_to_netcdf
+from wam2layers.reference.variables import PREPROCESSED_DATA_ATTRIBUTES
 
 
-def join_levels(pressure_level_data, surface_level_data):
-    """Combine 3d pressure level and 2d surface level data.
-
-    A dummy value of 1100 hPa is inserted for the surface pressure
-    """
-    bottom = pressure_level_data.isel(lev=0).copy()
-    bottom.values = surface_level_data.values
-    bottom["lev"] = 110000.0  # dummy value
-
-    # NB: plevs needs to come first to preserve dimension order
-    return xr.concat([pressure_level_data, bottom], dim="lev").sortby(
-        "lev", ascending=False
+def get_input_dates(config: Config) -> pd.DatetimeIndex:
+    """Dates for pre-processing."""
+    return pd.date_range(
+        start=config.preprocess_start_date,
+        end=config.preprocess_end_date,
+        freq=config.input_frequency,
     )
 
 
-def repeat_upper_level(pressure_level_data, fill_value=None):
-    """Add one more level with the same value as the upper level.
+def get_input_data(
+    datetime: pd.Timestamp, config: Config, source: str
+) -> tuple[xr.Dataset, dict[str, str]]:
+    """Retrieve input data from a specified source (e.g. ERA5, CMIP6).
 
-    A dummy value of 100 hPa is inserted for the top level pressure
-    """
-    top_level_data = pressure_level_data.isel(lev=-1).copy()
-    top_level_data["lev"] = 10000.0
-
-    if fill_value is not None:
-        top_level_data.values = np.ones_like(top_level_data) * fill_value
-
-    return xr.concat([pressure_level_data, top_level_data], dim="lev")
-
-
-def get_new_target_levels(surface_pressure, p_boundary, n_levels=40):
-    """Build a numpy array with new pressure levels including the boundary."""
-    # remove xarray labels if present
-    surface_pressure = np.array(surface_pressure)
-
-    pressure_upper = 20000
-    dp = (surface_pressure - pressure_upper) / (n_levels - 1)
-
-    levels = np.arange(0, n_levels)[None, :, None, None]
-    ntime, _, nlat, nlon = surface_pressure.shape
-
-    # Note the extra layer of zeros at the bottom and top of the array
-    # TODO: find out why
-    new_p = np.zeros((ntime, n_levels + 2, nlat, nlon))
-    new_p[:, 1:-1, :, :] = surface_pressure - dp * levels
-
-    mask = np.where(new_p > p_boundary, 1, 0)
-    mask[:, 0, :, :] = 1  # bottom value is always 1
-
-    # Insert the boundary in the new levels, pushing higher layers one index up
-    # e.g. with the boundary at 850 hPa:
-    # [0, 1000, 900, 800, 700, 600, 0] --> [0, 1000, 900, 850, 800, 700, 600]
-    new_p[:, :-1, :, :] = (
-        mask[:, 1:, :, :] * new_p[:, 1:, :, :]
-        + (1 - mask[:, 1:, :, :]) * new_p[:, :-1, :, :]
-    )
-
-    new_p[:, 1:, :, :] = np.where(
-        new_p[:, :-1, :, :] == new_p[:, 1:, :, :],
-        p_boundary,
-        new_p[:, 1:, :, :],
-    )
-    return new_p
-
-
-def interpolate_old(old_var, old_pressure_levels, new_pressure_levels, type="linear"):
-    """Interpolate old_var to new_pressure_levels."""
-    new_var = np.zeros_like(new_pressure_levels)
-
-    ntime, _, nlat, nlon = old_var.shape
-
-    for t in range(ntime):
-        for i in range(nlat):
-            for j in range(nlon):
-                pressure_1d = old_pressure_levels[t, :, i, j]
-                var_1d = old_var[t, :, i, j]
-
-                pressure_1d = pressure_1d[~pressure_1d.mask]
-                var_1d = var_1d[~var_1d.mask]
-
-                f_q = interp1d(pressure_1d, var_1d, type)
-                new_var[t, :, i, j] = f_q(new_pressure_levels[t, :, i, j])
-
-    return new_var
-
-
-def interpolate(x, xp, fp, axis, descending=False) -> np.ndarray:
-    """Linearly interpolate along an axis of an N-dimensional array.
-
-    This function interpolates one slice at a time, i.e. if xp and fp are 4d
-    arrays, x should be a 3d array and the function will return a 3d array.
-
-    It is assumed that the input array is monotonic along the axis.
+    This will load the xr.Dataset required for the preprocessing routines.
+        This dataset has the following coordinates: latitude, longitude, level.
+            Note that for pressure level data, the level coordinates should be the air
+            pressure (Pa). For model level data these are integers, counting down
+            towards the surface.
+        It has the following variables:
+            q: Specific humidity at pressure levels (kg/kg)
+            u: Eastward horizontal wind speed at pressure levels (m/s)
+            v: Northward horizontal wind speed at pressure levels (m/s)
+            ps: Air pressure at the surface (Pa)
+            twc (optional): Total column water content (kg/m2)
+        If the data uses model layers, this dataset has the variable:
+            dp: Pressure difference over each model layer (Pa).
+        If the data uses pressure layers, the dataset will have the following additional
+        variables:
+            qs: Specific humidity at the surface (kg/kg)
+            us: Eastward horizontal wind speed at the surface (m/s)
+            vs: Northward horizontal wind speed at the surface (m/s)
 
     Args:
-        x: The coordinate to which you want to interpolate your data to.
-        xp: The coordinates of the original data.
-        fp: The original data.
-        axis: The axis which should be interpolated over.
-        descending: If the coordinates are in descending order (defaults to False)
+        datetime: Which day of data should be loaded
+        config: WAM2layers configuration
+        source (optional): Which source to use. Defaults to "ERA5".
+
+    Returns:
+        Prepared input data
+        Attributes corresponding to the input data source
     """
-    # Cast input to numpy arrays
-    x = np.asarray(x)
-    xp = np.asarray(xp)
-    fp = np.asarray(fp)
-
-    # Move interpolation axis to first position for easier indexing
-    xp = np.moveaxis(xp, axis, 0)
-    fp = np.moveaxis(fp, axis, 0)
-
-    # Handle descending axis
-    if descending:
-        xp = np.flip(xp, axis=0)
-        fp = np.flip(fp, axis=0)
-        assert (
-            np.diff(xp, axis=0).min() >= 0
-        ), "with descending=False, xp must be monotonically decreasing"
+    if source == "ERA5":
+        data, input_data_attrs = era5.get_input_data(datetime, config)
     else:
-        assert (
-            np.diff(xp, axis=0).min() >= 0
-        ), "with descending=True, xp must be monotonically increasing"
+        msg = "Only the ERA5 input data loader has been implemented."
+        raise NotImplementedError(msg)
 
-    # Check for out of bounds values
-    if np.any(x < xp[0, ...]):
-        raise ValueError("one or more x are below the lowest value of xp")
-    if np.any(x > xp[-1, ...]):
-        raise ValueError("one or more x are above the highest value of xp")
-
-    # Find indices such that xp[lower] < x < xp[upper]
-    upper = np.sum(x > xp, axis=0)
-    lower = upper - 1
-
-    # This will allow numpy advanced indexing to take an (N-1)D slice of an ND array
-    upper = (upper, *np.meshgrid(*[range(l) for l in x.shape], indexing="ij"))
-    lower = (lower, *np.meshgrid(*[range(l) for l in x.shape], indexing="ij"))
-
-    fy = fp[lower] + (fp[upper] - fp[lower]) * (x - xp[lower]) / (xp[upper] - xp[lower])
-    return fy
+    validate_input(data, config)
+    return data, input_data_attrs
 
 
-def sortby_ndarray(array, other, axis):
-    """Sort array along axis by the values in another array."""
-    idx = np.argsort(other, axis=axis)
-    return np.take_along_axis(array, idx, axis=axis)
+def prep_experiment(config_file: Config, data_source: str):
+    """Pre-process all data for a given config file.
 
+    This function expects the following configuration settings:
 
-def calculate_humidity(dewpoint, pressure):
+    - preprocess_start_date: formatted as YYYYMMDD, e.g. '20210701'
+    - preprocess_end_date: formatted as YYYYMMDD, e.g. '20210716'
+    - level_type: either "pressure_levels" or "model_levels"
+    - levels: "all" or a list of integers with the desired (model or pressure)
+      levels.
+    - input_folder: path where raw era5 input data can be found, e.g.
+      /home/peter/WAM2layers/era5_2021
+    - preprocessed_data_folder: path where preprocessed data should be stored.
+      This directory will be created if it does not exist. E.g.
+      /home/peter/WAM2layers/preprocessed_data_2021
+    - filename_prefix: Fixed part of filename. This function will infer the
+      variable name and add _ml for model level data. E.g. with prefix =
+      "FloodCase_202107" this function will be able to find
+      FloodCase_202107_ml_u.nc or FloodCase_202107_u.nc and
+      FloodCase_202107_sp.nc
     """
-    Calculate the specific humidity from (surface) pressure and
-    dew point temperature
+    config = Config.from_yaml(config_file)
 
-    See further details at eq. 7.4 and 7.5 (Page 102) of:
-    https://www.ecmwf.int/en/elibrary/20198-ifs-documentation-cy47r3-part-iv-physical-processes
-    """
-    Rd = 287.0597
-    Rv = 461.5250
-    a1 = 611.21
-    a3 = 17.502
-    a4 = 32.19
-    t0 = 273.15
+    for datetime in get_input_dates(config):
+        is_new_day = datetime == datetime.floor("1d")
+        logger.info(datetime)
 
-    # Calculation of saturation water vapour pressure from Teten's formula
-    svp = a1 * np.exp(a3 * (dewpoint - t0) / (dewpoint - a4))
+        input_data, input_data_attrs = get_input_data(datetime, config, data_source)
+        surface_data = input_data.drop_dims("level")
+        level_data = input_data.drop_vars(surface_data.data_vars)
 
-    # Specific humidity
-    spec_hum = (Rd / Rv) * svp / (pressure - ((1 - Rd / Rv) * svp))
+        if config.level_type == "pressure_levels":
+            level_data, pb = extend_pressurelevels(level_data, surface_data, config)
+            level_data, dp = interp_dp_midpoints(level_data)
+            level_data = mask_below_surface_data(level_data, surface_data["ps"])
+        else:
+            dp = level_data["dp"]
 
-    return spec_hum
+        # Calculate column water vapour
+        g = 9.80665  # gravitational acceleration [m/s2]
+        cwv = level_data["q"] * dp / g  # (kg/m2)
 
+        if "tcw" in surface_data:
+            # Calculate column water instead of column water vapour
+            correction = surface_data["tcw"] / cwv.sum(dim="level")
+            cw = correction * cwv  # column water (kg/m2)
+            if is_new_day:
+                logger.info(
+                    "Total column water correction:\n"
+                    "    ratio total column water / computed integrated water vapour\n"
+                    f"    mean over grid for this timestep {correction.mean().item():.4f}"
+                )
+        else:  # Fluxes will be calculated based on the column water vapour
+            cw = cwv
 
-def accumulation_to_flux(data, input_frequency):
-    """Convert precip and evap from accumulations to fluxes.
+        # Integrate fluxes and states to upper and lower layer
+        if config.level_type == "model_levels":
+            lower_layer = dp["level"] > config.level_layer_boundary
+            upper_layer = ~lower_layer
 
-    Incoming data should have units of "m"
+        if config.level_type == "pressure_levels":
+            upper_layer = level_data["p"] < pb.broadcast_like(level_data["p"])
+            lower_layer = ~upper_layer
 
-    Note: this does not currently modify the time labels. It can be argued
-    that the times should be shifted. A good fix for this is welcome.
-    """
-    density = 1000  # [kg/m3]
-    timestep = pd.Timedelta(input_frequency)
-    nseconds = timestep.total_seconds()
+        # Vertically integrate state over two layers
+        s_lower = cw.where(lower_layer).sum(dim="level")
+        s_upper = cw.where(upper_layer).sum(dim="level")
 
-    fluxdata = (density * data / nseconds).assign_attrs(units="kg m-2 s-1")
+        # Determine the fluxes
+        fx = level_data["u"] * cw  # eastward atmospheric moisture flux (kg m-1 s-1)
+        fy = level_data["v"] * cw  # northward atmospheric moisture flux (kg m-1 s-1)
 
-    # TODO: Adjust time points?
-    # original_time = data.time
-    # midpoint_time = original_time - timestep / 2
-    # data["time"] = midpoint_time
+        # Vertically integrate fluxes over two layers
+        fx_lower = fx.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+        fy_lower = fy.where(lower_layer).sum(dim="level")  # kg m-1 s-1
+        fx_upper = fx.where(upper_layer).sum(dim="level")  # kg m-1 s-1
+        fy_upper = fy.where(upper_layer).sum(dim="level")  # kg m-1 s-1
 
-    # Extrapolation introduces a small inconsistency at the last midnight...
-    # data.interp(time=original_time, kwargs={"fill_value": "extrapolate"})
-    return fluxdata
+        # Combine everything into one dataset
+        ds = (
+            xr.Dataset(
+                {
+                    "fx_upper": fx_upper.assign_attrs(units="kg m-1 s-1"),
+                    "fy_upper": fy_upper.assign_attrs(units="kg m-1 s-1"),
+                    "fx_lower": fx_lower.assign_attrs(units="kg m-1 s-1"),
+                    "fy_lower": fy_lower.assign_attrs(units="kg m-1 s-1"),
+                    "s_upper": s_upper.assign_attrs(units="kg m-2"),
+                    "s_lower": s_lower.assign_attrs(units="kg m-2"),
+                    "evap": surface_data["evap"],
+                    "precip": surface_data["precip"],
+                }
+            )
+            .expand_dims("time")
+            .astype("float32")
+        )
+        add_bounds(ds)
 
+        # Add attributes
+        for var in PREPROCESSED_DATA_ATTRIBUTES:
+            ds[var].attrs.update(PREPROCESSED_DATA_ATTRIBUTES[var])
+        ds.attrs.update(input_data_attrs)
 
-def add_bounds(ds: xr.Dataset) -> None:
-    """Infer the lat and lon bounds and add to the dataset (in-place)."""
-    lats = ds["latitude"].to_numpy()
-    lons = ds["longitude"].to_numpy()
-    res_lat = np.median((np.diff(lats)))  # infer resolution
-    res_lon = np.median((np.diff(lons)))
+        # Save preprocessed data
+        filename = f"{datetime.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+        output_path = config.preprocessed_data_folder / filename
 
-    ds["latitude_bnds"] = (
-        ("latitude", "bnds"),
-        np.array((lats - res_lat / 2, lats + res_lat / 2)).T,
-    )
-    ds["longitude_bnds"] = (
-        ("longitude", "bnds"),
-        np.array((lons - res_lon / 2, lons + res_lon / 2)).T,
-    )
+        if is_new_day:
+            comp = dict(zlib=True, complevel=8)
+            encoding = {var: comp for var in ds.data_vars}
+            time_encoding = {"units": "seconds since 1900-01-01"}
+            encoding["time"] = time_encoding
+            ds.to_netcdf(
+                output_path, unlimited_dims=["time"], mode="w", encoding=encoding
+            )
+
+        else:
+            append_to_netcdf(output_path, ds, expanding_dim="time")

@@ -25,6 +25,9 @@ CFG_FILE_BACKWARD = Path("tests/test_data/config_rhine.yaml")
 CFG_FILE_BACKWARD_PL = Path("tests/test_data/config_rhine_pl.yaml")
 CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
 
+REGRESSION_DATA_MODEL_LAYERS = "tests/test_data/verify_output/preprocessed_data/2022-08-31_fluxes_storages.nc"
+REGRESSION_DATA_PRESSURE_LAYERS = "tests/test_data/verify_output/preprocessed_data/2020-01-01_fluxes_storages.nc"
+
 RTOL = 1e-5  # 0.001 %
 ATOL = 1e-7  # kg/m2 == 1e-7 mm (accumulated per timestep)
 
@@ -213,9 +216,7 @@ class TestPreprocess:
         output_path = preprocessed_dir / "2022-08-31_fluxes_storages.nc"
         assert output_path.exists()
         # verify outputs
-        expected_path = Path(
-            "tests/test_data/verify_output/preprocessed_data/2022-08-31_fluxes_storages.nc"
-        )
+        expected_path = Path(REGRESSION_DATA_MODEL_LAYERS)
         expected_output = xr.open_dataset(expected_path)
         output = xr.open_dataset(output_path)
 
@@ -251,6 +252,20 @@ class TestPreprocessPl:
     def test_preprocess(self, preprocessed_dir_pl: Path):
         output_path = preprocessed_dir_pl / "2020-01-01_fluxes_storages.nc"
         assert output_path.exists()
+
+        # verify outputs
+        expected_path = Path(REGRESSION_DATA_PRESSURE_LAYERS)
+        expected_output = xr.open_dataset(expected_path)
+        output = xr.open_dataset(output_path)
+
+        for var in expected_output.data_vars:
+            numpy.testing.assert_allclose(
+                expected_output[var].values,
+                output[var].values,
+                err_msg=f"{var} not close enough.",
+                rtol=RTOL,
+                atol=ATOL,
+            )
 
     def test_log_file(self, preprocessed_dir_pl):
         log_files = [i for i in preprocessed_dir_pl.glob("wam2layers_*.log")]

@@ -7,10 +7,12 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - updated example config
+- Added config options to allow for specifying the layer boundary during preprocessing [#391](https://github.com/WAM2layers/WAM2layers/pull/391).
 
 ### Fixed
 
 - Fixed bug in treatment of periodic boundaries ([#379](https://github.com/WAM2layers/WAM2layers/pull/379)).
+- Pressure level (ERA5) data can be preprocessed again [#387](https://github.com/WAM2layers/WAM2layers/pull/387)
 
 ## Release v3.0.0 (2024-04-05)
 
