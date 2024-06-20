@@ -98,7 +98,7 @@ def prep_experiment(config_file: Config, data_source: str):
         level_data = input_data.drop_vars(surface_data.data_vars)
 
         if config.level_type == "pressure_levels":
-            level_data, pb = extend_pressurelevels(level_data, surface_data)
+            level_data, pb = extend_pressurelevels(level_data, surface_data, config)
             level_data, dp = interp_dp_midpoints(level_data, surface_data["ps"])
         else:
             dp = level_data["dp"]

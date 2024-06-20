@@ -366,6 +366,46 @@ class Config(BaseModel):
 
     """
 
+    pressure_boundary_factor: float = 0.72878581
+    """Pressure level boundary multiplication factor.
+
+    The layer boundary is placed at:
+        A * P_surf + B
+    Where `P_surf` is the air pressure at the surface (at this location and time),
+        `A` is the `pressure_boundary_factor`,
+        and `B` is the `pressure_boundary_offset`.
+
+    Any pressure levels above this point will end up in the upper layer. 
+    The others in the lower layer
+
+    For example:
+
+    .. code-block:: yaml
+
+        pressure_boundary_factor: 0.7
+
+    """
+
+    pressure_boundary_offset: float = 7438.803223
+    """Pressure level boundary offset.
+
+    The layer boundary is placed at:
+        A * P_surf + B
+    Where `P_surf` is the air pressure at the surface (at this location and time),
+        `A` is the `pressure_boundary_factor`,
+        and `B` is the `pressure_boundary_offset`.
+
+    Any pressure levels above this point will end up in the upper layer. 
+    The others in the lower layer
+
+    For example:
+
+    .. code-block:: yaml
+
+        pressure_boundary_offset: 7440.0
+
+    """
+
     @classmethod
     def from_yaml(cls, config_file):
         """Read settings from a configuration.yaml file.

@@ -2,12 +2,14 @@
 import numpy as np
 import xarray as xr
 
+from wam2layers.config import Config
 from wam2layers.preprocessing.utils import interpolate, sortby_ndarray
 
 
 def extend_pressurelevels(
     level_data: xr.Dataset,
     surface_data: xr.Dataset,
+    config: Config,
 ) -> tuple[xr.Dataset, xr.DataArray]:
     """Extend the levels to top of atmosphere, surface and 2-layer boundary level.
 
@@ -65,7 +67,10 @@ def extend_pressurelevels(
     p = sortby_ndarray(p, p, axis=level_ax)
 
     # Insert boundary level values (at a dummy pressure value)
-    p_boundary = 0.72878581 * np.array(surface_data["ps"]) + 7438.803223
+    p_boundary = (
+        config.pressure_boundary_factor * np.array(surface_data["ps"]) + 
+        config.pressure_boundary_offset
+    )
     u = np.insert(u, 0, interpolate(p_boundary, p, u, axis=level_ax), axis=level_ax)
     v = np.insert(v, 0, interpolate(p_boundary, p, v, axis=level_ax), axis=level_ax)
     q = np.insert(q, 0, interpolate(p_boundary, p, q, axis=level_ax), axis=level_ax)
@@ -98,7 +103,7 @@ def extend_pressurelevels(
 def interp_dp_midpoints(
     level_data: xr.Dataset,
     ps: xr.DataArray,
-):
+) -> tuple[xr.Dataset, xr.DataArray]:
     """Interpolate the data to midpoints to allow for integration to two layers.
 
     Args:
