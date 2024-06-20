@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime as pydt
 from pathlib import Path
 
@@ -14,9 +13,7 @@ from wam2layers.preprocessing.utils import (
     log_once,
     midpoints,
 )
-
-logger = logging.getLogger(__name__)
-
+from wam2layers.preprocessing import logger
 
 PREPROCESS_ATTRS = {
     "title": "ERA5 data preprocessed for use in WAM2layers",
@@ -44,6 +41,8 @@ def get_input_data(datetime: pd.Timestamp, config: Config):
         data["qs"] = calculate_humidity(d2m, data["ps"])  # kg kg-1
         data["us"] = load_data("u10", datetime, config)  # in m/s
         data["vs"] = load_data("v10", datetime, config)  # in m/s
+    if config.level_type == "model_levels":
+        data["dp"] = get_dp_modellevels(data["ps"], config.levels)
 
     data["precip"], data["evap"] = preprocess_precip_and_evap(datetime, config)
     try:

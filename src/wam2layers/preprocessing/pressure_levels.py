@@ -133,7 +133,4 @@ def interp_dp_midpoints(
     # mask values below surface
     above_surface = interped_data["p"] < ps.broadcast_like(interped_data["p"])
     interped_data = interped_data.where(above_surface)
-    output = interped_data.drop_dims("level")
-    output
-
     return interped_data, dp

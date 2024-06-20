@@ -12,7 +12,7 @@ class ValidationError(Exception):
 def validate_input(data: xr.Dataset, config: Config) -> None:
     validate_dims(data)
     validate_vars(data, config)
-    check_nans(data)  # note: needs to load all data in memory...
+    check_nans(data)  # note: needs to load all data in memory... move to pre-output writing
 
 
 def validate_dims(data: xr.Dataset) -> None:
@@ -31,6 +31,8 @@ def validate_vars(data: xr.Dataset, config: Config) -> None:
     expected_surface_vars = ["ps", "precip", "evap"]
     if config.level_type == "pressure_levels":
         expected_surface_vars.extend(["qs", "us", "vs"])
+    if config.level_type == "model_levels":
+        expected_level_vars.extend(["dp"])
 
     # Check if the variables are present
     for var in expected_level_vars + expected_surface_vars:

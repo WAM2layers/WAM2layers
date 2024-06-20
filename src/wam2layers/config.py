@@ -350,6 +350,22 @@ class Config(BaseModel):
 
     """
 
+    level_layer_boundary: int = 111
+    """Which level to use for the layer boundary.
+
+    Defaults to layer number 111 (ERA5).
+        TODO: Check if this is a reasonable choice for boundary
+
+    Note that the specified level will be included in the lower layer.
+
+    For example:
+
+    .. code-block:: yaml
+
+        level_layer_boundary: 111
+    
+    """
+
     @classmethod
     def from_yaml(cls, config_file):
         """Read settings from a configuration.yaml file.

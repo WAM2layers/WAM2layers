@@ -1,11 +1,8 @@
-from typing import Literal
-
 import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
 from wam2layers.preprocessing import era5
-from wam2layers.preprocessing.era5 import get_dp_modellevels, logger
 from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
@@ -14,6 +11,7 @@ from wam2layers.preprocessing.pressure_levels import (
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
 from wam2layers.reference.variables import PREPROCESSED_DATA_ATTRIBUTES
+from wam2layers.preprocessing import logger
 
 
 def get_input_dates(config: Config) -> pd.DatetimeIndex:
@@ -30,13 +28,15 @@ def get_input_data(
 ) -> tuple[xr.Dataset, dict[str, str]]:
     """Retrieve input data from a specified source (e.g. ERA5, CMIP6).
 
-    This will load the xr.Dataset required for the preprocessing routines.
-    If the data uses model layers, this dataset has the variables:
+    This will load the xr.Dataset required for the preprocessing routines, with the
+    following variables:
         q: Specific humidity at pressure levels
         u: Eastward horizontal wind speed at pressure levels
         v: Northward horizontal wind speed at pressure levels
         ps: Air pressure at the surface
         twc (optional): Total column water content
+    If the data uses model layers, this dataset has the variable:
+        dp: Pressure difference over each model layer.
     If the data uses pressure layers, the dataset will have the following additional
     variables:
         qs: Specific humidity at the surface
@@ -89,23 +89,15 @@ def prep_experiment(config_file: Config, data_source: str):
         is_new_day = datetime == datetime.floor("1d")
         logger.info(datetime)
 
-        # 4d fields
-        levels = config.levels
-
         input_data, input_data_attrs = get_input_data(datetime, config, data_source)
         surface_data = input_data.drop_dims("level")
-        level_data = input_data[["q", "u", "v"]]
-
-        if config.level_type == "model_levels":
-            if data_source == "ERA5":
-                dp = get_dp_modellevels(surface_data["ps"], levels)
-            else:
-                msg = "Model level processing has only been implemented for ERA5."
-                raise NotImplementedError(msg)
+        level_data = input_data.drop_vars(surface_data.data_vars)
 
         if config.level_type == "pressure_levels":
             level_data, pb = extend_pressurelevels(level_data, surface_data)
             level_data, dp = interp_dp_midpoints(level_data, surface_data["ps"])
+        else:
+            dp = level_data["dp"]
 
         # Calculate column water vapour
         g = 9.80665  # gravitational acceleration [m/s2]
@@ -126,9 +118,7 @@ def prep_experiment(config_file: Config, data_source: str):
 
         # Integrate fluxes and states to upper and lower layer
         if config.level_type == "model_levels":
-            # TODO: Check if this is a reasonable choice for boundary
-            boundary = 111
-            lower_layer = dp["level"] > boundary
+            lower_layer = dp["level"] > config.level_layer_boundary
             upper_layer = ~lower_layer
 
         if config.level_type == "pressure_levels":
@@ -166,10 +156,6 @@ def prep_experiment(config_file: Config, data_source: str):
             .expand_dims("time")
             .astype("float32")
         )
-
-        # Verify that the data meets all the requirements for the model
-        # check_input(ds)
-
         add_bounds(ds)
 
         # Add attributes
