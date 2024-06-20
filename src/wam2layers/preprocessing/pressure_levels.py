@@ -102,7 +102,6 @@ def extend_pressurelevels(
 
 def interp_dp_midpoints(
     level_data: xr.Dataset,
-    ps: xr.DataArray,
 ) -> tuple[xr.Dataset, xr.DataArray]:
     """Interpolate the data to midpoints to allow for integration to two layers.
 
@@ -112,7 +111,6 @@ def interp_dp_midpoints(
             u: Eastward horizontal wind speed at levels
             v: Northward horizontal wind speed at levels
             p: Air pressure at levels
-        ps: Air pressure at the surface
 
     Returns:
         Dataset with the following variables:
@@ -132,10 +130,29 @@ def interp_dp_midpoints(
         level_data["level"].to_numpy()[1:] + level_data["level"].to_numpy()[:-1]
     )
     dp = dp.assign_coords(level=midpoints)
-    # from IPython import embed; embed(); quit()
     interped_data = level_data.interp(level=midpoints)
+    return interped_data, dp
+
+
+def mask_below_surface_data(
+    level_data: xr.Dataset,
+    ps: xr.DataArray,
+) -> tuple[xr.Dataset, xr.DataArray]:
+    """Mask any points that fall below the surface.
+
+    Args:
+        level_data: Dataset with the following variables:
+            q: Specific humidity at levels
+            u: Eastward horizontal wind speed at levels
+            v: Northward horizontal wind speed at levels
+            p: Air pressure at levels
+        ps: Air pressure at the surface
+
+    Returns:
+        The input data, with the values below the surface (based on surface
+            air pressure) masked out.
+    """
 
     # mask values below surface
-    above_surface = interped_data["p"] < ps.broadcast_like(interped_data["p"])
-    interped_data = interped_data.where(above_surface)
-    return interped_data, dp
+    above_surface = level_data["p"] < ps.broadcast_like(level_data["p"])
+    return level_data.where(above_surface)

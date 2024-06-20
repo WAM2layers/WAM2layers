@@ -8,6 +8,7 @@ from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
     interp_dp_midpoints,
+    mask_below_surface_data,
 )
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
@@ -99,7 +100,8 @@ def prep_experiment(config_file: Config, data_source: str):
 
         if config.level_type == "pressure_levels":
             level_data, pb = extend_pressurelevels(level_data, surface_data, config)
-            level_data, dp = interp_dp_midpoints(level_data, surface_data["ps"])
+            level_data, dp = interp_dp_midpoints(level_data)
+            level_data = mask_below_surface_data(level_data, surface_data["ps"])
         else:
             dp = level_data["dp"]
 
