@@ -12,7 +12,9 @@ class ValidationError(Exception):
 def validate_input(data: xr.Dataset, config: Config) -> None:
     validate_dims(data)
     validate_vars(data, config)
-    check_nans(data)  # note: needs to load all data in memory... move to pre-output writing
+    check_nans(
+        data
+    )  # note: needs to load all data in memory... move to pre-output writing
 
 
 def validate_dims(data: xr.Dataset) -> None:

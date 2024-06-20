@@ -1,3 +1,4 @@
+"""Loading ERA5 data for preprocessing."""
 from datetime import datetime as pydt
 from pathlib import Path
 
@@ -7,13 +8,13 @@ import xarray as xr
 
 from wam2layers import __version__
 from wam2layers.config import Config
+from wam2layers.preprocessing import logger
 from wam2layers.preprocessing.utils import (
     accumulation_to_flux,
     calculate_humidity,
     log_once,
     midpoints,
 )
-from wam2layers.preprocessing import logger
 
 PREPROCESS_ATTRS = {
     "title": "ERA5 data preprocessed for use in WAM2layers",
@@ -31,6 +32,7 @@ PREPROCESS_ATTRS = {
 
 
 def get_input_data(datetime: pd.Timestamp, config: Config):
+    """Get the preprocessing input data for ERA5."""
     data = xr.Dataset()
     data["q"] = load_data("q", datetime, config)  # in kg kg-1
     data["u"] = load_data("u", datetime, config)  # in m/s
@@ -52,6 +54,11 @@ def get_input_data(datetime: pd.Timestamp, config: Config):
             logger,
             "Total column water input data not available; using water vapour only",
         )
+
+    if config.level_type == "pressure_levels":
+        data["level"] = data["level"] * 100  # hPa --> Pa
+        data["level"].attrs.update(units="Pa")
+
     return data, PREPROCESS_ATTRS
 
 

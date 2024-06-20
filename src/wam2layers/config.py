@@ -363,7 +363,7 @@ class Config(BaseModel):
     .. code-block:: yaml
 
         level_layer_boundary: 111
-    
+
     """
 
     @classmethod

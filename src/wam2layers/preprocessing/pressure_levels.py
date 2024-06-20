@@ -1,3 +1,4 @@
+"""Routines specific for preprocessing pressure level data."""
 import numpy as np
 import xarray as xr
 
@@ -36,8 +37,7 @@ def extend_pressurelevels(
     """
     level_ax: int = level_data["u"].get_axis_num("level")  # type: ignore
 
-    da_p = level_data["level"].broadcast_like(level_data["u"]) * 100  # Pa
-    da_p.attrs["units"] = "Pa"
+    da_p = level_data["level"].broadcast_like(level_data["u"])
 
     p = da_p.to_numpy()
     u = level_data["u"].to_numpy()

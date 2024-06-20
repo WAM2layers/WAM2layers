@@ -1,8 +1,9 @@
+"""General preprocessing routine."""
 import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing import era5
+from wam2layers.preprocessing import era5, logger
 from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
@@ -11,7 +12,6 @@ from wam2layers.preprocessing.pressure_levels import (
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
 from wam2layers.reference.variables import PREPROCESSED_DATA_ATTRIBUTES
-from wam2layers.preprocessing import logger
 
 
 def get_input_dates(config: Config) -> pd.DatetimeIndex:
@@ -28,20 +28,24 @@ def get_input_data(
 ) -> tuple[xr.Dataset, dict[str, str]]:
     """Retrieve input data from a specified source (e.g. ERA5, CMIP6).
 
-    This will load the xr.Dataset required for the preprocessing routines, with the
-    following variables:
-        q: Specific humidity at pressure levels
-        u: Eastward horizontal wind speed at pressure levels
-        v: Northward horizontal wind speed at pressure levels
-        ps: Air pressure at the surface
-        twc (optional): Total column water content
-    If the data uses model layers, this dataset has the variable:
-        dp: Pressure difference over each model layer.
-    If the data uses pressure layers, the dataset will have the following additional
-    variables:
-        qs: Specific humidity at the surface
-        us: Eastward horizontal wind speed at the surface
-        vs: Northward horizontal wind speed at the surface
+    This will load the xr.Dataset required for the preprocessing routines.
+        This dataset has the following coordinates: latitude, longitude, level.
+            Note that for pressure level data, the level coordinates should be the air
+            pressure (Pa). For model level data these are integers, counting up from the
+            surface.
+        It has the following variables:
+            q: Specific humidity at pressure levels (kg/kg)
+            u: Eastward horizontal wind speed at pressure levels (m/s)
+            v: Northward horizontal wind speed at pressure levels (m/s)
+            ps: Air pressure at the surface (Pa)
+            twc (optional): Total column water content (kg/m2)
+        If the data uses model layers, this dataset has the variable:
+            dp: Pressure difference over each model layer (Pa).
+        If the data uses pressure layers, the dataset will have the following additional
+        variables:
+            qs: Specific humidity at the surface (kg/kg)
+            us: Eastward horizontal wind speed at the surface (m/s)
+            vs: Northward horizontal wind speed at the surface (m/s)
 
     Args:
         datetime: Which day of data should be loaded
