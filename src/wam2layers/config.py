@@ -356,7 +356,7 @@ class Config(BaseModel):
     Defaults to layer number 111 (ERA5).
         TODO: Check if this is a reasonable choice for boundary
 
-    Any layer numbers greater than the specified one will be 
+    Any layer numbers greater than the specified one will be
     included in the lower layer.
 
     For example:
@@ -376,7 +376,7 @@ class Config(BaseModel):
         `A` is the `pressure_boundary_factor`,
         and `B` is the `pressure_boundary_offset`.
 
-    Any pressure levels above this point will end up in the upper layer. 
+    Any pressure levels above this point will end up in the upper layer.
     The others in the lower layer
 
     For example:
@@ -396,7 +396,7 @@ class Config(BaseModel):
         `A` is the `pressure_boundary_factor`,
         and `B` is the `pressure_boundary_offset`.
 
-    Any pressure levels above this point will end up in the upper layer. 
+    Any pressure levels above this point will end up in the upper layer.
     The others in the lower layer
 
     For example:

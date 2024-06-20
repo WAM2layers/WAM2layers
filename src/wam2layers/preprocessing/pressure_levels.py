@@ -68,8 +68,8 @@ def extend_pressurelevels(
 
     # Insert boundary level values (at a dummy pressure value)
     p_boundary = (
-        config.pressure_boundary_factor * np.array(surface_data["ps"]) + 
-        config.pressure_boundary_offset
+        config.pressure_boundary_factor * np.array(surface_data["ps"])
+        + config.pressure_boundary_offset
     )
     u = np.insert(u, 0, interpolate(p_boundary, p, u, axis=level_ax), axis=level_ax)
     v = np.insert(v, 0, interpolate(p_boundary, p, v, axis=level_ax), axis=level_ax)
