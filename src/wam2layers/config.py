@@ -356,7 +356,8 @@ class Config(BaseModel):
     Defaults to layer number 111 (ERA5).
         TODO: Check if this is a reasonable choice for boundary
 
-    Note that the specified level will be included in the lower layer.
+    Any layer numbers greater than the specified one will be 
+    included in the lower layer.
 
     For example:
 

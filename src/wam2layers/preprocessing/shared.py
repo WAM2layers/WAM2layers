@@ -32,8 +32,8 @@ def get_input_data(
     This will load the xr.Dataset required for the preprocessing routines.
         This dataset has the following coordinates: latitude, longitude, level.
             Note that for pressure level data, the level coordinates should be the air
-            pressure (Pa). For model level data these are integers, counting up from the
-            surface.
+            pressure (Pa). For model level data these are integers, counting down 
+            towards the surface.
         It has the following variables:
             q: Specific humidity at pressure levels (kg/kg)
             u: Eastward horizontal wind speed at pressure levels (m/s)
