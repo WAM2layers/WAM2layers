@@ -11,7 +11,7 @@ DATA_ATTRIBUTES: dict[str, dict[str, str]] = {
         "units": "kg m-2",
         "description": (
             "tracked atmospheric moisture storage state in upper layer exactly at the "
-            "out time step (initial condition, i.e., 'restart' for next timestep)"
+            "output time (initial condition, i.e., 'restart' for next timestep)"
         ),
     },
     "s_track_lower_restart": {
@@ -19,7 +19,7 @@ DATA_ATTRIBUTES: dict[str, dict[str, str]] = {
         "units": "kg m-2",
         "description": (
             "tracked atmospheric moisture storage state in lower layer exactly at the "
-            "out time step (initial condition, i.e., 'restart' for next timestep)"
+            "output time (initial condition, i.e., 'restart' for next timestep)"
         ),
     },
     "p_track_upper": {
