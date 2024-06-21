@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+
+## Release v3.1.0 (2024-06-21)
+
 ### Changed
 
-- updated example config
+- The user guide has been restructured [#367](https://github.com/WAM2layers/WAM2layers/pull/367)
+- The example config has been updated [#371](https://github.com/WAM2layers/WAM2layers/pull/371)
 - Added config options to allow for specifying the layer boundary during preprocessing [#391](https://github.com/WAM2layers/WAM2layers/pull/391).
 
 ### Fixed
