@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - The user guide has been restructured [#367](https://github.com/WAM2layers/WAM2layers/pull/367)
 - The example config has been updated [#371](https://github.com/WAM2layers/WAM2layers/pull/371)
 - Added config options to allow for specifying the layer boundary during preprocessing [#391](https://github.com/WAM2layers/WAM2layers/pull/391).
+- The preprocessing module has been restructured to allow for easier implementation of new datasets [#391](https://github.com/WAM2layers/WAM2layers/pull/391)
 
 ### Fixed
 
