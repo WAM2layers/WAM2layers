@@ -25,8 +25,12 @@ CFG_FILE_BACKWARD = Path("tests/test_data/config_rhine.yaml")
 CFG_FILE_BACKWARD_PL = Path("tests/test_data/config_rhine_pl.yaml")
 CFG_FILE_FORWARD = Path("tests/test_data/config_west_africa.yaml")
 
-REGRESSION_DATA_MODEL_LAYERS = "tests/test_data/verify_output/preprocessed_data/2022-08-31_fluxes_storages.nc"
-REGRESSION_DATA_PRESSURE_LAYERS = "tests/test_data/verify_output/preprocessed_data/2020-01-01_fluxes_storages.nc"
+REGRESSION_DATA_MODEL_LAYERS = (
+    "tests/test_data/verify_output/preprocessed_data/2022-08-31_fluxes_storages.nc"
+)
+REGRESSION_DATA_PRESSURE_LAYERS = (
+    "tests/test_data/verify_output/preprocessed_data/2020-01-01_fluxes_storages.nc"
+)
 
 RTOL = 1e-5  # 0.001 %
 ATOL = 1e-7  # kg/m2 == 1e-7 mm (accumulated per timestep)
