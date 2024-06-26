@@ -96,17 +96,24 @@ class Config(BaseModel):
     tagging_region: Annotated[
         Union[FilePath, BoundingBox], AfterValidator(validate_region)
     ]
-    """Subdomain delimiting the source/sink regions for tagged moisture.
+    """Subdomain delimiting the tagging region from which in forward mode
+    evaporation is tagged (i.e., a source region) or from which i backward mode
+    precipitation is tagged (i.e., a sink region)
 
     You can either specify a path that contains a netcdf file, or a bounding box
-    of the form [west, south, east, north].
+    of the form [west, south, east, north]. The netcdf file should consist of
+    ones (tagging region) and zeros (non-tagging region). Values between 0
+    and 1 are possible as well and can be used in case the region of interest
+    overlaps with part of a grid cell
 
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
 
     The file should exist. If it has a time dimension, the nearest field will be
     used as tagging region, and the time should still be between
-    tagging_start_date and tagging_end_date
+    tagging_start_date and tagging_end_date. A dynamic tagging region is thus
+    possible as well.
+    TODO: test the dynamic tagging region in more detail.
 
     For example:
 
@@ -131,7 +138,8 @@ class Config(BaseModel):
 
     If it is set to `null`, then it will use full domain of preprocessed data.
 
-    Note that you should always set period to False if you use a subdomain.
+    Note that you should always set periodic_boundary to False if you use a
+    subdomain that does not have all Earth's longitudes.
 
     For example:
 
@@ -246,9 +254,10 @@ class Config(BaseModel):
     """
 
     input_frequency: str
-    """Frequency of the raw input data.
-
-    Used to calculated water volumes.
+    """Time frequency of the raw input data.
+    TODO: clarify if this is used during preprocessing, tracking or both, and
+    what one should do when, for example surface fluxes and humidity have
+    different frequencies.
 
     For example:
 
@@ -276,6 +285,7 @@ class Config(BaseModel):
 
     output_frequency: str
     """Frequency at which to write output to file.
+    TODO: clarify if this is used during preprocessing, tracking or both
 
     For example, for daily output files:
 
@@ -315,9 +325,10 @@ class Config(BaseModel):
     restart: bool
     """Whether to restart from previous run.
 
-    If set to `true`, this will attempt to read the output from a previous model
-    run and continue from there. The output from the previous timestep must be
-    available for this to work.
+    If set to `true`, this will attempt to read the output from a previous
+    tracking run and continue from there. The output from the previous
+    timestep must be available for this to work.
+    TODO: test this more extensively
 
     For example:
 
@@ -341,6 +352,7 @@ class Config(BaseModel):
 
     kvf: float
     """net to gross vertical flux multiplication parameter
+    TODO: test this more extensively
 
     For example:
 
@@ -353,7 +365,8 @@ class Config(BaseModel):
     level_layer_boundary: int = 111
     """Which level to use for the layer boundary.
 
-    Defaults to layer number 111 (ERA5).
+    Defaults to layer number 111 (ERA5). The pressure at this boundary can be found
+    in `WAM2layers/src/wam2layers/preprocessing/tableERA5model_to_pressure.csv'
         TODO: Check if this is a reasonable choice for boundary
 
     Any layer numbers greater than the specified one will be
@@ -377,13 +390,17 @@ class Config(BaseModel):
         and `B` is the `pressure_boundary_offset`.
 
     Any pressure levels above this point will end up in the upper layer.
-    The others in the lower layer
+    The others in the lower layer.
+
+    Defaults together with pressure_boundary_offset to layer number 111 (ERA5).
+    The pressure at this boundary can be found in
+    `WAM2layers/src/wam2layers/preprocessing/tableERA5model_to_pressure.csv'
 
     For example:
 
     .. code-block:: yaml
 
-        pressure_boundary_factor: 0.7
+        pressure_boundary_factor: 0.72878581
 
     """
 
@@ -399,11 +416,15 @@ class Config(BaseModel):
     Any pressure levels above this point will end up in the upper layer.
     The others in the lower layer
 
+    Defaults together with pressure_boundary_factor to layer number 111 (ERA5).
+    The pressure at this boundary can be found in
+    `WAM2layers/src/wam2layers/preprocessing/tableERA5model_to_pressure.csv'
+
     For example:
 
     .. code-block:: yaml
 
-        pressure_boundary_offset: 7440.0
+        pressure_boundary_offset: 7438.803223
 
     """
 
