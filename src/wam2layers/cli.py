@@ -22,7 +22,7 @@ from wam2layers.analysis import visualization
 from wam2layers.config import Config
 from wam2layers.download import download_from_doi
 from wam2layers.example_cases import AVAILABLE_CASES
-from wam2layers.preprocessing.era5 import prep_experiment
+from wam2layers.preprocessing.shared import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
 from wam2layers.tracking.forwardtrack import (
     run_experiment as run_forwardtrack_experiment,
@@ -164,7 +164,7 @@ def era5(ctx, config_file):
     _copy_config_yaml(config_file, log_path)
     logger.info("Welcome to WAM2layers.")
     logger.info("Starting preprocessing ERA5 data.")
-    prep_experiment(config_file)
+    prep_experiment(config_file, data_source="ERA5")
 
 
 # Command line setup for visualization

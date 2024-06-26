@@ -29,7 +29,7 @@ dependencies = [
     "pyyaml",
     "scipy",
     "pandas",
-    "xarray<2024.3.0",  # causes different results
+    "xarray",
     "netcdf4",
     "scipy",
     "click",
