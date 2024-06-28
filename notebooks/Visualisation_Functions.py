@@ -73,57 +73,28 @@ def logfile(config_file,filename,outdir):
     config = Config.from_yaml(config_file)
     region = load_tagging_region(config)
     
-    #Load precipitation
-    input_files = f"{config.preprocessed_data_folder}/*.nc"
-    ds_p = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
-    start = config.tagging_start_date
-    end = config.tagging_end_date
-    subset = ds_p.precip.sel(time=slice(start, end))
-    precip = (subset * region * 3600).sum('time').compute()
-    
-    #Load tracked moisture
+    #Load tracked moisture and precipitation
     a_gridcell, lx, ly = get_grid_info(region)
     output_files = f"{config.output_folder}/*.nc"
     ds_e = xr.open_mfdataset(output_files, combine='nested', concat_dim='time')
     e_track = ds_e.e_track.sum('time').compute()
-        
-    #Get moisture flux data
-    path_input = f"{config.preprocessed_data_folder}/*.nc"
-    ds = xr.open_mfdataset(path_input)
-    
-    start = config.tracking_start_date
-    end = config.tracking_end_date
-    subset = ds.sel(time=slice(start, end))
-    
-    mean_subset = ds.sum(dim='time')
-       
-    #calculate evaporation and precipitation ratio
-    mean_subset['evap_masked'] = mean_subset['evap'].where(region, drop=True) * 100
-    mean_subset['precip_masked'] = mean_subset['precip'].where(region, drop=True) * 1000    
-    mean_subset['tracked_masked'] = e_track.where(region, drop=True)
-    
-    mean_subset = mean_subset.assign(e_r=(mean_subset['tracked_masked'].sum() / mean_subset['evap_masked'].sum())*100)
-    mean_subset = mean_subset.assign(p_r=(mean_subset['tracked_masked'].sum() / mean_subset['precip_masked'].sum())*100)  
-  
-    precip_sum = precip.sum()
-    e_track_sum = e_track.sum()
-    
-    precip_mean  = (precip*a_gridcell[:, None]).sum()/a_gridcell[:, None].sum() #Should only be target area
+    p_tagged = ds_e.tagged_precip.sum('time').compute()
+
+    #calculate precipitation recycling ratio + mean precipitation over area
+    p_r=(e_track*a_gridcell[:, None]).where(region, drop=True).sum() / (p_tagged*a_gridcell[:, None]).sum()  
+ 
+    #Calculate (area-weighted) mean precip and moisture sources 
+    precip_mean  = (p_tagged*a_gridcell[:, None]).sum()/a_gridcell[:, None].sum() #Should only be target area
     e_track_mean  = (e_track*a_gridcell[:, None]).sum()/a_gridcell[:, None].sum()
     
-    diff = abs(precip_sum - e_track_sum)
-    diff_areacorrected = abs((precip*a_gridcell[:, None]).sum() - (e_track*a_gridcell[:, None]).sum())
+    diff_areacorrected = (p_tagged*a_gridcell[:, None]).sum() - (e_track*a_gridcell[:, None]).sum()
     
     #Write to file
     logfile = open(outdir+"/Logfile_"+filename+".txt",'w')
-    logfile.write('precip_sum: '+str(float(precip_sum))+'\n')
-    logfile.write('e_track_sum: '+str(float(e_track_sum))+'\n')
-    logfile.write('abs_diff: '+str(float(diff))+'\n')
-    logfile.write('precip_mean: '+str(float(precip_mean))+'\n')
-    logfile.write('e_track_mean: '+str(float(e_track_mean))+'\n')
-    logfile.write('abs_diff_areacorrected: '+str(float(diff_areacorrected))+'\n')
-    logfile.write('e_r: '+str(float(mean_subset['e_r']))+'\n')
-    logfile.write('p_r: '+str(float(mean_subset['p_r']))+'\n')
+    logfile.write('mean precipiation: '+str(float(precip_mean))+'\n')
+    logfile.write('mean moisture sources: '+str(float(e_track_mean))+'\n')
+    logfile.write('Difference: '+str(float(diff_areacorrected))+'\n')
+    logfile.write('p_r: '+str(float(p_r*100))+' % \n')
     
     logfile.close()
     
