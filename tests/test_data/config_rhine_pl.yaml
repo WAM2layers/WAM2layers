@@ -1,0 +1,34 @@
+# Paths (relative to root of repo)
+preprocessed_data_folder: tests/tmp/preprocessed_data
+output_folder: tests/tmp/output_data
+
+# Preprocessing
+filename_template: tests/test_data/era5_pl/ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+preprocess_start_date: "2020-01-01T00:00"
+preprocess_end_date: "2020-01-01T23:00"
+level_type: pressure_levels
+levels: [100, 200, 300, 400, 500, 550, 600, 650, 700, 750, 775, 800, 825, 850, 875, 900, 925, 950, 975, 1000]
+
+# Tracking
+tracking_direction: backward
+tracking_domain: null  # use full domain of preprocessed data
+# tracking_domain: [0, 50, 10, 55]  # use subdomain of preprocessed data
+tracking_start_date: "2020-01-01T00:00"
+tracking_end_date: "2020-01-01T23:00"
+
+# Tagging
+tagging_region: tests/test_data/region_rhine.nc
+# tagging_region: [0, 50, 10, 55]  # alternative to mask file
+tagging_start_date: "2020-01-01T12:00"
+tagging_end_date: "2020-01-01T23:00"
+
+# Time
+input_frequency: "1h"
+timestep: 600  # Time step in seconds
+output_frequency: "6h"
+
+# Model settings
+log_level: info
+restart: False
+periodic_boundary: false
+kvf: 3

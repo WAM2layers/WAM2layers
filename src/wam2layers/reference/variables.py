@@ -88,7 +88,7 @@ DATA_ATTRIBUTES: dict[str, dict[str, str]] = {
 }
 
 
-ERA5_INPUT_DATA_ATTRIBUTES: dict[str, dict[str, str]] = {
+PREPROCESSED_DATA_ATTRIBUTES: dict[str, dict[str, str]] = {
     "fx_upper": {
         "long_name": "eastward moisture flux in the upper layer",
         "units": "kg m-1 s-1",

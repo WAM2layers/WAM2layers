@@ -7,7 +7,7 @@ import xarray as xr
 
 from wam2layers import __version__
 from wam2layers.config import Config
-from wam2layers.preprocessing.shared import add_bounds
+from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.reference.variables import DATA_ATTRIBUTES
 
 logger = logging.getLogger(__name__)
