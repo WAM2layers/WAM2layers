@@ -97,7 +97,7 @@ class Config(BaseModel):
         Union[FilePath, BoundingBox], AfterValidator(validate_region)
     ]
     """Subdomain delimiting the tagging region from which in forward mode
-    evaporation is tagged (i.e., a source region) or from which i backward mode
+    evaporation is tagged (i.e., a source region) or from which in backward mode
     precipitation is tagged (i.e., a sink region)
 
     You can either specify a path that contains a netcdf file, or a bounding box
@@ -255,9 +255,11 @@ class Config(BaseModel):
 
     input_frequency: str
     """Time frequency of the raw input data.
-    TODO: clarify if this is used during preprocessing, tracking or both, and
-    what one should do when, for example surface fluxes and humidity have
-    different frequencies.
+    This refers to the time frequency of the climate or weather model data
+    data. Primarily used during the preprocessing, but the setting does carry
+    over to the tracking as well.
+    TODO: Enable surface fluxes and atmospheric fluxes to have different
+    frequencies, which may happen with some data sets.
 
     For example:
 
@@ -272,7 +274,7 @@ class Config(BaseModel):
 
     The data will be interpolated during model execution. Too large timestep will
     violate CFL criterion, too small timestep will lead to excessive numerical
-    diffusion and slow progress. For best performance, the input frequency
+    diffusion and slow progress. For best performance, the input_frequency
     should be divisible by the timestep.
 
     For example:
