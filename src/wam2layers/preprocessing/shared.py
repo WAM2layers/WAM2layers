@@ -3,7 +3,7 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing import era5, logger
+from wam2layers.preprocessing import cmip, era5, logger
 from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
@@ -59,6 +59,10 @@ def get_input_data(
     """
     if source == "ERA5":
         data, input_data_attrs = era5.get_input_data(datetime, config)
+    elif source == "CMIP":
+        data = cmip.get_input_data(datetime, config)
+        data.load()
+        input_data_attrs = {}
     else:
         msg = "Only the ERA5 input data loader has been implemented."
         raise NotImplementedError(msg)
