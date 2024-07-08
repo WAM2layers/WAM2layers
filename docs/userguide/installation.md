@@ -23,7 +23,7 @@ use `which`:
 
 ```sh
 # Check if python and pip are installed
-which python3
+which python3  # On windows use 'Get-Command python' in PowerShell
 which pip
 ```
 
