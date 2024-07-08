@@ -47,7 +47,7 @@ following commands, depending on your requirements:
 pip install wam2layers
 pip install wam2layers[viz]  # includes packages required for visualization
 pip install wam2layers[dev]  # include all packages needed for working on the code
-pip install wam2layers=3.0.0  # install a specific version (e.g. to reproduce previous results)
+pip install wam2layers=3.1.0  # install a specific version (e.g. to reproduce previous results)
 ```
 
 The available versions are listed
