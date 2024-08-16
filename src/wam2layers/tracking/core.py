@@ -229,20 +229,21 @@ def calculate_fz(F, S0, S1, dt, kvf):
     s_rel = s_mean / s_total
 
     # Evaluate all terms in the moisture balance execpt the unknown Fz and err
-    foo_upper = (S1 - S0).s_upper + dt * (
-        divergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
+    # TODO: divergence is not negative as in the manuscript
+    R_upper = (S1 - S0).s_upper + dt * (
+        -divergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
     )
-    foo_lower = (S1 - S0).s_lower + dt * (
-        divergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
+    R_lower = (S1 - S0).s_lower + dt * (
+        -divergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
     )
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new err_lower/s_lower = err_upper/s_upper (positive downward)
-    fz = foo_lower - S1.s_lower / (S1.s_lower + S1.s_upper) * (foo_upper + foo_lower)
+    fz = R_lower - (R_upper + R_lower) * S1.s_lower / (S1.s_lower + S1.s_upper)
 
     # TODO: verify that err_lower/s_lower = err_upper/s_upper is satisfied on debug log
 
-    # stabilize the outfluxes / influxes; during the reduced timestep the
+    # stabilize the outfluxes / influxes; during a timestep the
     # vertical flux can maximally empty/fill 1/x of the top or down storage
     stab = 1.0 / (kvf + 1.0)
     flux_limit = np.minimum(
