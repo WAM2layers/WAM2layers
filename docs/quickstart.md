@@ -35,13 +35,13 @@ wam2layers download example-input-volta
 cd example-input-eiffel  # or example-input-volta
 
 # Prepare the data for a tracking experiment
-wam2layers preprocess era5 config_eiffel.yaml  # or example-config-volta
+wam2layers preprocess era5 config-eiffel.yaml  # or example-config-volta
 
 # Run the tracking experiment
-wam2layers track config_eiffel.yaml  # or example-config-volta
+wam2layers track config-eiffel.yaml  # or example-config-volta
 
 # Make a default plot of the results
-wam2layers visualize output config_eiffel.yaml  # or example-config-volta
+wam2layers visualize output config-eiffel.yaml  # or example-config-volta
 ```
 
 A detailed explanation for each of these steps is available in the [user
