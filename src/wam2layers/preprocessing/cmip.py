@@ -52,6 +52,9 @@ def get_input_data(datetime, config):
     data["precip"] = load_cmip_var("tp", datetime, config)
     data["evap"] = load_cmip_var("e", datetime, config)
 
+    data["precip"] = np.maximum(data["precip"], 0) + np.maximum(data["evap"], 0)
+    data["evap"] = np.abs(np.minimum(data["evap"], 0))
+
     return data
 
 
