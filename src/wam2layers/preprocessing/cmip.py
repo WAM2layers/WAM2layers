@@ -57,8 +57,8 @@ def get_input_data(datetime, config):
     data["precip"] = load_cmip_var("tp", datetime, config)
     data["evap"] = load_cmip_var("e", datetime, config)
 
-    data["precip"] = np.maximum(data["precip"], 0) + np.maximum(data["evap"], 0)
-    data["evap"] = np.abs(np.minimum(data["evap"], 0))
+    data["precip"] = np.maximum(data["precip"], 0) + np.minimum(data["evap"], 0)
+    data["evap"] = np.abs(np.maximum(data["evap"], 0))
 
     return data
 
@@ -116,11 +116,7 @@ def accumulate_3hr_var(data: xr.DataArray) -> xr.DataArray:
         data["time"].isel(time=slice(None, None, 2)) + pd.Timedelta("4h30m"), repeats=2
     )
 
-    return (
-        (data.isel(time=slice(0, None, 2)) + data.isel(time=slice(1, None, 2)))
-        / 2
-        * SECONDS_6HR
-    )
+    return (data.isel(time=slice(0, None, 2)) + data.isel(time=slice(1, None, 2))) / 2
 
 
 def assert_correct_starttime(data: xr.DataArray):
