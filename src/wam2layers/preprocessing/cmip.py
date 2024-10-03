@@ -30,12 +30,11 @@ COORD_NAMES = {
 
 THREE_HR_VARS = ("pr", "hfls")
 
-SECONDS_6HR = 6 * 3600
 LATENT_HEAT = 2.45e6  # J/kg (at ~20 degC, ranges from 2.5 (0 degC) to 2.4 (50 degC)
 # 1.91846e6*((temp/(temp-33.91))**2)
 
 
-def get_input_data(datetime, config):
+def get_input_data(datetime: cftime.datetime, config: Config):
     assert config.level_type == "pressure_levels"
 
     data = xr.Dataset()
@@ -63,8 +62,17 @@ def get_input_data(datetime, config):
     return data
 
 
-@cache
+@cache  # Cache this function: keep output in memory for reuse
 def open_var(files: tuple[Path], var: str) -> xr.DataArray:
+    """Open a certain CMIP variable, which can be split over multiple files time-wise.
+
+    To speed up this function, the output is cached so it can be reused
+    in the following timesteps.
+
+    Args:
+        files: The netCDF files corresponding to this variable.
+        var: The name of the varialbe in the netCDF file.
+    """
     datasets = [
         xr.open_dataset(
             file,
@@ -78,7 +86,7 @@ def open_var(files: tuple[Path], var: str) -> xr.DataArray:
     return ds[var]
 
 
-def load_cmip_var(variable, datetime: cftime.datetime, config: Config):
+def load_cmip_var(variable: str, datetime: cftime.datetime, config: Config):
     """Load a single CMIP input data variable.
 
     Args:
@@ -95,7 +103,7 @@ def load_cmip_var(variable, datetime: cftime.datetime, config: Config):
     data = open_var(input_files, var)
 
     if var in THREE_HR_VARS:
-        data = accumulate_3hr_var(data)
+        data = resample_3hr_var(data)
     if var == "hfls":
         data = data / LATENT_HEAT
 
@@ -107,8 +115,8 @@ def load_cmip_var(variable, datetime: cftime.datetime, config: Config):
     return data.sel(time=datetime)
 
 
-def accumulate_3hr_var(data: xr.DataArray) -> xr.DataArray:
-    """Accumulates 3-hour variables to 6 hour intervals."""
+def resample_3hr_var(data: xr.DataArray) -> xr.DataArray:
+    """Resample 3-hour flux variables to 6 hour intervals."""
     assert_correct_starttime(data)
     data = data.copy(deep=True)
 

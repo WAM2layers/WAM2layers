@@ -28,11 +28,15 @@ def output_path(date: cftime.datetime, config: Config):
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=4)  # cache for speedup
 def read_data_at_date(
     date: cftime.datetime, input_dir: Path, tracking_domain: Optional[BoundingBox]
 ):
-    """Load input data for given date."""
+    """Load input data for given date.
+
+    This function is accessed every time step. By caching the result we reduce the
+    number of times the files need to be accessed.
+    """
     file = input_path(date, input_dir)
     ds = xr.open_dataset(file, cache=False, use_cftime=True)
     if tracking_domain is not None:

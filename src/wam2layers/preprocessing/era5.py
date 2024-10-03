@@ -64,8 +64,14 @@ def get_input_data(datetime: cftime.datetime, config: Config):
     return data, PREPROCESS_ATTRS
 
 
-@lru_cache(maxsize=16)  # Small speedup as file access is reduced
+@lru_cache(maxsize=16)  # Cache this function: small speedup as file access is reduced
 def open_da(filepath) -> xr.DataArray:
+    """Cached open dataarray function.
+
+    This function is accessed every time step. By caching the result we reduce the
+    number of times the files need to be accessed, making the preprocessing slightly
+    more efficient.
+    """
     return xr.open_dataarray(filepath, use_cftime=True)
 
 
@@ -106,7 +112,7 @@ def load_data(variable: str, datetime: cftime.datetime, config: Config) -> xr.Da
 
 
 def preprocess_precip_and_evap(
-    datetime: pd.Timestamp, config: Config
+    datetime: cftime.datetime, config: Config
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step
