@@ -1,23 +1,25 @@
 from typing import Literal
 
+import cftime
 import pandas as pd
 import xarray as xr
 
 from wam2layers.config import BoundingBox, Config
+from wam2layers.utils.calendar import cftime_from_timestamp
 
 
 def initialize_time(
     config: Config,
     direction: Literal["forward", "backward"] = "forward",
-) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timedelta]:
+) -> tuple[cftime.datetime, cftime.datetime, cftime.datetime, pd.Timedelta]:
     dt = pd.Timedelta(seconds=config.timestep)
 
     if direction == "forward":
-        t0 = pd.Timestamp(config.tracking_start_date)
+        t0 = cftime_from_timestamp(config.tracking_start_date, config.calendar)
         th = t0 + dt / 2  # th is "half" time, i.e. between t0 and t1
         t1 = t0 + dt
     elif direction == "backward":
-        t1 = pd.Timestamp(config.tracking_end_date)
+        t1 = cftime_from_timestamp(config.tracking_end_date, config.calendar)
         th = t1 - dt / 2  # th is "half" time, i.e. between t0 and t1
         t0 = t1 - dt
     else:

@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
@@ -20,6 +19,11 @@ from wam2layers.tracking.io import (
     write_output,
 )
 from wam2layers.tracking.shared import initialize_tagging_region, initialize_time
+from wam2layers.utils.calendar import (
+    cftime_from_iso,
+    cftime_from_timestamp,
+    round_cftime,
+)
 from wam2layers.utils.grid import get_boundary, get_grid_info, stagger_x, stagger_y
 from wam2layers.utils.profiling import ProgressTracker
 
@@ -116,7 +120,7 @@ def initialize(config_file):
     config = Config.from_yaml(config_file)
 
     # Initialize outputs as empty fields based on the input coords
-    t = pd.Timestamp(config.tracking_end_date)
+    t = cftime_from_iso(config.tracking_end_date.isoformat(), config.calendar)
     grid = load_data(t, config, "states").coords
     output = xr.Dataset(
         {
@@ -164,7 +168,7 @@ def run_experiment(config_file):
         tagging_region = initialize_tagging_region(bbox, lat, lon)
         tagging_region_stationary = True
 
-    while t0 >= config.tracking_start_date:
+    while t0 >= cftime_from_timestamp(config.tracking_start_date):
         S0 = load_data(t0, config, "states")
         F = load_data(th, config, "fluxes")
         S1 = load_data(t1, config, "states")
@@ -178,7 +182,11 @@ def run_experiment(config_file):
 
         # Load/update tagging mask
         tagging_mask = 0
-        if config.tagging_start_date <= t1 <= config.tagging_end_date:
+        if (
+            cftime_from_timestamp(config.tagging_start_date, config.calendar)
+            <= t1
+            <= cftime_from_timestamp(config.tagging_end_date, config.calendar)
+        ):
             if tagging_region_stationary:
                 tagging_mask = tagging_region
             else:
@@ -197,7 +205,7 @@ def run_experiment(config_file):
         t0 -= dt
 
         # Daily output
-        is_output_time = t1 == t1.floor(config.output_frequency)
+        is_output_time = t1 == round_cftime(t1, config.output_frequency, "floor")
         is_final_step = t0 < config.tracking_start_date
         if is_output_time or is_final_step:
             progress_tracker.print_progress(t1, output)
