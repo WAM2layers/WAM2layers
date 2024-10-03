@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
+from xarray.core.coordinates import DatasetCoordinates
 
 from wam2layers.config import Config
 from wam2layers.tracking.core import (
@@ -111,7 +112,7 @@ def forwardtrack(
     output["gains"] += gains
 
 
-def initialize(config_file):
+def initialize(config_file: Config) -> tuple[Config, xr.Dataset, DatasetCoordinates]:
     """Read config, region, and initial states."""
     logger.info(f"Initializing experiment with config file {config_file}")
 
@@ -150,7 +151,7 @@ def initialize(config_file):
 #############################################################################
 
 
-def run_experiment(config_file):
+def run_experiment(config_file: Config):
     """Run a forwardtracking experiment from start to finish."""
     config, output, grid = initialize(config_file)
 

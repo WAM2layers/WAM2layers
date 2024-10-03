@@ -1,7 +1,9 @@
 """Loading ERA5 data for preprocessing."""
 from datetime import datetime as pydt
+from functools import lru_cache
 from pathlib import Path
 
+import cftime
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -31,7 +33,7 @@ PREPROCESS_ATTRS = {
 }
 
 
-def get_input_data(datetime: pd.Timestamp, config: Config):
+def get_input_data(datetime: cftime.datetime, config: Config):
     """Get the preprocessing input data for ERA5."""
     data = xr.Dataset()
     data["q"] = load_data("q", datetime, config)  # in kg kg-1
@@ -62,7 +64,12 @@ def get_input_data(datetime: pd.Timestamp, config: Config):
     return data, PREPROCESS_ATTRS
 
 
-def load_data(variable: str, datetime: pd.Timestamp, config: Config) -> xr.DataArray:
+@lru_cache(maxsize=16)  # Small speedup as file access is reduced
+def open_da(filepath) -> xr.DataArray:
+    return xr.open_dataarray(filepath, use_cftime=True)
+
+
+def load_data(variable: str, datetime: cftime.datetime, config: Config) -> xr.DataArray:
     """Load data for given variable and date."""
     template = config.filename_template
 
@@ -86,7 +93,7 @@ def load_data(variable: str, datetime: pd.Timestamp, config: Config) -> xr.DataA
         levtype=prefix,
         variable=variable,
     )
-    da = xr.open_dataarray(filepath).sel(time=datetime.strftime("%Y%m%d%H%M"))
+    da = open_da(filepath).sel(time=datetime)
 
     if "lev" in da.coords:
         da = da.rename(lev="level")

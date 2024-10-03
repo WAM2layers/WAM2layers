@@ -1,12 +1,13 @@
 import logging
 from datetime import datetime as pydt
 
+import cftime
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from wam2layers import __version__
-from wam2layers.config import Config
+from wam2layers.config import BoundingBox, Config
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.reference.variables import DATA_ATTRIBUTES
 
@@ -24,7 +25,7 @@ def output_path(date, config):
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
-def read_data_at_date(d, config):
+def read_data_at_date(d, config: Config):
     """Load input data for given date."""
     file = input_path(d, config)
     ds = xr.open_dataset(file, cache=False)
@@ -33,13 +34,13 @@ def read_data_at_date(d, config):
     return ds
 
 
-def read_data_at_time(t, config):
+def read_data_at_time(t: pd.Timestamp, config: Config) -> xr.Dataset:
     """Get a single time slice from input data at time t."""
     ds = read_data_at_date(t, config)
     return ds.sel(time=t, drop=True)
 
 
-def select_subdomain(ds, bbox):
+def select_subdomain(ds: xr.Dataset, bbox: BoundingBox):
     """Limit the data to a subdomain."""
     if bbox.west < bbox.east:
         return ds.sel(
@@ -58,7 +59,9 @@ def select_subdomain(ds, bbox):
         return ds_rolled.sel(longitude=in_bbox, latitude=slice(bbox.north, bbox.south))
 
 
-def load_data(t, config, subset="fluxes"):
+def load_data(
+    t: pd.Timestamp | cftime.datetime, config: Config, subset: str = "fluxes"
+) -> xr.Dataset:
     """Load variable at t, interpolate if needed."""
     variables = {
         "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
@@ -79,7 +82,7 @@ def load_data(t, config, subset="fluxes"):
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
-def load_tagging_region(config, t=None):
+def load_tagging_region(config: Config, t: pd.Timestamp | None = None):
     tagging_region = xr.open_dataarray(config.tagging_region)
 
     if config.tracking_domain is not None:

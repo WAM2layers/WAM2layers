@@ -1,8 +1,15 @@
+from typing import Literal
+
 import pandas as pd
 import xarray as xr
 
+from wam2layers.config import BoundingBox, Config
 
-def initialize_time(config, direction="forward"):
+
+def initialize_time(
+    config: Config,
+    direction: Literal["forward", "backward"] = "forward",
+) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timedelta]:
     dt = pd.Timedelta(seconds=config.timestep)
 
     if direction == "forward":
@@ -19,7 +26,7 @@ def initialize_time(config, direction="forward"):
     return t0, th, t1, dt
 
 
-def initialize_tagging_region(bbox, lat, lon):
+def initialize_tagging_region(bbox: BoundingBox, lat, lon):
     """Build a new xr.DataArray with ones inside and zeros outside bbox."""
     lat_in_bbox = (bbox.south <= lat) & (lat <= bbox.north)
     unrolled_lon_in_bbox = (bbox.west <= lon) & (lon <= bbox.east)

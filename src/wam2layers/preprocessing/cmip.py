@@ -1,8 +1,13 @@
+from functools import cache
+from pathlib import Path
+
+import cftime
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
+from wam2layers.utils.calendar import template_to_files
 
 WAM2CMIP = {  # wam2layers name -> cmip name
     "q": "hus",
@@ -58,7 +63,22 @@ def get_input_data(datetime, config):
     return data
 
 
-def load_cmip_var(variable, datetime: pd.Timestamp, config: Config):
+@cache
+def open_var(files: tuple[Path], var: str) -> xr.DataArray:
+    datasets = [
+        xr.open_dataset(
+            file,
+            chunks={"time": 1, "latitude": -1, "longitude": -1},
+            use_cftime=True,
+        )
+        for file in files
+    ]
+
+    ds = xr.concat(datasets, dim="time") if len(datasets) > 0 else datasets[0]
+    return ds[var]
+
+
+def load_cmip_var(variable, datetime: cftime.datetime, config: Config):
     """Load a single CMIP input data variable.
 
     Args:
@@ -70,10 +90,9 @@ def load_cmip_var(variable, datetime: pd.Timestamp, config: Config):
         DataArray of the variable at the specified time
     """
     var = WAM2CMIP[variable]
-    fname_pattern = config.filename_template.format(variable=var)
+    input_files = tuple(template_to_files(config, var))
 
-    ds = xr.open_mfdataset(fname_pattern, chunks="auto")
-    data = ds[var]
+    data = open_var(input_files, var)
 
     if var in THREE_HR_VARS:
         data = accumulate_3hr_var(data)
@@ -85,7 +104,7 @@ def load_cmip_var(variable, datetime: pd.Timestamp, config: Config):
         if old_name in data.coords:
             data = data.rename({old_name: new_name})
 
-    return data.sel(time=datetime.strftime("%Y%m%d%H%M"))
+    return data.sel(time=datetime)
 
 
 def accumulate_3hr_var(data: xr.DataArray) -> xr.DataArray:

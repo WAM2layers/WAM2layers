@@ -80,6 +80,29 @@ class Config(BaseModel):
 
     """
 
+    calendar: Literal[
+        "standard",
+        "gregorian",
+        "proleptic_gregorian",
+        "noleap",
+        "365_day",
+        "360_day",
+        "julian",
+        "all_leap",
+        "366_day",
+    ] = "standard"
+    """Which calendar the input data and preprocessed data is on.
+
+    ERA5 uses the standard calendar, however future scenarios in earth system models
+    can be on different calendars.
+
+    For example:
+
+    .. code-block:: yaml
+
+        calendar: noleap
+    """
+
     tracking_direction: Literal["forward", "backward"]
     """The tracking direction, either forward or backward.
 
