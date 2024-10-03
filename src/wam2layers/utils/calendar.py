@@ -24,7 +24,7 @@ def get_calendar_type(ds: xr.Dataset) -> str:
 
 
 def validate_calendar_type(config: Config) -> None:
-    file = template_to_files(config)[0]
+    file = template_to_files(config, var="ua")[0]
     data_calendar = get_calendar_type(xr.open_dataset(file))
     if data_calendar != config.calendar:
         warnings.warn(

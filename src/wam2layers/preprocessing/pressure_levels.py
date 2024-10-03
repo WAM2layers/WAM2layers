@@ -137,7 +137,7 @@ def interp_dp_midpoints(
 def mask_below_surface_data(
     level_data: xr.Dataset,
     ps: xr.DataArray,
-) -> tuple[xr.Dataset, xr.DataArray]:
+) -> xr.Dataset:
     """Mask any points that fall below the surface.
 
     Args:
