@@ -1,13 +1,53 @@
 """Functionality related to (non-standard) calendars."""
 import warnings
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, Union
 
 import cftime
 import pandas as pd
 import xarray as xr
 
-from wam2layers.config import Config
+if TYPE_CHECKING:
+    from wam2layers.config import Config
+
+# Define a type alias for easier reuse
+CfDateTime = Union[
+    cftime.DatetimeNoLeap,
+    cftime.Datetime360Day,
+    cftime.DatetimeAllLeap,
+    cftime.DatetimeGregorian,
+    cftime.DatetimeJulian,
+    cftime.DatetimeProlepticGregorian,
+]
+
+
+def subclass_cftime(dt: cftime.datetime) -> CfDateTime:
+    """Convert the base cftime.datetime to the correct subclass.
+
+    Base cftime.datetime objects don't place nice with xarray, by converting them to
+    the specific subclasses things work better.
+
+    This code is obsolete once https://github.com/pydata/xarray/pull/8942 is merged.
+    """
+    ordial = dt.toordinal()  # julian day ordinal
+    if dt.calendar in ["noleap", "365_day"]:
+        return cftime.DatetimeNoLeap.fromordinal(ordial, dt.calendar, dt.has_year_zero)
+    elif dt.calendar == "360_day":
+        return cftime.Datetime360Day.fromordinal(ordial, dt.calendar, dt.has_year_zero)
+    elif dt.calendar in ["all_leap", "366_day"]:
+        return cftime.DatetimeAllLeap.fromordinal(ordial, dt.calendar, dt.has_year_zero)
+    elif dt.calendar in ["standard", "gregorian"]:
+        return cftime.DatetimeGregorian.fromordinal(
+            ordial, dt.calendar, dt.has_year_zero
+        )
+    elif dt.calendar == "julian":
+        return cftime.DatetimeJulian.fromordinal(ordial, dt.calendar, dt.has_year_zero)
+    elif dt.calendar == "proleptic_gregorian":
+        return cftime.DatetimeProlepticGregorian.fromordinal(
+            ordial, dt.calendar, dt.has_year_zero
+        )
+    else:
+        raise ValueError
 
 
 def has_cftime(ds: xr.Dataset) -> bool:
@@ -23,38 +63,43 @@ def get_calendar_type(ds: xr.Dataset) -> str:
         return "standard"
 
 
-def validate_calendar_type(config: Config) -> None:
+def validate_calendar_type(config: "Config") -> None:
     file = template_to_files(config, var="ua")[0]
     data_calendar = get_calendar_type(xr.open_dataset(file))
     if data_calendar != config.calendar:
-        warnings.warn(
+        msg = (
             "Calendar mismatch detected:\n"
-            f"The configuration file has calendar type '{config.calendar}', "
+            f"    The configuration file has calendar type '{config.calendar}', "
             f"while the data has calendar '{data_calendar}'.\n"
-            "This can lead to unpredictable errors!"
+            "    This can lead to unpredictable errors!"
         )
+        warnings.warn(msg)
 
 
-def template_to_files(config: Config, var: str) -> list[Path]:
+def template_to_files(config: "Config", var: str) -> list[Path]:
     template = Path(config.filename_template.format(variable=var))
-
     return list(template.parent.glob(template.name))
 
 
 def round_cftime(
-    date: cftime.datetime, freq: str, how: Literal["nearest", "floor", "ceil"]
-) -> cftime.datetime:
+    date: CfDateTime, freq: str, how: Literal["nearest", "floor", "ceil"]
+) -> CfDateTime:
+    date.year, date.month, date.hour, date.minute, date.second, date.calendar, date.has_year_zero
     if how == "nearest":
-        return xr.CFTimeIndex([date]).round(freq)[0]
+        return xr.CFTimeIndex([date], calendar=date.calendar).round(freq)[0]
     if how == "ceil":
-        return xr.CFTimeIndex([date]).ceil(freq)[0]
+        return xr.CFTimeIndex([date], calendar=date.calendar).ceil(freq)[0]
     if how == "floor":
-        return xr.CFTimeIndex([date]).floor(freq)[0]
+        return xr.CFTimeIndex([date], calendar=date.calendar).floor(freq)[0]
 
 
-def cftime_from_iso(timestamp: str, calendar: str):
-    return cftime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S", calendar)
+def cftime_from_iso(timestamp: str, calendar: str) -> CfDateTime:
+    if timestamp.count(":") == 1:
+        fmt = "%Y-%m-%dT%H:%M"
+    else:
+        fmt = "%Y-%m-%dT%H:%M:%S"
+    return subclass_cftime(cftime.datetime.strptime(timestamp, fmt, calendar))
 
 
-def cftime_from_timestamp(timestamp: pd.Timestamp, calendar: str):
+def cftime_from_timestamp(timestamp: pd.Timestamp, calendar: str) -> CfDateTime:
     return cftime_from_iso(timestamp.isoformat(), calendar)

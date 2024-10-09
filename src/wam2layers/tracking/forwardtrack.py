@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 from xarray.core.coordinates import DatasetCoordinates
 
@@ -34,7 +33,7 @@ def forwardtrack(
     S0,
     region,
     output,
-    config,
+    config: Config,
 ):
     # Unpack input data
     fx_upper = stagger_x(F["fx_upper"].values)
@@ -120,7 +119,7 @@ def initialize(config_file: Config) -> tuple[Config, xr.Dataset, DatasetCoordina
     config = Config.from_yaml(config_file)
 
     # Initialize outputs as empty fields based on the input coords
-    t = cftime_from_timestamp(config.tracking_start_date, config.calendar)
+    t = config.tracking_start_date
     grid = load_data(t, config, "states").coords
     output = xr.Dataset(
         {

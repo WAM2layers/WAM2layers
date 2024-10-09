@@ -3,7 +3,6 @@ from datetime import datetime as pydt
 from functools import lru_cache
 from pathlib import Path
 
-import cftime
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -17,6 +16,7 @@ from wam2layers.preprocessing.utils import (
     log_once,
     midpoints,
 )
+from wam2layers.utils.calendar import CfDateTime
 
 PREPROCESS_ATTRS = {
     "title": "ERA5 data preprocessed for use in WAM2layers",
@@ -33,7 +33,7 @@ PREPROCESS_ATTRS = {
 }
 
 
-def get_input_data(datetime: cftime.datetime, config: Config):
+def get_input_data(datetime: CfDateTime, config: Config):
     """Get the preprocessing input data for ERA5."""
     data = xr.Dataset()
     data["q"] = load_data("q", datetime, config)  # in kg kg-1
@@ -75,7 +75,7 @@ def open_da(filepath) -> xr.DataArray:
     return xr.open_dataarray(filepath, use_cftime=True)
 
 
-def load_data(variable: str, datetime: cftime.datetime, config: Config) -> xr.DataArray:
+def load_data(variable: str, datetime: CfDateTime, config: Config) -> xr.DataArray:
     """Load data for given variable and date."""
     template = config.filename_template
 
@@ -112,7 +112,7 @@ def load_data(variable: str, datetime: cftime.datetime, config: Config) -> xr.Da
 
 
 def preprocess_precip_and_evap(
-    datetime: cftime.datetime, config: Config
+    datetime: CfDateTime, config: Config
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import xarray as xr
+from xarray.core.coordinates import DatasetCoordinates
 
 from wam2layers.config import Config
 from wam2layers.tracking.core import (
@@ -32,7 +33,7 @@ def backtrack(
     S0,
     tagging_mask,
     output,
-    config,
+    config: Config,
 ):
     # Unpack input data
     fx_upper = stagger_x(F["fx_upper"].values)
@@ -109,14 +110,14 @@ def backtrack(
     output["gains"] += gains
 
 
-def initialize(config_file):
+def initialize(config_file: Config) -> tuple[Config, xr.Dataset, DatasetCoordinates]:
     """Read config, region, and initial states."""
     logger.info(f"Initializing experiment with config file {config_file}")
 
     config = Config.from_yaml(config_file)
 
     # Initialize outputs as empty fields based on the input coords
-    t = cftime_from_timestamp(config.tracking_end_date, config.calendar)
+    t = config.tracking_end_date
     grid = load_data(t, config, "states").coords
     output = xr.Dataset(
         {
@@ -147,7 +148,7 @@ def initialize(config_file):
 #############################################################################
 
 
-def run_experiment(config_file):
+def run_experiment(config_file: Config):
     """Run a backtracking experiment from start to finish."""
     config, output, grid = initialize(config_file)
 
@@ -178,11 +179,7 @@ def run_experiment(config_file):
 
         # Load/update tagging mask
         tagging_mask = 0
-        if (
-            cftime_from_timestamp(config.tagging_start_date, config.calendar)
-            <= t1
-            <= cftime_from_timestamp(config.tagging_end_date, config.calendar)
-        ):
+        if config.tagging_start_date <= t1 <= config.tagging_end_date:
             if tagging_region_stationary:
                 tagging_mask = tagging_region
             else:

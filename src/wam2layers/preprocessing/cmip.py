@@ -1,13 +1,12 @@
 from functools import cache
 from pathlib import Path
 
-import cftime
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.utils.calendar import template_to_files
+from wam2layers.utils.calendar import CfDateTime, template_to_files
 
 WAM2CMIP = {  # wam2layers name -> cmip name
     "q": "hus",
@@ -34,7 +33,7 @@ LATENT_HEAT = 2.45e6  # J/kg (at ~20 degC, ranges from 2.5 (0 degC) to 2.4 (50 d
 # 1.91846e6*((temp/(temp-33.91))**2)
 
 
-def get_input_data(datetime: cftime.datetime, config: Config):
+def get_input_data(datetime: CfDateTime, config: Config):
     assert config.level_type == "pressure_levels"
 
     data = xr.Dataset()
@@ -86,7 +85,7 @@ def open_var(files: tuple[Path], var: str) -> xr.DataArray:
     return ds[var]
 
 
-def load_cmip_var(variable: str, datetime: cftime.datetime, config: Config):
+def load_cmip_var(variable: str, datetime: CfDateTime, config: Config):
     """Load a single CMIP input data variable.
 
     Args:
