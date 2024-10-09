@@ -1,9 +1,14 @@
 """General preprocessing routine."""
-import pandas as pd
+import warnings
+from itertools import product
+from multiprocessing.pool import Pool
+from pathlib import Path
+from typing import Literal, Union
+
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing import era5, logger
+from wam2layers.preprocessing import cmip, era5, logger
 from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
@@ -13,19 +18,25 @@ from wam2layers.preprocessing.pressure_levels import (
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.preprocessing.xarray_append import append_to_netcdf
 from wam2layers.reference.variables import PREPROCESSED_DATA_ATTRIBUTES
+from wam2layers.utils.calendar import CfDateTime, validate_calendar_type
 
 
-def get_input_dates(config: Config) -> pd.DatetimeIndex:
+def get_input_dates(config: Config) -> xr.CFTimeIndex:
     """Dates for pre-processing."""
-    return pd.date_range(
+    return xr.cftime_range(
         start=config.preprocess_start_date,
         end=config.preprocess_end_date,
         freq=config.input_frequency,
-    )
+        calendar=config.calendar,
+    ).round(
+        "1min"
+    )  # round to whole minutes: avoids leap(micro)seconds
 
 
 def get_input_data(
-    datetime: pd.Timestamp, config: Config, source: str
+    datetime: CfDateTime,
+    config: Config,
+    data_source: Literal["ERA5", "CMIP"] = "ERA5",
 ) -> tuple[xr.Dataset, dict[str, str]]:
     """Retrieve input data from a specified source (e.g. ERA5, CMIP6).
 
@@ -51,14 +62,18 @@ def get_input_data(
     Args:
         datetime: Which day of data should be loaded
         config: WAM2layers configuration
-        source (optional): Which source to use. Defaults to "ERA5".
+        data_source (optional): Which source to use. Defaults to "ERA5".
 
     Returns:
         Prepared input data
         Attributes corresponding to the input data source
     """
-    if source == "ERA5":
+    if data_source == "ERA5":
         data, input_data_attrs = era5.get_input_data(datetime, config)
+    elif data_source == "CMIP":
+        data = cmip.get_input_data(datetime, config)
+        data.load()
+        input_data_attrs = {}
     else:
         msg = "Only the ERA5 input data loader has been implemented."
         raise NotImplementedError(msg)
@@ -67,7 +82,9 @@ def get_input_data(
     return data, input_data_attrs
 
 
-def prep_experiment(config_file: Config, data_source: str):
+def prep_experiment(
+    config_file: Union[str, Path], data_source: Literal["ERA5", "CMIP"]
+):
     """Pre-process all data for a given config file.
 
     This function expects the following configuration settings:
@@ -90,8 +107,40 @@ def prep_experiment(config_file: Config, data_source: str):
     """
     config = Config.from_yaml(config_file)
 
-    for datetime in get_input_dates(config):
-        is_new_day = datetime == datetime.floor("1d")
+    if data_source == "CMIP":
+        validate_calendar_type(config)
+
+    daterange = get_input_dates(config)
+    day_groups = group_timestamps_by_day(daterange)
+
+    if config.parallel_preprocess:
+        msg = (
+            "Running the preprocessor in parallel is still under development.\n"
+            "    Use at your own risk! If you run into issues, set \n"
+            "    parallel_preprocess: false\n"
+            "    in your configuration."
+        )
+        warnings.warn(msg)
+
+        # We can speed up preprocessing by processing days of data in parallel:
+        parallel_preprocess(day_groups, data_source, config)
+    else:  # Process the data sequentially
+        for _, datetimes in day_groups.items():
+            preprocess(datetimes, data_source, config)
+
+
+def preprocess(
+    datetimes: xr.CFTimeIndex, data_source: Literal["ERA5", "CMIP"], config: Config
+):
+    """Preprocess one day of input data.
+
+    Args:
+        datetimes: Which datetimes have to be extracted.
+        data_source: The name of the data source ("ERA5" or "CMIP")
+        config: The WAM2layers configuration
+    """
+    for i, datetime in enumerate(datetimes):
+        is_new_day = i == 0
         logger.info(datetime)
 
         input_data, input_data_attrs = get_input_data(datetime, config, data_source)
@@ -184,3 +233,35 @@ def prep_experiment(config_file: Config, data_source: str):
 
         else:
             append_to_netcdf(output_path, ds, expanding_dim="time")
+
+
+def group_timestamps_by_day(daterange: xr.CFTimeIndex) -> dict[int, xr.CFTimeIndex]:
+    """Groups the date range by day, to align with the daily output files.
+
+    Args:
+        daterange: Datetimes to be preprocessed.
+
+    Returns:
+        dictionary with the days as key (formatted YYYYMMDD), and the corresponding
+            datetimes as value.
+    """
+    return daterange.groupby(
+        [date.year * 10000 + date.month * 100 + date.day for date in daterange]
+    )
+
+
+def parallel_preprocess(
+    day_groups: dict[int, xr.CFTimeIndex], data_source: str, config: Config
+):
+    """Preprocess WAM2layers with parallel processes.
+
+    The output data will be written per day, so we can split up the preprocessing
+    over multiple processes where each process analyses one day of data and writes
+    away the result.
+
+    This preprocessor will be a lot more memory and CPU intensive, but will speed
+    up preprocessing significantly.
+    """
+    pool = Pool(config.parallel_processes)
+    args = product(day_groups.values(), (data_source,), (config,))
+    pool.starmap(preprocess, args)

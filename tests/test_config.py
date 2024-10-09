@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+import cftime
 import pytest
 
 from wam2layers.config import BoundingBox, Config
@@ -35,7 +36,7 @@ def test_check_date_order_invalid_tracking():
     with pytest.raises(
         ValueError, match="tracking_end_date should be later than tracking_start_date"
     ):
-        config.tracking_end_date = datetime(2022, 7, 31)
+        config.tracking_end_date = cftime.DatetimeGregorian(2022, 7, 30)
 
 
 def test_check_date_order_invalid_tagging():
@@ -44,7 +45,7 @@ def test_check_date_order_invalid_tagging():
     with pytest.raises(
         ValueError, match="tagging_end_date should be later than tagging_start_date"
     ):
-        config.tagging_end_date = datetime(2022, 7, 31)
+        config.tagging_end_date = cftime.DatetimeGregorian(2022, 7, 30)
 
 
 def test_check_date_order_invalid_preprocess():
@@ -54,7 +55,7 @@ def test_check_date_order_invalid_preprocess():
         ValueError,
         match="preprocess_end_date should be later than preprocess_start_date",
     ):
-        config.preprocess_end_date = datetime(2022, 7, 31)
+        config.preprocess_end_date = cftime.DatetimeGregorian(2022, 7, 30)
 
 
 class TestValidateRegion:
