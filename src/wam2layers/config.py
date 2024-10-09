@@ -519,7 +519,7 @@ class Config(BaseModel):
             "preprocess_end_date",
         ]
         for date in date_entries:
-            if not isinstance(self[date], CfDateTime):
+            if not isinstance(self[date], CfDateTime.__args__):
                 self[date] = cftime_from_iso(self[date], c)
         return self
 
