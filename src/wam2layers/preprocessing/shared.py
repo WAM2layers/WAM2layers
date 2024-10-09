@@ -2,6 +2,8 @@
 import warnings
 from itertools import product
 from multiprocessing.pool import Pool
+from pathlib import Path
+from typing import Literal, Union
 
 import xarray as xr
 
@@ -32,7 +34,9 @@ def get_input_dates(config: Config) -> xr.CFTimeIndex:
 
 
 def get_input_data(
-    datetime: CfDateTime, config: Config, source: str
+    datetime: CfDateTime,
+    config: Config,
+    data_source: Literal["ERA5", "CMIP"] = "ERA5",
 ) -> tuple[xr.Dataset, dict[str, str]]:
     """Retrieve input data from a specified source (e.g. ERA5, CMIP6).
 
@@ -58,15 +62,15 @@ def get_input_data(
     Args:
         datetime: Which day of data should be loaded
         config: WAM2layers configuration
-        source (optional): Which source to use. Defaults to "ERA5".
+        data_source (optional): Which source to use. Defaults to "ERA5".
 
     Returns:
         Prepared input data
         Attributes corresponding to the input data source
     """
-    if source == "ERA5":
+    if data_source == "ERA5":
         data, input_data_attrs = era5.get_input_data(datetime, config)
-    elif source == "CMIP":
+    elif data_source == "CMIP":
         data = cmip.get_input_data(datetime, config)
         data.load()
         input_data_attrs = {}
@@ -78,7 +82,9 @@ def get_input_data(
     return data, input_data_attrs
 
 
-def prep_experiment(config_file: Config, data_source: str):
+def prep_experiment(
+    config_file: Union[str, Path], data_source: Literal["ERA5", "CMIP"]
+):
     """Pre-process all data for a given config file.
 
     This function expects the following configuration settings:
@@ -123,12 +129,14 @@ def prep_experiment(config_file: Config, data_source: str):
             preprocess(datetimes, data_source, config)
 
 
-def preprocess(datetimes: xr.CFTimeIndex, data_source: str, config: Config):
+def preprocess(
+    datetimes: xr.CFTimeIndex, data_source: Literal["ERA5", "CMIP"], config: Config
+):
     """Preprocess one day of input data.
 
     Args:
         datetimes: Which datetimes have to be extracted.
-        data_source: The name of the data source ("era5" or "cmip")
+        data_source: The name of the data source ("ERA5" or "CMIP")
         config: The WAM2layers configuration
     """
     for i, datetime in enumerate(datetimes):

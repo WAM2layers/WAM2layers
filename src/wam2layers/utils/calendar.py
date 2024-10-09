@@ -29,7 +29,7 @@ def subclass_cftime(dt: cftime.datetime) -> CfDateTime:
 
     This code is obsolete once https://github.com/pydata/xarray/pull/8942 is merged.
     """
-    ordial = dt.toordinal()  # julian day ordinal
+    ordial = dt.toordinal(fractional=True)  # julian day ordinal
     if dt.calendar in ["noleap", "365_day"]:
         return cftime.DatetimeNoLeap.fromordinal(ordial, dt.calendar, dt.has_year_zero)
     elif dt.calendar == "360_day":
