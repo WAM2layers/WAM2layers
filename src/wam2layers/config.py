@@ -224,7 +224,7 @@ class Config(BaseModel):
         parallel_preprocess: True
     """
 
-    parallel_processes: int | None = None
+    parallel_processes: Optional[int] = None
     """The number of parallel processes to use (if parallel processing is enabled).
 
     If this is left empty, the number of processes is set to the number of
