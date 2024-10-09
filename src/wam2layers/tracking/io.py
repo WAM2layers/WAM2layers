@@ -124,8 +124,8 @@ def get_main_attrs(attrs: dict, config: Config):
         if "history" in attrs
         else new_history,
         "source": (
-            "Moisture tracking applied to ERA5 dataset: ECMWF Reanalysis v5 (ERA5), "
-            "www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5"
+            "Moisture tracking applied to original data; "
+            f"{attrs['source'] if 'source' in attrs else 'UNKNOWN'}"
         ),
         "references": "doi.org/10.5281/zenodo.7010594, doi.org/10.5194/esd-5-471-2014",
         "Conventions": "CF-1.6",
