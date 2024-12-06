@@ -75,6 +75,12 @@ def backtrack(
         + tagging_mask * precip * s_upper / (s_upper + s_lower)
     )
 
+    # Remove boundary transport from s_track and bookkeep losses
+    boundary = get_boundary(losses, periodic=config.periodic_boundary)
+    losses = xr.where(boundary, (s_track_upper + s_track_lower), 0)
+    s_track_upper = xr.where(boundary, 0, s_track_upper)
+    s_track_lower = xr.where(boundary, 0, s_track_lower)
+
     # lower and upper: redistribute unaccounted water that is otherwise lost from the sytem
     overshoot_lower = np.maximum(0, s_track_lower - S0["s_lower"])
     overshoot_upper = np.maximum(0, s_track_upper - S0["s_upper"])
@@ -91,15 +97,9 @@ def backtrack(
     # At this point any of the storages could still be overfull, thus stabilize and assigns losses
     losses_lower = np.maximum(0, s_track_lower - S0["s_lower"])
     losses_upper = np.maximum(0, s_track_upper - S0["s_upper"])
-    losses = losses_lower + losses_upper
+    losses += losses_lower + losses_upper
     s_track_lower = np.minimum(s_track_lower, S0["s_lower"])
     s_track_upper = np.minimum(s_track_upper, S0["s_upper"])
-
-    # Bookkeep boundary transport as "lost moisture at grid edges"
-    boundary = get_boundary(losses, periodic=config.periodic_boundary)
-    losses += xr.where(boundary, (s_track_upper + s_track_lower), 0)
-    s_track_upper = xr.where(boundary, 0, s_track_upper)
-    s_track_lower = xr.where(boundary, 0, s_track_lower)
 
     # Update output fields
     output["tagged_precip"] += tagging_mask * precip * config.timestep
