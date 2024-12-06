@@ -1,45 +1,57 @@
 import logging
 from datetime import datetime as pydt
+from functools import lru_cache
+from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from wam2layers import __version__
-from wam2layers.config import Config
+from wam2layers.config import BoundingBox, Config
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.reference.variables import DATA_ATTRIBUTES
+from wam2layers.utils.calendar import CfDateTime, round_cftime
 
 logger = logging.getLogger(__name__)
 
 
-def input_path(date, config):
-    input_dir = config.preprocessed_data_folder
+def input_path(date: CfDateTime, input_dir: Path):
     return f"{input_dir}/{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
 
 
-def output_path(date, config):
+def output_path(date: CfDateTime, config: Config):
     output_dir = config.output_folder
     mode = "backtrack" if config.tracking_direction == "backward" else "forwardtrack"
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
-def read_data_at_date(d, config):
-    """Load input data for given date."""
-    file = input_path(d, config)
-    ds = xr.open_dataset(file, cache=False)
-    if config.tracking_domain is not None:
-        return select_subdomain(ds, config.tracking_domain)
+@lru_cache(maxsize=4)  # cache for speedup
+def read_data_at_date(
+    date: CfDateTime, input_dir: Path, tracking_domain: Optional[BoundingBox]
+):
+    """Load input data for given date.
+
+    This function is accessed every time step. By caching the result we reduce the
+    number of times the files need to be accessed.
+    """
+    file = input_path(date, input_dir)
+    ds = xr.open_dataset(file, cache=False, use_cftime=True)
+    if tracking_domain is not None:
+        return select_subdomain(ds, tracking_domain)
     return ds
 
 
-def read_data_at_time(t, config):
-    """Get a single time slice from input data at time t."""
-    ds = read_data_at_date(t, config)
-    return ds.sel(time=t, drop=True)
+def read_data_at_time(datetime: CfDateTime, config: Config) -> xr.Dataset:
+    """Get a single time slice from input data."""
+    ds = read_data_at_date(
+        datetime, config.preprocessed_data_folder, config.tracking_domain
+    )
+    return ds.sel(time=datetime, drop=True)
 
 
-def select_subdomain(ds, bbox):
+def select_subdomain(ds: xr.Dataset, bbox: BoundingBox):
     """Limit the data to a subdomain."""
     if bbox.west < bbox.east:
         return ds.sel(
@@ -58,20 +70,20 @@ def select_subdomain(ds, bbox):
         return ds_rolled.sel(longitude=in_bbox, latitude=slice(bbox.north, bbox.south))
 
 
-def load_data(t, config, subset="fluxes"):
+def load_data(t: CfDateTime, config: Config, subset: str = "fluxes") -> xr.Dataset:
     """Load variable at t, interpolate if needed."""
     variables = {
         "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
         "states": ["s_upper", "s_lower"],
     }
 
-    t1 = t.ceil(config.input_frequency)
+    t1 = round_cftime(t, config.input_frequency, "ceil")
     da1 = read_data_at_time(t1, config)[variables[subset]]
     if t == t1:
         # this saves a lot of work if times are aligned with input
         return da1
 
-    t0 = t.floor(config.input_frequency)
+    t0 = round_cftime(t, config.input_frequency, "floor")
     da0 = read_data_at_time(t0, config)[variables[subset]]
     if t == t0:
         return da0
@@ -79,7 +91,7 @@ def load_data(t, config, subset="fluxes"):
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
-def load_tagging_region(config, t=None):
+def load_tagging_region(config: Config, t: Optional[CfDateTime] = None):
     tagging_region = xr.open_dataarray(config.tagging_region)
 
     if config.tracking_domain is not None:
@@ -90,7 +102,7 @@ def load_tagging_region(config, t=None):
     return tagging_region
 
 
-def add_time_bounds(ds: xr.Dataset, t: pd.Timestamp, config: Config):
+def add_time_bounds(ds: xr.Dataset, t: CfDateTime, config: Config):
     """Compute the time bounds and add them to the output dataset."""
     dt = pd.Timedelta(config.output_frequency)
     if config.tracking_direction == "forward":
@@ -105,24 +117,26 @@ def get_main_attrs(attrs: dict, config: Config):
         f"created on {pydt.utcnow():%Y-%m-%dT%H:%M:%SZ} "
         f"using wam2layers version {__version__}; "
     )
-    return {
+    new_attrs = {
         "title": f"WAM2Layers {config.tracking_direction}tracking output file",
         "history": new_history + attrs["history"]
         if "history" in attrs
         else new_history,
         "source": (
-            "Moisture tracking applied to ERA5 dataset: ECMWF Reanalysis v5 (ERA5), "
-            "www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5"
+            "Moisture tracking applied to original data; "
+            f"{attrs['source'] if 'source' in attrs else 'UNKNOWN'}"
         ),
         "references": "doi.org/10.5281/zenodo.7010594, doi.org/10.5194/esd-5-471-2014",
         "Conventions": "CF-1.6",
-        "WAM2Layers_config": config.model_dump_json(),
+        "WAM2Layers_config": config.to_string(),
     }
+
+    return new_attrs
 
 
 def write_output(
     output: xr.Dataset,
-    t: pd.Timestamp,
+    t: CfDateTime,
     config: Config,
 ) -> None:
     # TODO: add back (and cleanup) coordinates and units
@@ -141,7 +155,7 @@ def write_output(
 
     comp = dict(zlib=True, complevel=8)
     encoding = {var: comp for var in output.data_vars}
-    time_encoding = {"units": "seconds since 1900-01-01"}
+    time_encoding = {"units": "seconds since 1900-01-01"}  # TODO: check cftime output
     encoding["time"] = time_encoding
     encoding["time_bnds"] = time_encoding
 
