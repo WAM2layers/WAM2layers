@@ -19,7 +19,7 @@ conda create --name wamenv python=3.11
 conda activate wamenv
 
 # Install wam2layers in your current python environment
-pip install wam2layers[viz]
+pip install wam2layers[viz] # includes packages required for visualization
 
 # Check the version of wam2layers
 wam2layers --version
