@@ -213,7 +213,7 @@ def arco_era5(ctx, config_file):
     Usage examples:
 
         \b
-        - wam2layers preprocess arco_era5 path/to/cases/era5_2021.yaml
+        - wam2layers preprocess arco-era5 path/to/cases/era5_2021.yaml
     """
     log_path = Config.from_yaml(config_file).preprocessed_data_folder
     setup_logging(log_path, ctx.obj["debug"])
