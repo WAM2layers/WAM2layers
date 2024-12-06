@@ -1,4 +1,4 @@
-"""Load ACOR-ERA5: preprocessing from zarr."""
+"""Load ARCO-ERA5: preprocessing from zarr."""
 
 from time import time
 
@@ -24,7 +24,7 @@ REQUIRED_VARS = [
     "surface_latent_heat_flux",
 ]
 
-ACOR2WAM = {
+ARCO2WAM = {
     "u_component_of_wind": "u",
     "v_component_of_wind": "v",
     "specific_humidity": "q",
@@ -36,7 +36,7 @@ ACOR2WAM = {
 
 
 def get_input_data(datetime: pd.Timestamp, config: Config):
-    """Get the preprocessing input data for ACOR-ERA5."""
+    """Get the preprocessing input data for ARCO-ERA5."""
     t0 = time()
     assert config.level_type == "pressure_levels"
 
@@ -70,7 +70,7 @@ def get_input_data(datetime: pd.Timestamp, config: Config):
     data["level"] = data["level"] * 100  # hPa --> Pa
     data["level"].attrs.update(units="Pa")
 
-    data = data.rename_vars(ACOR2WAM)
+    data = data.rename_vars(ARCO2WAM)
     data = data.drop_vars(
         [
             "2m_temperature",
@@ -79,6 +79,6 @@ def get_input_data(datetime: pd.Timestamp, config: Config):
             "total_precipitation",
         ]
     )
-    data.load()  # Load ACOR data into memory
-    print(f"Elapsed time ACOR load: {time() - t0:.1f} s")
+    data.load()  # Load ARCO data into memory
+    print(f"Elapsed time ARCO load: {time() - t0:.1f} s")
     return data, {}

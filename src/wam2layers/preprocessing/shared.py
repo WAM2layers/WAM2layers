@@ -8,7 +8,7 @@ from typing import Literal, Union
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing import acor, cmip, era5, logger
+from wam2layers.preprocessing import arco, cmip, era5, logger
 from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
@@ -74,8 +74,8 @@ def get_input_data(
         data = cmip.get_input_data(datetime, config)
         data.load()
         input_data_attrs = {}
-    elif data_source == "ACOR":
-        data, input_data_attrs = acor.get_input_data(datetime, config)
+    elif data_source == "ARCO":
+        data, input_data_attrs = arco.get_input_data(datetime, config)
     else:
         msg = "Only the ERA5 input data loader has been implemented."
         raise NotImplementedError(msg)
