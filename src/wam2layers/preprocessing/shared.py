@@ -215,6 +215,8 @@ def preprocess(
         )
         add_bounds(ds)
 
+        ds = shift_longitude(ds)
+
         # Add attributes
         for var in PREPROCESSED_DATA_ATTRIBUTES:
             ds[var].attrs.update(PREPROCESSED_DATA_ATTRIBUTES[var])
@@ -267,3 +269,14 @@ def parallel_preprocess(
     pool = Pool(config.parallel_processes)
     args = product(day_groups.values(), (data_source,), (config,))
     pool.starmap(preprocess, args)
+
+
+def shift_longitude(ds: xr.Dataset) -> xr.Dataset:
+    """Return dataset with longitude shifted to ISO 6709 standard."""
+    if (
+        (ds["longitude"].to_numpy() > 180).any() or
+        (ds["longitude"].to_numpy() < 0).any()
+    ):
+        ds.coords["longitude"] = (ds.coords["longitude"] + 180) % 360 - 180
+        return ds.sortby(ds.longitude)
+    return ds
