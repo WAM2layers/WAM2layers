@@ -213,9 +213,9 @@ def preprocess(
             .expand_dims("time")
             .astype("float32")
         )
-        add_bounds(ds)
 
         ds = shift_longitude(ds)
+        add_bounds(ds)
 
         # Add attributes
         for var in PREPROCESSED_DATA_ATTRIBUTES:
