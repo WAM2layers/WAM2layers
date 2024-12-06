@@ -4,10 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+- Windows instruction to the installation guide ([#392](https://github.com/WAM2layers/WAM2layers/pull/392)).
+- support for preprocessing CMIP data ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+- experimental support for parallel preprocessing ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+
+## Release v3.1.0 (2024-06-21)
+
 ### Changed
 
-- updated example config
+- The user guide has been restructured [#367](https://github.com/WAM2layers/WAM2layers/pull/367)
+- The example config has been updated [#371](https://github.com/WAM2layers/WAM2layers/pull/371)
 - Added config options to allow for specifying the layer boundary during preprocessing [#391](https://github.com/WAM2layers/WAM2layers/pull/391).
+- The preprocessing module has been restructured to allow for easier implementation of new datasets [#391](https://github.com/WAM2layers/WAM2layers/pull/391)
 
 ### Fixed
 

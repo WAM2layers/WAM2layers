@@ -175,6 +175,20 @@ def cmip(ctx, config_file):
 
     CONFIG_FILE: Path to WAM2layers experiment configuration file.
 
+    Note that currently only the right variables from the right MIPs are supported:
+        MIP table "3hr":
+            hfls,
+            pr
+        MIP table "6hrPlevPt":
+            hus,
+            huss,
+            ua,
+            uas,
+            va,
+            vas
+        MIP table "6hrLev":
+            ps
+
     Usage examples:
 
         \b
