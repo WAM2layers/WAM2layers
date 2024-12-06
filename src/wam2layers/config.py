@@ -1,5 +1,5 @@
+import json
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, NamedTuple, Optional, Union
 
@@ -15,7 +15,22 @@ from pydantic import (
 )
 from typing_extensions import Annotated
 
+from wam2layers.utils.calendar import CfDateTime, cftime_from_iso
+
 logger = logging.getLogger(__name__)
+
+
+CALENDAR_TYPES = Literal[
+    "standard",
+    "gregorian",
+    "proleptic_gregorian",
+    "noleap",
+    "365_day",
+    "360_day",
+    "julian",
+    "all_leap",
+    "366_day",
+]
 
 
 class BoundingBox(NamedTuple):
@@ -42,7 +57,10 @@ def validate_region(region):
 
 class Config(BaseModel):
     # Pydantic configuration
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(
+        validate_assignment=True,
+        arbitrary_types_allowed=True,  # required for cftime
+    )
 
     # Configuration settings
     filename_template: str
@@ -78,6 +96,19 @@ class Config(BaseModel):
 
         preprocessed_data_folder: ~/floodcase_202107/preprocessed_data
 
+    """
+
+    calendar: CALENDAR_TYPES = "standard"
+    """Which calendar the input data and preprocessed data is on.
+
+    ERA5 uses the standard calendar, however future scenarios in earth system models
+    can be on different calendars.
+
+    For example:
+
+    .. code-block:: yaml
+
+        calendar: noleap
     """
 
     tracking_direction: Literal["forward", "backward"]
@@ -152,7 +183,7 @@ class Config(BaseModel):
 
     """
 
-    preprocess_start_date: datetime
+    preprocess_start_date: CfDateTime
     """Start date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
@@ -166,7 +197,7 @@ class Config(BaseModel):
 
     """
 
-    preprocess_end_date: datetime
+    preprocess_end_date: CfDateTime
     """End date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
@@ -179,7 +210,35 @@ class Config(BaseModel):
         preprocess_end_date: "2021-07-15T23:00"
     """
 
-    tracking_start_date: datetime
+    parallel_preprocess: bool = False
+    """Run the preprocessor with multiple parallel processes.
+
+    Optional configuration. Should be True of False.
+    Parallel preprocessing is a lot faster but much more resource intensive.
+    Note that this feature is still experimental, and needs more testing.
+
+    For example:
+
+    .. code-block:: yaml
+
+        parallel_preprocess: True
+    """
+
+    parallel_processes: Optional[int] = None
+    """The number of parallel processes to use (if parallel processing is enabled).
+
+    If this is left empty, the number of processes is set to the number of
+    CPU threads available on your system. You can define a lower number to
+    reduce the CPU and memory load.
+
+    For example:
+
+    .. code-block:: yaml
+
+        parallel_processes: 4
+    """
+
+    tracking_start_date: CfDateTime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
@@ -194,7 +253,7 @@ class Config(BaseModel):
 
     """
 
-    tracking_end_date: datetime
+    tracking_end_date: CfDateTime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
@@ -207,7 +266,7 @@ class Config(BaseModel):
         tracking_end_date: "2021-07-15T23:00"
     """
 
-    tagging_start_date: datetime
+    tagging_start_date: CfDateTime
     """Start date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
@@ -226,7 +285,7 @@ class Config(BaseModel):
 
     """
 
-    tagging_end_date: datetime
+    tagging_end_date: CfDateTime
     """End date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
@@ -440,6 +499,30 @@ class Config(BaseModel):
             path.mkdir(parents=True)
         return path
 
+    @model_validator(mode="before")
+    def convert_dates(self: dict[str, str]):
+        # Before validator: calendar entry might be missing.
+        if "calendar" not in self:
+            self["calendar"] = "standard"
+        elif self["calendar"] not in CALENDAR_TYPES.__args__:
+            msg = f"Calendar '{self['calendar']} is not a valid calendar type."
+            raise ValueError(msg)
+
+        c = self["calendar"]
+
+        date_entries = [
+            "tracking_start_date",
+            "tracking_end_date",
+            "tagging_start_date",
+            "tagging_end_date",
+            "preprocess_start_date",
+            "preprocess_end_date",
+        ]
+        for date in date_entries:
+            if not isinstance(self[date], CfDateTime.__args__):
+                self[date] = cftime_from_iso(self[date], c)
+        return self
+
     @model_validator(mode="after")
     def check_date_order(self):
         if self.tracking_start_date > self.tracking_end_date:
@@ -467,4 +550,21 @@ class Config(BaseModel):
         """
         fpath = Path(fname)
         with fpath.open("w") as f:
-            yaml.dump(self.model_dump(mode="json"), f)
+            f.write(self.to_string())
+
+    def to_string(self: "Config"):
+        """Pydantic can't serialize the dates. We convert these to string manually."""
+        dates = [
+            "preprocess_start_date",
+            "preprocess_end_date",
+            "tracking_start_date",
+            "tracking_end_date",
+            "tagging_start_date",
+            "tagging_end_date",
+        ]
+        jsonconfig = self.model_dump_json(exclude=dates)
+        jsondict = json.loads(jsonconfig)
+
+        for date in dates:
+            jsondict[date] = getattr(self, date).strftime("%Y-%m-%dT%H:%M")
+        return json.dumps(jsondict)
