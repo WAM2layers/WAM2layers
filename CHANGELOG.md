@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+- Windows instruction to the installation guide ([#392](https://github.com/WAM2layers/WAM2layers/pull/392)).
+- support for preprocessing CMIP data ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+- experimental support for parallel preprocessing ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+- config file documentation expanded ([#398](https://github.com/WAM2layers/WAM2layers/pull/398)).
 
 ## Release v3.1.0 (2024-06-21)
 

@@ -1,7 +1,6 @@
 import logging
 import time
 
-import numpy as np
 import pandas as pd
 import psutil
 import xarray as xr
