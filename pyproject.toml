@@ -49,6 +49,10 @@ dependencies = [
 viz = [
     "cartopy",
 ]
+arco = [
+    "zarr",
+    "gcsfs",
+]
 dev = [
     "black",
     "cffconvert",
@@ -65,7 +69,7 @@ docs = [
     "sphinx",
     "myst-nb",
 ]
-complete = ["wam2layers[viz,dev,docs]"]
+complete = ["wam2layers[viz,arco,dev,docs]"]
 
 [project.urls]
 Documentation = "https://wam2layers.readthedocs.io/en/latest"
