@@ -8,10 +8,8 @@ import xarray as xr
 
 from wam2layers import __version__
 from wam2layers.config import Config
-from wam2layers.preprocessing.cmip import LATENT_HEAT
-from wam2layers.preprocessing.utils import calculate_humidity
+from wam2layers.preprocessing.utils import accumulation_to_flux, calculate_humidity
 from wam2layers.utils.calendar import CfDateTime
-
 
 PREPROCESS_ATTRS = {
     "title": "ARCO-ERA5 data preprocessed for use in WAM2layers",
@@ -45,7 +43,7 @@ REQUIRED_VARS = [
     "2m_dewpoint_temperature",
     "total_column_water",
     "total_precipitation",
-    "surface_latent_heat_flux",
+    "evaporation",
 ]
 
 ARCO2WAM = {
@@ -64,7 +62,7 @@ def get_input_data(datetime: CfDateTime, config: Config):
     if config.level_type != "pressure_levels":
         msg = "Currently the ARCO-ERA5 preprocessor only supports pressure level data."
         raise ValueError(msg)
-    
+
     if config.calendar != "proleptic_gregorian":
         msg = (
             "ARCO-ERA5 data is on a 'proleptic_gregorian' calendar.\n"
@@ -81,9 +79,20 @@ def get_input_data(datetime: CfDateTime, config: Config):
         data["2m_dewpoint_temperature"], data["surface_pressure"]
     )
 
-    evap = data["surface_latent_heat_flux"] / LATENT_HEAT
-    data["precip"] = np.maximum(data["total_precipitation"], 0) + np.maximum(evap, 0)
-    data["evap"] = np.abs(np.minimum(evap, 0))
+    # Transfer negative (originally positive) values of evap to precip
+    data["precip"] = np.maximum(data["total_precipitation"], 0) + np.maximum(
+        data["evaporation"], 0
+    )
+
+    # Change sign convention to all positive,
+    data["evap"] = np.abs(np.minimum(data["evaporation"], 0))
+
+    data["precip"] = accumulation_to_flux(
+        data["precip"], input_frequency=config.input_frequency
+    )
+    data["evap"] = accumulation_to_flux(
+        data["evap"], input_frequency=config.input_frequency
+    )
 
     data["level"] = data["level"] * 100  # hPa --> Pa
     data["level"].attrs.update(units="Pa")
@@ -93,7 +102,7 @@ def get_input_data(datetime: CfDateTime, config: Config):
         [
             "2m_temperature",
             "2m_dewpoint_temperature",
-            "surface_latent_heat_flux",
+            "evaporation",
             "total_precipitation",
         ]
     )
