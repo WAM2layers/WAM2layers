@@ -80,7 +80,7 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
         vp = pad_y_zero(v)  # [M-1, N] -> [M+1, N]
     else:
         sp = pad_xy_zero(s)  # [M, N] -> [M+2, N+2]
-        up = pad_xy_zero(u)  # [M-2, N-1] -> [M, N-1]
+        up = pad_xy_zero(u)  # [M-2, N-1] -> [M, N+1]
         vp = pad_xy_zero(v)  # [M-1, N-2] -> [M+1, N]
 
     west = np.s_[:-1]

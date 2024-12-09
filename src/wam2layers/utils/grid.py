@@ -27,7 +27,7 @@ def stagger_x(fx, periodic_x=False):
     return fx_new[1:-1, :]
 
 
-def stagger_y(fy, periodic_x=True):
+def stagger_y(fy, periodic_x=False):
     """Interpolate fy to the grid cell interfaces.
     Only the values at the interior interfaces are returned
     Arguments:
@@ -35,9 +35,9 @@ def stagger_y(fy, periodic_x=True):
     Returns:
         2d array of shape [M-1, N-2] or [M-1, N] when periodic_x = True
     """
-    if not periodic_x:
-        return 0.5 * (fy[:-1, :] + fy[1:, :])[:, 1:-1]
-    return 0.5 * (fy[:-1, :] + fy[1:, :])
+    if periodic_x:
+        return 0.5 * (fy[:-1, :] + fy[1:, :])
+    return 0.5 * (fy[:-1, :] + fy[1:, :])[:, 1:-1]
 
 
 def get_grid_info(ds):
