@@ -156,7 +156,9 @@ def run_experiment(config_file: Config):
     """Run a backtracking experiment from start to finish."""
     config, output, grid = initialize(config_file)
 
-    progress_tracker = ProgressTracker(output, mode="backtrack")
+    progress_tracker = ProgressTracker(
+        output, mode="backtrack", periodic_x=config.periodic_boundary
+    )
 
     t0, th, t1, dt = initialize_time(config, direction="backward")
 

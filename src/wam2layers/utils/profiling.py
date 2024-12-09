@@ -29,9 +29,10 @@ class Profiler:
 
 
 class ProgressTracker:
-    def __init__(self, output, mode="backtrack"):
+    def __init__(self, output, mode="backtrack", periodic_x=False):
         """Keep track of tagged and tracked moisture."""
         self.mode = mode
+        self.periodic_x = periodic_x
         self.total_tagged_moisture = 0
         self.tracked = 0
         self.lost_water = 0
@@ -58,7 +59,10 @@ class ProgressTracker:
             self.tracked += totals["p_track_lower"] + totals["p_track_upper"]
             self.total_tagged_moisture += totals["tagged_evap"]
 
-        interior_losses = area_weighted_output.losses[1:-1, 1:-1].sum()
+        if self.periodic_x:
+            interior_losses = area_weighted_output.losses[1:-1, :].sum()
+        else:
+            interior_losses = area_weighted_output.losses[1:-1, 1:-1].sum()
         boundary_transport = totals["losses"] - interior_losses
 
         self.lost_water += interior_losses
@@ -80,7 +84,11 @@ class ProgressTracker:
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
 
-        interior_losses = area_weighted_output.losses[1:-1, 1:-1].sum()
+        if self.periodic_x:
+            interior_losses = area_weighted_output.losses[1:-1, :].sum()
+        else:
+            interior_losses = area_weighted_output.losses[1:-1, 1:-1].sum()
+        boundary_transport = totals["losses"] - interior_losses
         boundary_transport = totals["losses"] - interior_losses
 
         lost_water = self.lost_water + interior_losses

@@ -159,7 +159,9 @@ def run_experiment(config_file: Config):
     """Run a forwardtracking experiment from start to finish."""
     config, output, grid = initialize(config_file)
 
-    progress_tracker = ProgressTracker(output, mode="forwardtrack")
+    progress_tracker = ProgressTracker(
+        output, mode="forwardtrack", periodic_x=config.periodic_boundary
+    )
 
     t0, th, t1, dt = initialize_time(config, direction="forward")
 
