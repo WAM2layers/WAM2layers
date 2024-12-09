@@ -67,7 +67,7 @@ def get_input_data(datetime: CfDateTime, config: Config):
     
     if config.calendar != "proleptic_gregorian":
         msg = (
-            "ARCO-ERA5 data is on a 'proleptic_georgian' calendar.\n"
+            "ARCO-ERA5 data is on a 'proleptic_gregorian' calendar.\n"
             "Please set this calendar in your configuration file."
         )
         raise ValueError(msg)
