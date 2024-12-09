@@ -72,7 +72,7 @@ def get_grid_info(ds):
 
 def get_boundary(field, periodic=False):
     """Return a mask with 1 along the boundary and 0 in the interior."""
-    boundary = xr.ones_like(field, dtype=bool)
+    boundary = np.ones_like(field, dtype=bool)
     # Mask interior
     if periodic:
         boundary[1:-1, :] = 0
