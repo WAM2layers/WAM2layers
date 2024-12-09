@@ -76,7 +76,7 @@ def backtrack(
     )
 
     # Remove boundary transport from s_track and bookkeep losses
-    boundary = get_boundary(losses, periodic=config.periodic_boundary)
+    boundary = get_boundary(s_track_upper, periodic=config.periodic_boundary)
     losses = xr.where(boundary, (s_track_upper + s_track_lower), 0)
     s_track_upper = xr.where(boundary, 0, s_track_upper)
     s_track_lower = xr.where(boundary, 0, s_track_lower)
