@@ -1,5 +1,6 @@
 """Loading ERA5 data for preprocessing."""
 from datetime import datetime as pydt
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,7 @@ from wam2layers.preprocessing.utils import (
     log_once,
     midpoints,
 )
+from wam2layers.utils.calendar import CfDateTime
 
 PREPROCESS_ATTRS = {
     "title": "ERA5 data preprocessed for use in WAM2layers",
@@ -31,7 +33,7 @@ PREPROCESS_ATTRS = {
 }
 
 
-def get_input_data(datetime: pd.Timestamp, config: Config):
+def get_input_data(datetime: CfDateTime, config: Config):
     """Get the preprocessing input data for ERA5."""
     data = xr.Dataset()
     data["q"] = load_data("q", datetime, config)  # in kg kg-1
@@ -62,7 +64,18 @@ def get_input_data(datetime: pd.Timestamp, config: Config):
     return data, PREPROCESS_ATTRS
 
 
-def load_data(variable: str, datetime: pd.Timestamp, config: Config) -> xr.DataArray:
+@lru_cache(maxsize=16)  # Cache this function: small speedup as file access is reduced
+def open_da(filepath) -> xr.DataArray:
+    """Cached open dataarray function.
+
+    This function is accessed every time step. By caching the result we reduce the
+    number of times the files need to be accessed, making the preprocessing slightly
+    more efficient.
+    """
+    return xr.open_dataarray(filepath, use_cftime=True)
+
+
+def load_data(variable: str, datetime: CfDateTime, config: Config) -> xr.DataArray:
     """Load data for given variable and date."""
     template = config.filename_template
 
@@ -86,7 +99,7 @@ def load_data(variable: str, datetime: pd.Timestamp, config: Config) -> xr.DataA
         levtype=prefix,
         variable=variable,
     )
-    da = xr.open_dataarray(filepath).sel(time=datetime.strftime("%Y%m%d%H%M"))
+    da = open_da(filepath).sel(time=datetime)
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
@@ -99,7 +112,7 @@ def load_data(variable: str, datetime: pd.Timestamp, config: Config) -> xr.DataA
 
 
 def preprocess_precip_and_evap(
-    datetime: pd.Timestamp, config: Config
+    datetime: CfDateTime, config: Config
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Load and pre-process precipitation and evaporation."""
     # All incoming units are accumulations (in m) since previous time step

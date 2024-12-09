@@ -96,7 +96,7 @@ def _plot_output(config: Config, ax):
     region = load_tagging_region(config)
 
     # Load data
-    dates = pd.date_range(
+    dates = xr.cftime_range(
         start=config.tracking_start_date,
         end=config.tracking_end_date,
         freq=config.output_frequency,

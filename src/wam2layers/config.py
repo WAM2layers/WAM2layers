@@ -1,5 +1,5 @@
+import json
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, NamedTuple, Optional, Union
 
@@ -15,7 +15,22 @@ from pydantic import (
 )
 from typing_extensions import Annotated
 
+from wam2layers.utils.calendar import CfDateTime, cftime_from_iso
+
 logger = logging.getLogger(__name__)
+
+
+CALENDAR_TYPES = Literal[
+    "standard",
+    "gregorian",
+    "proleptic_gregorian",
+    "noleap",
+    "365_day",
+    "360_day",
+    "julian",
+    "all_leap",
+    "366_day",
+]
 
 
 class BoundingBox(NamedTuple):
@@ -42,7 +57,10 @@ def validate_region(region):
 
 class Config(BaseModel):
     # Pydantic configuration
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(
+        validate_assignment=True,
+        arbitrary_types_allowed=True,  # required for cftime
+    )
 
     # Configuration settings
     filename_template: str
@@ -80,6 +98,19 @@ class Config(BaseModel):
 
     """
 
+    calendar: CALENDAR_TYPES = "standard"
+    """Which calendar the input data and preprocessed data is on.
+
+    ERA5 uses the standard calendar, however future scenarios in earth system models
+    can be on different calendars.
+
+    For example:
+
+    .. code-block:: yaml
+
+        calendar: noleap
+    """
+
     tracking_direction: Literal["forward", "backward"]
     """The tracking direction, either forward or backward.
 
@@ -96,17 +127,24 @@ class Config(BaseModel):
     tagging_region: Annotated[
         Union[FilePath, BoundingBox], AfterValidator(validate_region)
     ]
-    """Subdomain delimiting the source/sink regions for tagged moisture.
+    """Subdomain delimiting the tagging region from which in forward mode
+    evaporation is tagged (i.e., a source region) or from which in backward mode
+    precipitation is tagged (i.e., a sink region)
 
     You can either specify a path that contains a netcdf file, or a bounding box
-    of the form [west, south, east, north].
+    of the form [west, south, east, north]. The netcdf file should consist of
+    ones (tagging region) and zeros (non-tagging region). Values between 0
+    and 1 are possible as well and can be used in case the region of interest
+    overlaps with part of a grid cell
 
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
 
     The file should exist. If it has a time dimension, the nearest field will be
     used as tagging region, and the time should still be between
-    tagging_start_date and tagging_end_date
+    tagging_start_date and tagging_end_date. A dynamic tagging region is thus
+    possible as well.
+    TODO: test the dynamic tagging region in more detail.
 
     For example:
 
@@ -131,7 +169,8 @@ class Config(BaseModel):
 
     If it is set to `null`, then it will use full domain of preprocessed data.
 
-    Note that you should always set period to False if you use a subdomain.
+    Note that you should always set periodic_boundary to False if you use a
+    subdomain that does not have all Earth's longitudes.
 
     For example:
 
@@ -152,7 +191,7 @@ class Config(BaseModel):
 
     """
 
-    preprocess_start_date: datetime
+    preprocess_start_date: CfDateTime
     """Start date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
@@ -166,7 +205,7 @@ class Config(BaseModel):
 
     """
 
-    preprocess_end_date: datetime
+    preprocess_end_date: CfDateTime
     """End date for preprocessing.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date.
@@ -179,7 +218,35 @@ class Config(BaseModel):
         preprocess_end_date: "2021-07-15T23:00"
     """
 
-    tracking_start_date: datetime
+    parallel_preprocess: bool = False
+    """Run the preprocessor with multiple parallel processes.
+
+    Optional configuration. Should be True of False.
+    Parallel preprocessing is a lot faster but much more resource intensive.
+    Note that this feature is still experimental, and needs more testing.
+
+    For example:
+
+    .. code-block:: yaml
+
+        parallel_preprocess: True
+    """
+
+    parallel_processes: Optional[int] = None
+    """The number of parallel processes to use (if parallel processing is enabled).
+
+    If this is left empty, the number of processes is set to the number of
+    CPU threads available on your system. You can define a lower number to
+    reduce the CPU and memory load.
+
+    For example:
+
+    .. code-block:: yaml
+
+        parallel_processes: 4
+    """
+
+    tracking_start_date: CfDateTime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
@@ -194,7 +261,7 @@ class Config(BaseModel):
 
     """
 
-    tracking_end_date: datetime
+    tracking_end_date: CfDateTime
     """Start date for tracking.
 
     Should be formatted as: `"YYYY-MM-DD[T]HH:MM"`. Start date < end date, even if
@@ -207,7 +274,7 @@ class Config(BaseModel):
         tracking_end_date: "2021-07-15T23:00"
     """
 
-    tagging_start_date: datetime
+    tagging_start_date: CfDateTime
     """Start date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
@@ -226,7 +293,7 @@ class Config(BaseModel):
 
     """
 
-    tagging_end_date: datetime
+    tagging_end_date: CfDateTime
     """End date for tagging.
 
     For tracking individual (e.g. heavy precipitation) events, you can set the
@@ -246,9 +313,12 @@ class Config(BaseModel):
     """
 
     input_frequency: str
-    """Frequency of the raw input data.
-
-    Used to calculated water volumes.
+    """Time frequency of the raw input data.
+    This refers to the time frequency of the climate or weather model data
+    data. Primarily used during the preprocessing, but the setting does carry
+    over to the tracking as well.
+    TODO: Enable surface fluxes and atmospheric fluxes to have different
+    frequencies, which may happen with some data sets.
 
     For example:
 
@@ -263,7 +333,7 @@ class Config(BaseModel):
 
     The data will be interpolated during model execution. Too large timestep will
     violate CFL criterion, too small timestep will lead to excessive numerical
-    diffusion and slow progress. For best performance, the input frequency
+    diffusion and slow progress. For best performance, the input_frequency
     should be divisible by the timestep.
 
     For example:
@@ -276,6 +346,7 @@ class Config(BaseModel):
 
     output_frequency: str
     """Frequency at which to write output to file.
+    TODO: clarify if this is used during preprocessing, tracking or both
 
     For example, for daily output files:
 
@@ -315,9 +386,10 @@ class Config(BaseModel):
     restart: bool
     """Whether to restart from previous run.
 
-    If set to `true`, this will attempt to read the output from a previous model
-    run and continue from there. The output from the previous timestep must be
-    available for this to work.
+    If set to `true`, this will attempt to read the output from a previous
+    tracking run and continue from there. The output from the previous
+    timestep must be available for this to work.
+    TODO: test this more extensively
 
     For example:
 
@@ -341,6 +413,7 @@ class Config(BaseModel):
 
     kvf: float
     """net to gross vertical flux multiplication parameter
+    TODO: test this more extensively
 
     For example:
 
@@ -353,7 +426,8 @@ class Config(BaseModel):
     level_layer_boundary: int = 111
     """Which level to use for the layer boundary.
 
-    Defaults to layer number 111 (ERA5).
+    Defaults to layer number 111 (ERA5). The pressure at this boundary can be found
+    in `WAM2layers/src/wam2layers/preprocessing/tableERA5model_to_pressure.csv'
         TODO: Check if this is a reasonable choice for boundary
 
     Any layer numbers greater than the specified one will be
@@ -377,13 +451,17 @@ class Config(BaseModel):
         and `B` is the `pressure_boundary_offset`.
 
     Any pressure levels above this point will end up in the upper layer.
-    The others in the lower layer
+    The others in the lower layer.
+
+    Defaults together with pressure_boundary_offset to layer number 111 (ERA5).
+    The pressure at this boundary can be found in
+    `WAM2layers/src/wam2layers/preprocessing/tableERA5model_to_pressure.csv'
 
     For example:
 
     .. code-block:: yaml
 
-        pressure_boundary_factor: 0.7
+        pressure_boundary_factor: 0.72878581
 
     """
 
@@ -399,11 +477,15 @@ class Config(BaseModel):
     Any pressure levels above this point will end up in the upper layer.
     The others in the lower layer
 
+    Defaults together with pressure_boundary_factor to layer number 111 (ERA5).
+    The pressure at this boundary can be found in
+    `WAM2layers/src/wam2layers/preprocessing/tableERA5model_to_pressure.csv'
+
     For example:
 
     .. code-block:: yaml
 
-        pressure_boundary_offset: 7440.0
+        pressure_boundary_offset: 7438.803223
 
     """
 
@@ -440,6 +522,30 @@ class Config(BaseModel):
             path.mkdir(parents=True)
         return path
 
+    @model_validator(mode="before")
+    def convert_dates(self: dict[str, str]):
+        # Before validator: calendar entry might be missing.
+        if "calendar" not in self:
+            self["calendar"] = "standard"
+        elif self["calendar"] not in CALENDAR_TYPES.__args__:
+            msg = f"Calendar '{self['calendar']} is not a valid calendar type."
+            raise ValueError(msg)
+
+        c = self["calendar"]
+
+        date_entries = [
+            "tracking_start_date",
+            "tracking_end_date",
+            "tagging_start_date",
+            "tagging_end_date",
+            "preprocess_start_date",
+            "preprocess_end_date",
+        ]
+        for date in date_entries:
+            if not isinstance(self[date], CfDateTime.__args__):
+                self[date] = cftime_from_iso(self[date], c)
+        return self
+
     @model_validator(mode="after")
     def check_date_order(self):
         if self.tracking_start_date > self.tracking_end_date:
@@ -467,4 +573,21 @@ class Config(BaseModel):
         """
         fpath = Path(fname)
         with fpath.open("w") as f:
-            yaml.dump(self.model_dump(mode="json"), f)
+            f.write(self.to_string())
+
+    def to_string(self: "Config"):
+        """Pydantic can't serialize the dates. We convert these to string manually."""
+        dates = [
+            "preprocess_start_date",
+            "preprocess_end_date",
+            "tracking_start_date",
+            "tracking_end_date",
+            "tagging_start_date",
+            "tagging_end_date",
+        ]
+        jsonconfig = self.model_dump_json(exclude=dates)
+        jsondict = json.loads(jsonconfig)
+
+        for date in dates:
+            jsondict[date] = getattr(self, date).strftime("%Y-%m-%dT%H:%M")
+        return json.dumps(jsondict)
