@@ -75,11 +75,11 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     """
     # Pad boundaries with ghost cells
     if periodic_x:
-        qp = pad_y_zero(pad_x_wrap(q))  # [M, N] -> [M+2, N+2]
+        sp = pad_y_zero(pad_x_wrap(s))  # [M, N] -> [M+2, N+2]
         up = pad_y_zero(u)  # [M-2, N+1] -> [M, N+1]
         vp = pad_y_zero(v)  # [M-1, N] -> [M+1, N]
     else:
-        qp = pad_xy_zero(q)  # [M, N] -> [M+2, N+2]
+        sp = pad_xy_zero(s)  # [M, N] -> [M+2, N+2]
         up = pad_xy_zero(u)  # [M-2, N-1] -> [M, N-1]
         vp = pad_xy_zero(v)  # [M-1, N-2] -> [M+1, N]
 
@@ -90,11 +90,11 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     inner = np.s_[1:-1]
 
     # Donor cell upwind scheme (2 directions seperately)
-    uq = np.where(up > 0, up * qp[inner, west], up * qp[inner, east])  # [M, N+1]
-    vq = np.where(vp > 0, vp * qp[south, inner], vp * qp[north, inner])  # [M+1, N]
+    us = np.where(up > 0, up * sp[inner, west], up * sp[inner, east])  # [M, N+1]
+    vs = np.where(vp > 0, vp * sp[south, inner], vp * sp[north, inner])  # [M+1, N]
 
-    adv_x = uq[:, west] - uq[:, east]  # [M, N]
-    adv_y = vq[south, :] - vq[north, :]  # [M, N]
+    adv_x = us[:, west] - us[:, east]  # [M, N]
+    adv_y = vs[south, :] - vs[north, :]  # [M, N]
 
     return adv_x + adv_y  # [M, N]
 
