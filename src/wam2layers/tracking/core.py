@@ -5,27 +5,12 @@ import numpy as np
 from wam2layers.config import Config
 from wam2layers.utils.profiling import ProgressTracker
 
-
-def pad_boundaries(*args, periodic=False):
-    """Add boundary padding to all input arrays.
-
-    Arguments:
-        *args: Input arrays to which boundary padding will be added.
-        periodic: If True, apply periodic boundary conditions when padding in
-            the x-direction. If False, pad with zeros in the x and y directions.
-
-    Returns:
-        List of input arrays with boundary padding added.
-    """
-    zero_xy = partial(np.pad, pad_width=1, mode="constant", constant_values=0)
-    periodic_x = partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
-    zero_y = partial(
-        np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
-    )
-
-    if periodic:
-        return [periodic_x(zero_y(arg)) for arg in args]
-    return [zero_xy(arg) for arg in args]
+# Functions to pad poundaries of arrays
+pad_x_wrap = partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
+pad_y_zero = partial(
+    np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
+)
+pad_xy_zero = partial(np.pad, pad_width=1, mode="constant", constant_values=0)
 
 
 def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
@@ -51,8 +36,8 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     Arguments:
         s: array of shape [M, N]. It is assumed that the grid dimensions are
             [latitude, longitude] and latitude is in decreasing order.
-        u: array of shape = [M-2, N-1]
-        v: array of shape = [M-1, N-2]
+        u: array of shape = [M-2, N-1] or [M-2, N+1] if periodic_x = True
+        v: array of shape = [M-1, N-2] or [M-1, N] if periodic_x = True
 
     Returns:
         array of shape [M, N]
@@ -89,8 +74,14 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
 
     """
     # Pad boundaries with ghost cells
-    qp, up, vp = pad_boundaries(s, u, v, periodic=periodic_x)
-    # shapes: [M+2, N+2], [M, N+1], [M+1, N]
+    if periodic_x:
+        qp = pad_y_zero(pad_x_wrap(q))  # [M, N] -> [M+2, N+2]
+        up = pad_y_zero(u)  # [M-2, N+1] -> [M, N+1]
+        vp = pad_y_zero(v)  # [M-1, N] -> [M+1, N]
+    else:
+        qp = pad_xy_zero(q)  # [M, N] -> [M+2, N+2]
+        up = pad_xy_zero(u)  # [M-2, N-1] -> [M, N-1]
+        vp = pad_xy_zero(v)  # [M-1, N-2] -> [M+1, N]
 
     west = np.s_[:-1]
     east = np.s_[1:]
@@ -100,7 +91,6 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
 
     # Donor cell upwind scheme (2 directions seperately)
     uq = np.where(up > 0, up * qp[inner, west], up * qp[inner, east])  # [M, N+1]
-
     vq = np.where(vp > 0, vp * qp[south, inner], vp * qp[north, inner])  # [M+1, N]
 
     adv_x = uq[:, west] - uq[:, east]  # [M, N]
