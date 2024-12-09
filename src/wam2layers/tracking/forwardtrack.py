@@ -35,6 +35,8 @@ def forwardtrack(
     output,
     config: Config,
 ):
+    a, dy, dx = get_grid_info(F)
+
     # Unpack input data
     fx_upper = stagger_x(F["fx_upper"].values)
     fy_upper = stagger_y(F["fy_upper"].values)
@@ -59,6 +61,7 @@ def forwardtrack(
     # TODO: apply terms in successive steps instead of all at once?
     s_track_lower += config.timestep * (
         horizontal_advection(s_track_relative_lower, fx_lower, fy_lower, bc)
+        / a[:, None]
         + vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         + vertical_dispersion(
             f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
@@ -69,6 +72,7 @@ def forwardtrack(
 
     s_track_upper += config.timestep * (
         horizontal_advection(s_track_relative_upper, fx_upper, fy_upper, bc)
+        / a[:, None]
         - vertical_advection(f_vert, s_track_relative_lower, s_track_relative_upper)
         - vertical_dispersion(
             f_vert, s_track_relative_lower, s_track_relative_upper, config.kvf
@@ -155,7 +159,9 @@ def run_experiment(config_file: Config):
     """Run a forwardtracking experiment from start to finish."""
     config, output, grid = initialize(config_file)
 
-    progress_tracker = ProgressTracker(output, mode="forwardtrack")
+    progress_tracker = ProgressTracker(
+        output, mode="forwardtrack", periodic_x=config.periodic_boundary
+    )
 
     t0, th, t1, dt = initialize_time(config, direction="forward")
 
@@ -177,8 +183,8 @@ def run_experiment(config_file: Config):
         a, dy, dx = get_grid_info(F)
         for level in ["upper", "lower"]:
             # Convert to accumulations for budget calculations
-            F["fx_" + level] /= dx
-            F["fy_" + level] /= dy
+            F["fx_" + level] *= dy
+            F["fy_" + level] *= dx
 
         # Load/update tagging mask
         tagging_mask = 0
