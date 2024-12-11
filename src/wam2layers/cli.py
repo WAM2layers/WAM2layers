@@ -202,6 +202,27 @@ def cmip(ctx, config_file):
     prep_experiment(config_file, data_source="CMIP")
 
 
+@preproc_cli.command()
+@click.pass_context
+@click.argument("config_file", type=click.Path(exists=True))
+def arco_era5(ctx, config_file):
+    """Preprocess ARCO-ERA5 data for WAM2layers tracking experiments.
+
+    CONFIG_FILE: Path to WAM2layers experiment configuration file.
+
+    Usage examples:
+
+        \b
+        - wam2layers preprocess arco-era5 path/to/cases/era5_2021.yaml
+    """
+    log_path = Config.from_yaml(config_file).preprocessed_data_folder
+    setup_logging(log_path, ctx.obj["debug"])
+    _copy_config_yaml(config_file, log_path)
+    logger.info("Welcome to WAM2layers.")
+    logger.info("Starting preprocessing ARCO-ERA5 data.")
+    prep_experiment(config_file, data_source="ARCO")
+
+
 # Command line setup for visualization
 @click.group()
 def visualize_cli():
