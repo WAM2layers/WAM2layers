@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 - support for preprocessing ARCO-ERA5 data ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
 - longitude shifter to preprocessing that ensures all longitude values are in the range (-180, 180) ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
 
+### Changed
+- input data to the tracking code is now assumed to have longitude values between -180 and 180 degrees ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+
 ## Release v3.1.0 (2024-06-21)
 
 ### Changed

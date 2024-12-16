@@ -81,6 +81,7 @@ This pre-processed dataset adheres to the following requirements:
 - States are given in units of "kg m-2", fluxes in "kg m-1 s-1"
 - `evap` and `precip` are given in units of "kg m-2 s-2"
 - Latitude should be decreasing, time and longitude increasing.
+- Longitude values are between -180 and 180 degrees.
 
 ```{note}
 If you need help in pre-processing your data, please don't hesitate to reach

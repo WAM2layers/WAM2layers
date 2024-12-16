@@ -277,6 +277,7 @@ def shift_longitude(ds: xr.Dataset) -> xr.Dataset:
         (ds["longitude"].to_numpy() > 180).any() or
         (ds["longitude"].to_numpy() < 0).any()
     ):
+        logger.info("Shifting longitude values to a range of -180 to 180 degrees.")
         ds.coords["longitude"] = (ds.coords["longitude"] + 180) % 360 - 180
         return ds.sortby(ds.longitude)
     return ds
