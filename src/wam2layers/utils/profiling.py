@@ -1,6 +1,7 @@
 import logging
 import time
 
+import numpy as np
 import pandas as pd
 import psutil
 import xarray as xr
@@ -28,9 +29,10 @@ class Profiler:
 
 
 class ProgressTracker:
-    def __init__(self, output, mode="backtrack"):
+    def __init__(self, output, mode="backtrack", periodic_x=False):
         """Keep track of tagged and tracked moisture."""
         self.mode = mode
+        self.periodic_x = periodic_x
         self.total_tagged_moisture = 0
         self.tracked = 0
         self.lost_water = 0
@@ -47,7 +49,8 @@ class ProgressTracker:
         Intended for when the output fields are reset at write time, so we
         don't lose accumulations from previous outputs.
         """
-        totals = output.sum()
+        area_weighted_output = output * np.cos(np.deg2rad(output["latitude"]))
+        totals = area_weighted_output.sum()
 
         if self.mode == "backtrack":
             self.tracked += totals["e_track"]
@@ -56,8 +59,10 @@ class ProgressTracker:
             self.tracked += totals["p_track_lower"] + totals["p_track_upper"]
             self.total_tagged_moisture += totals["tagged_evap"]
 
-        # Don't include boundary losses in log messages
-        interior_losses = output.losses[1:-1, 1:-1].sum()
+        if self.periodic_x:
+            interior_losses = area_weighted_output.losses[1:-1, :].sum()
+        else:
+            interior_losses = area_weighted_output.losses[1:-1, 1:-1].sum()
         boundary_transport = totals["losses"] - interior_losses
 
         self.lost_water += interior_losses
@@ -66,7 +71,8 @@ class ProgressTracker:
 
     def print_progress(self, t, output):
         """Print some useful runtime diagnostics."""
-        totals = output.sum()
+        area_weighted_output = output * np.cos(np.deg2rad(output["latitude"]))
+        totals = area_weighted_output.sum()
 
         if self.mode == "backtrack":
             tracked = self.tracked + totals["e_track"]
@@ -78,13 +84,18 @@ class ProgressTracker:
             totals["s_track_upper_restart"] + totals["s_track_lower_restart"]
         )
 
-        # Don't include boundary losses in log messages
-        interior_losses = output.losses[1:-1, 1:-1].sum()
+        if self.periodic_x:
+            interior_losses = area_weighted_output.losses[1:-1, :].sum()
+        else:
+            interior_losses = area_weighted_output.losses[1:-1, 1:-1].sum()
+        boundary_transport = totals["losses"] - interior_losses
         boundary_transport = totals["losses"] - interior_losses
 
         lost_water = self.lost_water + interior_losses
         boundary_transport = self.boundary_transport + boundary_transport
         gained_water = self.gained_water + totals["gains"]
+
+        # TODO Everything above is a duplication of self.store_intermediate_states; combine into one
 
         tracked_percentage = tracked / total_tagged_moisture * 100
         in_atmos_percentage = still_in_atmosphere / total_tagged_moisture * 100

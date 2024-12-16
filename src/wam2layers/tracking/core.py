@@ -3,6 +3,7 @@ from functools import partial
 import numpy as np
 
 from wam2layers.config import Config
+from wam2layers.utils.grid import get_grid_info
 from wam2layers.utils.profiling import ProgressTracker
 
 
@@ -140,10 +141,12 @@ def stabilize_fluxes(F, S, progress_tracker: ProgressTracker, config: Config, t)
         config: Config object with the configuration for this experiment
         t: current time (for writing output)
     """
+    a, dy, dx = get_grid_info(F)
+
     for level in ["upper", "lower"]:
         fx = F["fx_" + level] * config.timestep
         fy = F["fy_" + level] * config.timestep
-        s = S["s_" + level]
+        s = S["s_" + level] * a[:, None]
 
         fx_abs = np.abs(fx)
         fy_abs = np.abs(fy)
@@ -224,6 +227,7 @@ def calculate_fz(F, S0, S1, dt, kvf):
         Dimensions without coordinates: lat, lon
 
     """
+    a, dy, dx = get_grid_info(F)
     s_mean = (S1 + S0) / 2
     s_total = s_mean.s_upper + s_mean.s_lower
     s_rel = s_mean / s_total
@@ -231,10 +235,10 @@ def calculate_fz(F, S0, S1, dt, kvf):
     # Evaluate all terms in the moisture balance execpt the unknown Fz and err
     foo_upper = (S1 - S0).s_upper + dt * (
         divergence(F.fx_upper, F.fy_upper) + F.precip.values * s_rel.s_upper
-    )
+    ) / a[:, None]
     foo_lower = (S1 - S0).s_lower + dt * (
         divergence(F.fx_lower, F.fy_lower) + F.precip.values * s_rel.s_lower - F.evap
-    )
+    ) / a[:, None]
 
     # compute the resulting vertical moisture flux; the vertical velocity so
     # that the new err_lower/s_lower = err_upper/s_upper (positive downward)

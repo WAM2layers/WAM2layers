@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+
 - Windows instruction to the installation guide ([#392](https://github.com/WAM2layers/WAM2layers/pull/392)).
 - support for preprocessing CMIP data ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
 - experimental support for parallel preprocessing ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
@@ -14,6 +15,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - input data to the tracking code is now assumed to have longitude values between -180 and 180 degrees ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+
+### Fixed
+
+- Patch for bug in meridional advection not accounting for decreasing grid cell size towards poles ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 
 ## Release v3.1.0 (2024-06-21)
 
@@ -59,10 +64,11 @@ All notable changes to this project will be documented in this file.
 - The calculated gains are now absolute fields instead of relative to the reference field ([#355](https://github.com/WAM2layers/WAM2layers/pull/355)).
 
 ### Changed
+
 - The workflow tests use a temporary directory managed by pytest and the user's operating system, to avoid the `/tmp` folder polluting the workspace ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The workflow tests now make extensive use of pytest's [fixtures](https://docs.pytest.org/en/8.0.x/explanation/fixtures.html), which will make future test writing easier ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - The `kvf` parameter can now be a floating point number instead of an integer ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
-- The stability correction warning will now occur only when 10% more of the grid is corrected compared to last warning, or the correction factor is 10% stronger  ([#332](https://github.com/WAM2layers/WAM2layers/pull/332)).
+- The stability correction warning will now occur only when 10% more of the grid is corrected compared to last warning, or the correction factor is 10% stronger ([#332](https://github.com/WAM2layers/WAM2layers/pull/332)).
 - The output files now contain a time dimension (incl. the coordinate) ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 - The package version is now defined in `src/wam2layers/__init__.py` ([#334](https://github.com/WAM2layers/WAM2layers/pull/334)).
 - The command line interface for tracking has changed. Tracking experiments are now started by doing `wam2layers track config.yml`. The tracking direction is retrieved from the new configuration entry "tracking_direction" ([#338](https://github.com/WAM2layers/WAM2layers/pull/338)).
@@ -96,9 +102,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - The "analyse output" command now excludes the first timestep when it looks for output files, as it is usually not present in backtrack output ([#266](https://github.com/WAM2layers/WAM2layers/pull/266)).
-- A long-existing bug in the calculation of vertical fluxes, effectively changing the direction of the vertical flux ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)). Also use the *new* state in the error correction term `S_1 / S_T * err_T`
+- A long-existing bug in the calculation of vertical fluxes, effectively changing the direction of the vertical flux ([#274](https://github.com/WAM2layers/WAM2layers/pull/274)). Also use the _new_ state in the error correction term `S_1 / S_T * err_T`
 - Log files are now saved to the output path, instead of the current working directory ([#291](https://github.com/WAM2layers/WAM2layers/pull/291))
-
 
 ### Changed
 
@@ -126,7 +131,6 @@ All notable changes to this project will be documented in this file.
 - last time step is outputted (but with name of 00.10)
 - Output filenames now also include hours and minutes
 
-
 ## Release v3.0.0-beta.4 (2023-04-21)
 
 ### Added
@@ -146,10 +150,13 @@ All notable changes to this project will be documented in this file.
 ## Release v3.0.0-beta.3 (2022-12-02)
 
 ### Fixed (patch version, bugs)
+
 - n/a
 
 ### Added (minor version only)
+
 Some highlights:
+
 - Chunking using xarray the preprocessed data
 - Visualizing output data
 - Allowing global input data to read
@@ -157,4 +164,5 @@ Some highlights:
 - From double to single precision
 
 ### Changed and removed (major version only)
+
 - n/a
