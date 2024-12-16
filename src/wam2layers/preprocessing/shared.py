@@ -8,7 +8,7 @@ from typing import Literal, Union
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.preprocessing import cmip, era5, logger
+from wam2layers.preprocessing import arco, cmip, era5, logger
 from wam2layers.preprocessing.input_validation import validate_input
 from wam2layers.preprocessing.pressure_levels import (
     extend_pressurelevels,
@@ -74,6 +74,8 @@ def get_input_data(
         data = cmip.get_input_data(datetime, config)
         data.load()
         input_data_attrs = {}
+    elif data_source == "ARCO":
+        data, input_data_attrs = arco.get_input_data(datetime, config)
     else:
         msg = "Only the ERA5 input data loader has been implemented."
         raise NotImplementedError(msg)
@@ -211,6 +213,8 @@ def preprocess(
             .expand_dims("time")
             .astype("float32")
         )
+
+        ds = shift_longitude(ds)
         add_bounds(ds)
 
         # Add attributes
@@ -265,3 +269,15 @@ def parallel_preprocess(
     pool = Pool(config.parallel_processes)
     args = product(day_groups.values(), (data_source,), (config,))
     pool.starmap(preprocess, args)
+
+
+def shift_longitude(ds: xr.Dataset) -> xr.Dataset:
+    """Return dataset with longitude shifted to ISO 6709 standard."""
+    if (
+        (ds["longitude"].to_numpy() > 180).any() or
+        (ds["longitude"].to_numpy() < 0).any()
+    ):
+        logger.info("Shifting longitude values to a range of -180 to 180 degrees.")
+        ds.coords["longitude"] = (ds.coords["longitude"] + 180) % 360 - 180
+        return ds.sortby(ds.longitude)
+    return ds

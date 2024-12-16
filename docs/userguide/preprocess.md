@@ -11,12 +11,14 @@ grid if that isn't the case already.
 
 ## Built-in preprocessing functionality
 
-WAM2layers comes with built-in preprocessing functionality for ERA5 data. You can
-use the following command:
+WAM2layers comes with built-in preprocessing functionality for ERA5, ARCO-ERA5 and CMIP
+data. You can use the following commands:
 
 ```
-# Preprocess era5 data using the wam2layers builting functionality
+# Preprocess data using the wam2layers built-in functionality
 wam2layers preprocess era5 config_file.yaml
+wam2layers preprocess arco-era5 config_file.yaml
+wam2layers preprocess cmip config_file.yaml
 ```
 
 where `config_file.yaml` is the path to your configuration file. This file
@@ -26,9 +28,26 @@ what filename pattern they follow. For more information, see [](./config) or
 have a look at the example config file
 [here](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
 
+### ARCO-ERA5
+
+[ARCO-ERA5](https://github.com/google-research/arco-era5) is a version of ERA5 hosted
+publicly by Google.
+When you use this input data for the preprocessor, you don't need to download any files
+to your computer. The input data will be pulled in on-the-fly.
+
+However, there are some limitation to this. Due to the way the dataset is stored, all
+latitude/longitude values, as well as all pressure levels are retrieved at a time.
+You cannot download subsets of this data.
+
+For this reason the preprocessor will *always download data for the entire globe*.
+The pressure levels you specify in your config will be kept, any others are still
+downloaded but "thrown away". For this reason you could pre-process all pressure levels
+but only use some in your analysis (if disk space allows).
+
 ```{note}
-For now WAM2layers only contains preprocessing code for era5. We think it would
-be nice to add preprocessing functionality for more datasets over time.
+If you and other people in your group/institute make use of this data, it could be 
+useful to store it somewhere where all of you can have shared access, and preprocess
+the entire globe/all pressure levels once.
 ```
 
 ## Preprocessing other datasets
@@ -62,6 +81,7 @@ This pre-processed dataset adheres to the following requirements:
 - States are given in units of "kg m-2", fluxes in "kg m-1 s-1"
 - `evap` and `precip` are given in units of "kg m-2 s-2"
 - Latitude should be decreasing, time and longitude increasing.
+- Longitude values are between -180 and 180 degrees.
 
 ```{note}
 If you need help in pre-processing your data, please don't hesitate to reach

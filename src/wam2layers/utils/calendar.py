@@ -84,7 +84,13 @@ def template_to_files(config: "Config", var: str) -> list[Path]:
 def round_cftime(
     date: CfDateTime, freq: str, how: Literal["nearest", "floor", "ceil"]
 ) -> CfDateTime:
-    date.year, date.month, date.hour, date.minute, date.second, date.calendar, date.has_year_zero
+    """Round a CF datetime index to a nearest frequency."""
+    # make freq argument comply with https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
+    if any(freq.lower().endswith(_f) for _f in ("h", "s", "min")):
+        freq = freq.lower()
+    else:
+        freq = freq.upper()
+
     if how == "nearest":
         return xr.CFTimeIndex([date], calendar=date.calendar).round(freq)[0]
     if how == "ceil":
