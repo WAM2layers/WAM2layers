@@ -50,6 +50,63 @@ useful to store it somewhere where all of you can have shared access, and prepro
 the entire globe/all pressure levels once.
 ```
 
+#### Configuration
+
+The configuration for ARCO-ERA5 data is largely the same as for ERA5 data.
+You can base your configuration file off the [ERA5 example config](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
+
+However, there are two small differences.
+The `filename_template` config entry is not used by the ARCO-ERA5 preprocessor
+as the raw data is retrieved from the internet and is not stored on disk.
+Additionally, the ARCO-ERA5 data is on the Proleptic Gregorian calendar,
+which you have to set in your configuration file:
+
+```yml
+calendar: proleptic_gregorian
+```
+
+### CMIP6 
+
+The WAM2layers preprocessor supports some input data from [CMIP6](https://pcmdi.llnl.gov/CMIP6/).
+Data currently needs to come from the following MIP tables:
+
+- [CMIP6_3hr](https://github.com/PCMDI/cmip6-cmor-tables/blob/main/Tables/CMIP6_3hr.json)
+  - variables `hfls`, `pr`
+- [CMIP6_6hrPlevPt](https://github.com/PCMDI/cmip6-cmor-tables/blob/main/Tables/CMIP6_6hrPlevPt.json)
+  - variables `hus`, `huss`, `ua`, `uas`, `va`, `vas`
+- [CMIP6_6hr_Lev](https://github.com/PCMDI/cmip6-cmor-tables/blob/main/Tables/CMIP6_6hrLev.json)
+  - variables `ps`
+
+A bash script that downloads these variables from the MPI-ESMI1.2 model is
+available [here](https://github.com/WAM2layers/WAM2layers/blob/main/scripts/download_MPI_cmip_data.sh).
+
+To search through the Earth System Grid Federation (ESGF) for models in CMIP6
+that can also be used, you can use tools like ESMValTool and our [ESGF searcher](https://github.com/WAM2layers/search-esgf).
+
+#### Configuration
+The configuration for ARCO-ERA5 data is largely the same as for ERA5 data.
+You can base your configuration file off the [ERA5 example config](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
+
+However, for CMIP6 data you can format the 'preprocessing' section of the
+config file in the following way;
+
+```yml
+# Preprocessing
+filename_template: ./input_data/{variable}_*.nc
+preprocess_start_date: "2012-05-02T00:00"
+preprocess_end_date: "2012-08-01T00:00"
+level_type: pressure_levels
+levels: [5000, 25000, 50000, 60000, 70000, 85000, 92500]
+```
+
+If the data you use is not on a standard calendar (which is often the case
+for future scenario runs), you will also have to configure the calendar 
+in the configuration file:
+
+```yml
+calendar: standard  # or, for example, 'noleap'
+```
+
 ## Preprocessing other datasets
 
 If you want to use another dataset, you need to make sure that it follows the
