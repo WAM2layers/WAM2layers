@@ -41,13 +41,13 @@ You cannot download subsets of this data.
 
 For this reason the preprocessor will *always download data for the entire globe*.
 The pressure levels you specify in your config will be kept, any others are still
-downloaded but "thrown away". For this reason you could pre-process all pressure levels
-but only use some in your analysis (if disk space allows).
+downloaded but "thrown away". For this reason you should generally pre-process
+all pressure levels, as they are aggregated to two levels anyway.
 
-```{note}
+```{tip}
 If you and other people in your group/institute make use of this data, it could be 
 useful to store it somewhere where all of you can have shared access, and preprocess
-the entire globe/all pressure levels once.
+the entire globe once.
 ```
 
 #### Configuration
@@ -80,8 +80,10 @@ Data currently needs to come from the following MIP tables:
 A bash script that downloads these variables from the MPI-ESMI1.2 model is
 available [here](https://github.com/WAM2layers/WAM2layers/blob/main/scripts/download_MPI_cmip_data.sh).
 
+```{tip}
 To search through the Earth System Grid Federation (ESGF) for models in CMIP6
 that can also be used, you can use tools like ESMValTool and our [ESGF searcher](https://github.com/WAM2layers/search-esgf).
+```
 
 #### Configuration
 The configuration for ARCO-ERA5 data is largely the same as for ERA5 data.
