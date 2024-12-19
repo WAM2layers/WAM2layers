@@ -89,17 +89,19 @@ for date in datelist:
             )
         else:
             try:
+                request = {
+                    "product_type": "reanalysis",
+                    "variable": long_name,
+                    "date": date.strftime("%Y-%m-%d"),
+                    "time": times,
+                    "grid": grid,
+                    "format": "netcdf",
+                }
+                if area is not None:
+                    request["area"] = area
                 c.retrieve(
                     "reanalysis-era5-single-levels",
-                    {
-                        "product_type": "reanalysis",
-                        "variable": long_name,
-                        "date": date.strftime("%Y-%m-%d"),
-                        "time": times,
-                        "area": area,
-                        "grid": grid,
-                        "format": "netcdf",
-                    },
+                    request,
                     str(outfolder / outfile),
                 )
             except Exception as e:
@@ -121,22 +123,25 @@ for date in datelist:
             )
         else:
             try:
+                request = {
+                    "time": times,
+                    "date": date.strftime("%Y-%m-%d"),
+                    "levelist": levels,
+                    "param": param,
+                    "class": "ea",
+                    "expver": "1",
+                    "levtype": "ml",
+                    "stream": "oper",
+                    "type": "an",
+                    "format": "netcdf",
+                    "grid": grid,
+                }
+                if area is not None:
+                    request["area"] = area
+
                 c.retrieve(
                     "reanalysis-era5-complete",
-                    {
-                        "time": times,
-                        "date": date.strftime("%Y-%m-%d"),
-                        "levelist": levels,
-                        "param": param,
-                        "class": "ea",
-                        "expver": "1",
-                        "levtype": "ml",
-                        "stream": "oper",
-                        "type": "an",
-                        "format": "netcdf",
-                        "area": area,
-                        "grid": grid,
-                    },
+                    request,
                     str(outfolder / outfile),
                 )
             except Exception as e:
