@@ -72,7 +72,17 @@ def open_da(filepath) -> xr.DataArray:
     number of times the files need to be accessed, making the preprocessing slightly
     more efficient.
     """
-    return xr.open_dataarray(filepath, use_cftime=True)
+    da = xr.open_dataarray(filepath, use_cftime=True, chunks="auto")
+
+    # Rename new-cds to old cds netCDF4 names
+    if "valid_time" in da.coords and "time" not in da.coords:
+        da = da.rename({"valid_time": "time"})
+    if "model_level" in da.coords and "level" not in da.coords:
+        da = da.rename({"model_level": "level"})
+    if "pressure_level" in da.coords and "level" not in da.coords:
+        da = da.rename({"pressure_level": "level"})
+
+    return da
 
 
 def load_data(variable: str, datetime: CfDateTime, config: Config) -> xr.DataArray:
@@ -103,14 +113,6 @@ def load_data(variable: str, datetime: CfDateTime, config: Config) -> xr.DataArr
 
     if "lev" in da.coords:
         da = da.rename(lev="level")
-
-    # Rename new-cds to old cds netCDF4 names
-    if "valid_time" in da.coords and "time" not in da.coords:
-        da = da.rename({"valid_time": "time"})
-    if "model_level" in da.coords and "level" not in da.coords:
-        da = da.rename({"model_level": "level"})
-    if "pressure_level" in da.coords and "level" not in da.coords:
-        da = da.rename({"pressure_level": "level"})
 
     # If it's 4d data we want to select a subset of the levels
     if variable in ["u", "v", "q"] and isinstance(config.levels, list):
