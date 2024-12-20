@@ -132,22 +132,19 @@ class Config(BaseModel):
     precipitation is tagged (i.e., a sink region)
 
     You can either specify a path that contains a netcdf file, a shapefile, or
-    a bounding box of the form [west, south, east, north].
+    a bounding box of the form [west, south, east, north]:
+    - The netcdf file should consist of ones (tagging region) and zeros 
+      (non-tagging region). 
+      Values between 0 and 1 are possible as well and can be used in case the
+      region of interest overlaps with part of a grid cell.
+    - The shapefile should contain only one polygon. The mask generated from the
+      shapefile is also written to the debug directory in the output folder.
+      The entire shapefile polygon needs to be inside -180, -80, 180, 80.
+    - The bounding box should be inside -180, -80, 180, 80; if west > south, the
+      coordinates will be rolled to retain a continous longitude.
 
-    The netcdf file should consist of ones (tagging region) and zeros 
-    (non-tagging region). 
-    Values between 0 and 1 are possible as well and can be used in case the
-    region of interest overlaps with part of a grid cell.
-
-    The shapefile should contain only one polygon. The mask generated from the
-    shapefile is also written to the debug directory in the output folder.
-    The entire shapefile polygon needs to be inside -180, -80, 180, 80.
-    
-    The bounding box should be inside -180, -80, 180, 80; if west > south, the
-    coordinates will be rolled to retain a continous longitude.
-
-    The file should exist. If it has a time dimension, the nearest field will be
-    used as tagging region, and the time should still be between
+    The file should exist. If the netCDF file has a time dimension, the nearest
+    field will be used as tagging region, and the time should still be between
     tagging_start_date and tagging_end_date. A dynamic tagging region is thus
     possible as well.
     TODO: test the dynamic tagging region in more detail.
@@ -157,6 +154,7 @@ class Config(BaseModel):
     .. code-block:: yaml
 
         tagging_region: /data/volume_2/era5_2021/tagging_region_global.nc
+        tagging_region: tests/test_data/shape/Rhine.shp
         tagging_region: [0, 50, 10, 55]
     """
 
