@@ -4,26 +4,40 @@ import numpy as np
 import xarray as xr
 
 
-def stagger_x(f):
+def stagger_x(fx, periodic_x=False):
     """Interpolate f to the grid cell interfaces.
-    Only the values at the interior interfaces are returned
+
+    Only the values at the interior interfaces are returned, except when
+    periodic is True. In that case, the same value is inserted at both the east
+    and west interfaces.
+
     Arguments:
-        f: 2d array of shape [M, N]
+        fx: 2d array of shape [M, N]
     Returns:
-        2d array of shape [M-2, N-1]
+        2d array of shape [M-2, N-1] or [M-2, N+1] when periodic_x = True
     """
-    return 0.5 * (f[:, :-1] + f[:, 1:])[1:-1, :]
+    if not periodic_x:
+        return 0.5 * (fx[:, :-1] + fx[:, 1:])[1:-1, :]
+
+    ny, nx = fx.shape
+    fx_new = np.zeros((ny, nx + 1))
+    fx_new[:, 1:-1] = 0.5 * (fx[:, :-1] + fx[:, 1:])
+    fx_new[:, 0] = 0.5 * (fx[:, 0] + fx[:, -1])
+    fx_new[:, -1] = 0.5 * (fx[:, 0] + fx[:, -1])
+    return fx_new[1:-1, :]
 
 
-def stagger_y(f):
-    """Interpolate f to the grid cell interfaces.
+def stagger_y(fy, periodic_x=False):
+    """Interpolate fy to the grid cell interfaces.
     Only the values at the interior interfaces are returned
     Arguments:
-        f: 2d array of shape [M, N]
+        fy: 2d array of shape [M, N]
     Returns:
-        2d array of shape [M-1, N-2]
+        2d array of shape [M-1, N-2] or [M-1, N] when periodic_x = True
     """
-    return 0.5 * (f[:-1, :] + f[1:, :])[:, 1:-1]
+    if periodic_x:
+        return 0.5 * (fy[:-1, :] + fy[1:, :])
+    return 0.5 * (fy[:-1, :] + fy[1:, :])[:, 1:-1]
 
 
 def get_grid_info(ds):
@@ -58,7 +72,7 @@ def get_grid_info(ds):
 
 def get_boundary(field, periodic=False):
     """Return a mask with 1 along the boundary and 0 in the interior."""
-    boundary = xr.ones_like(field, dtype=bool)
+    boundary = np.ones_like(field, dtype=bool)
     # Mask interior
     if periodic:
         boundary[1:-1, :] = 0

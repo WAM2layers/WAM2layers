@@ -141,7 +141,8 @@ class Config(BaseModel):
       shapefile is also written to the debug directory in the output folder.
       The entire shapefile polygon needs to be inside -180, -80, 180, 80.
     - The bounding box should be inside -180, -80, 180, 80; if west > south, the
-      coordinates will be rolled to retain a continous longitude.
+      coordinates will be rolled to retain a continous longitude, this can be used
+      for studies crossing the antimeridian.
 
     The file should exist. If the netCDF file has a time dimension, the nearest
     field will be used as tagging region, and the time should still be between
