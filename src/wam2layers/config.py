@@ -131,12 +131,17 @@ class Config(BaseModel):
     evaporation is tagged (i.e., a source region) or from which in backward mode
     precipitation is tagged (i.e., a sink region)
 
-    You can either specify a path that contains a netcdf file, or a bounding box
-    of the form [west, south, east, north]. The netcdf file should consist of
-    ones (tagging region) and zeros (non-tagging region). Values between 0
-    and 1 are possible as well and can be used in case the region of interest
-    overlaps with part of a grid cell
+    You can either specify a path that contains a netcdf file, a shapefile, or
+    a bounding box of the form [west, south, east, north].
 
+    The netcdf file should consist of ones (tagging region) and zeros 
+    (non-tagging region). 
+    Values between 0 and 1 are possible as well and can be used in case the
+    region of interest overlaps with part of a grid cell.
+
+    The shapefile should contain only one polygon. The mask generated from the
+    shapefile is also written to the debug directory in the output folder.
+    
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
 

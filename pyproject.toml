@@ -43,6 +43,8 @@ dependencies = [
     "cmocean",
     "seaborn",
     "threddsclient",
+    "pyshp",
+    "shapely",
 ]
 
 [project.optional-dependencies]
