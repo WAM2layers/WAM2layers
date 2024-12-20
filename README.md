@@ -35,11 +35,14 @@ See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more
 
 ```mermaid
 graph TD
-    A[Welcome to WAM2layers] --> |Need help, have a question, or idea?| B[Check existing resources:<br>• <a href='https://wam2layers.readthedocs.io'>Documentation</a><br>• <a href='https://github.com/WAM2layers/WAM2layers/discussions'>Discussion forum</a><br>• <a href='https://github.com/WAM2layers/WAM2layers/issues'>Open issues</a>]
-    B --> |Still unresolved?| C[<a href="https://github.com/WAM2layers/WAM2layers/discussions/new">Start a new discussion</a><br>Briefly introduce yourself and your use case and provide relevant context, e.g. config files - if applicable]
-    C --> |Discussion concludes that work is needed?| D[Discussion is converted to issue]
+    A[Question or idea?] --> B[Check existing resources:<br><a href='https://wam2layers.readthedocs.io'>Documentation</a>, <a href='https://github.com/WAM2layers/WAM2layers/discussions'>Discussion forum</a>, <a href='https://github.com/WAM2layers/WAM2layers/issues'>Open issues</a>]
+    B --> |Still unresolved?| C[<a href="https://github.com/WAM2layers/WAM2layers/discussions/new">Start a new discussion</a><br>Briefly introduce yourself and your use case and provide relevant context, e.g. config files]
+    C --> |Work needed?| D[Discussion is converted to issue]
     D --> |Want to contribute?| E[See <a href='https://wam2layers.readthedocs.io/en/latest/develop.html'>Developer guide</a>]
-    D --> F[Wait and hope others have time to work on it]
+    D --> F[Wait for others to hopefully work on it]
+
+    class A startStep;
+    classDef startStep fill:#f9f,stroke:#333,stroke-width:4px,font-size:16px;
 ```
 
 # Other versions
