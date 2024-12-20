@@ -24,7 +24,7 @@ tagging_end_date: "2021-07-15T00:00"
 
 input_frequency: "1h"
 timestep: 600  # timestep in seconds
-output_frequency: "1d"
+output_frequency: "1D"
 restart: False
 periodic_boundary: false
 kvf: 3
