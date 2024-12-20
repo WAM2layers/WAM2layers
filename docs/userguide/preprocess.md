@@ -55,10 +55,18 @@ the entire globe once.
 The configuration for ARCO-ERA5 data is largely the same as for ERA5 data.
 You can base your configuration file off the [ERA5 example config](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
 
-However, there are two small differences.
+However, there are three differences.
 The `filename_template` config entry is not used by the ARCO-ERA5 preprocessor
 as the raw data is retrieved from the internet and is not stored on disk.
-Additionally, the ARCO-ERA5 data is on the Proleptic Gregorian calendar,
+Only ARCO-ERA5 pressure layer data is currently implemented, so you will have
+to set this in the configuration file:
+
+```yml
+level_type: pressure_levels
+levels: [100, 200, 300, 400, 500, 550, 600, 650, 700, 750, 775, 800, 825, 850, 875, 900, 925, 950, 975, 1000]
+```
+
+Lastly, the ARCO-ERA5 data is on the Proleptic Gregorian calendar,
 which you have to set in your configuration file:
 
 ```yml
@@ -90,7 +98,8 @@ The configuration for ARCO-ERA5 data is largely the same as for ERA5 data.
 You can base your configuration file off the [ERA5 example config](https://github.com/WAM2layers/WAM2layers/blob/main/example-config.yaml).
 
 However, for CMIP6 data you can format the 'preprocessing' section of the
-config file in the following way;
+config file in the following way (note that the pressure levels can differ between
+different CMIP models);
 
 ```yml
 # Preprocessing
@@ -99,6 +108,9 @@ preprocess_start_date: "2012-05-02T00:00"
 preprocess_end_date: "2012-08-01T00:00"
 level_type: pressure_levels
 levels: [5000, 25000, 50000, 60000, 70000, 85000, 92500]
+
+input_frequency: "6h"
+output_frequency: "1D"
 ```
 
 If the data you use is not on a standard calendar (which is often the case
