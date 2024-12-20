@@ -1,37 +1,50 @@
+
+# WAM2layers
+
 [![DOI](https://zenodo.org/badge/471007521.svg)](https://zenodo.org/badge/latestdoi/471007521)
 [![Documentation Status](https://readthedocs.org/projects/wam2layers/badge/?version=latest)](https://wam2layers.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/pypi/v/wam2layers)](https://pypi.org/project/wam2layers/)
 
-# Atmospheric moisture tracking
-
-https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
-
-This repository contains the source code of the WAM2layers moisture tracking
-code. It can be used to determine where
+WAM2layers is an atmospheric moisture tracking model. It can be used to determine where
 precipitation originally evaporated (backtracking), or where evaporated moisture
 eventually ends up (forward tracking).
+
+Reference paper: [Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/egusphere-2024-3401)
+
+https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
 
 The animation above illustrates the concept of backtracking: you first see the water
 content and fluxes move forward in time (left panel). Midway through, the animation
 reverses and the moisture from the "source region" is tracked backward in time (right panel).
 
+## How does it work
 
-This code is currently developed by a core team:
-Ruud van der Ent (Delft University of Technology)
-Imme Benedict (Wageningen University)
-Chris Weijenborg (Wageningen University)
-Peter Kalverla (Netherlands eScienceCenter)
-Bart Schilperoort (Netherlands eScience Center)
+The simplest experiment with WAM2layers could look like this
 
-We are proudly part of [open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology).
+```sh
+pip install wam2layers[viz]
+wam2layers download example-input-eiffel
+cd example-input-eiffel
+wam2layers preprocess era5 config-eiffel.yaml
+wam2layers track config-eiffel.yaml
+wam2layers visualize output config-eiffel.yaml
+```
 
-# How to use
-See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description.
-Are you relatively new to setting up Python environments, command line interfaces etc.? Try this [video](https://youtu.be/QudlILlZnOg)
+See the [documentation](https://wam2layers.readthedocs.io/en/latest/) for a more detailed description. We also have a [video walkthrough](https://youtu.be/QudlILlZnOg)!
 
-Still questions? Follow the flowchart below.
-![FlowChart GitHub](https://github.com/WAM2layers/WAM2layers/assets/123247866/f5cbcf8f-a45f-4e73-b304-00956b4e2ee5)
+## Finding help
 
+```mermaid
+graph TD
+    A[Question or idea?] --> B[Check existing resources:<br><a href='https://wam2layers.readthedocs.io'>Documentation</a>, <a href='https://github.com/WAM2layers/WAM2layers/discussions'>Discussion forum</a>, <a href='https://github.com/WAM2layers/WAM2layers/issues'>Open issues</a>]
+    B --> |Still unresolved?| C[<a href="https://github.com/WAM2layers/WAM2layers/discussions/new">Start a new discussion</a><br>Briefly introduce yourself and your use case and provide relevant context, e.g. config files]
+    C --> |Work needed?| D[Discussion is converted to issue]
+    D --> |Want to contribute?| E[See <a href='https://wam2layers.readthedocs.io/en/latest/develop.html'>Developer guide</a>]
+    D --> F[Wait for others to hopefully work on it]
+
+    class A startStep;
+    classDef startStep fill:#f9f,stroke:#333,stroke-width:4px,font-size:16px;
+```
 
 # Other versions
 
@@ -46,13 +59,22 @@ This is the official codebase for the WAM-2layers moisture tracking model as of
 
 # Reuse and acknowledgement
 
-We are actively developing the code at the moment, so it may be subject to
-change. We aim for backward compatability from v3.0.0 onward. We encourage anyone who is interested in re-using the code to get in
-touch on the discussion pages. We may be able to help and you may be able to help us getting rid off bugs.
+This code is currently developed by a core team:
+Ruud van der Ent (Delft University of Technology)
+Imme Benedict (Wageningen University)
+Chris Weijenborg (Wageningen University)
+Peter Kalverla (Netherlands eScienceCenter)
+Bart Schilperoort (Netherlands eScience Center)
+
+We are proudly part of [open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology).
 
 If you use the code for a publication, please cite it using the [DOI of the
 appropriate release](https://doi.org/10.5281/zenodo.7010594) and the
-following paper:
-[Contrasting roles of interception and transpiration in the
-hydrological cycle - Part 2: Moisture
-recycling](https://doi.org/10.5194/esd-5-471-2014)
+following paper (currently in preprint):
+[Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/egusphere-2024-3401)
+
+<p align='right'>
+<img src="https://github.com/user-attachments/assets/6d553165-88d5-40d3-8def-2aec45cb695b" width="100"/>
+<img src="https://github.com/user-attachments/assets/99617790-ae0c-484c-971d-d9a7e0d8da5a" width="100"/>
+<img src="https://github.com/user-attachments/assets/fb29f5ab-bdb5-4008-b6a7-3b44c6b1f5a1" width="100"/>
+</p>

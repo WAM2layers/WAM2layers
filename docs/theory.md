@@ -1,5 +1,7 @@
 # Theory
 
+The equations implemented in WAM2layers v3 are described in detail in [this manuscript](https://doi.org/10.5194/egusphere-2024-3401). Below, we provide a brief summary of the main principle.
+
 Considering the schematic illustration below, forward- and backward tracking can
 be formulated respectively as:
 
