@@ -5,7 +5,7 @@ import numpy as np
 from wam2layers.config import Config
 from wam2layers.utils.profiling import ProgressTracker
 
-# Functions to pad poundaries of arrays
+# Functions to pad boundaries of arrays
 pad_x_wrap = partial(np.pad, pad_width=((0, 0), (1, 1)), mode="wrap")
 pad_y_zero = partial(
     np.pad, pad_width=((1, 1), (0, 0)), mode="constant", constant_values=0
@@ -83,6 +83,7 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
         up = pad_xy_zero(u)  # [M-2, N-1] -> [M, N+1]
         vp = pad_xy_zero(v)  # [M-1, N-2] -> [M+1, N]
 
+    # Useful for indexing the arrays later on
     west = np.s_[:-1]
     east = np.s_[1:]
     south = np.s_[1:]
@@ -93,6 +94,7 @@ def horizontal_advection(s, u, v, periodic_x=False) -> np.ndarray:
     us = np.where(up > 0, up * sp[inner, west], up * sp[inner, east])  # [M, N+1]
     vs = np.where(vp > 0, vp * sp[south, inner], vp * sp[north, inner])  # [M+1, N]
 
+    # Combine advection from all surrounding cells into one
     adv_x = us[:, west] - us[:, east]  # [M, N]
     adv_y = vs[south, :] - vs[north, :]  # [M, N]
 

@@ -95,7 +95,7 @@ def forwardtrack(
     s_track_lower = np.maximum(s_track_lower, 0)
     s_track_upper = np.maximum(s_track_upper, 0)
 
-    # at this point any of the storages could still be overfull, thus stabilize and assigns losses:
+    # At this point the storages could still be overfull internally, thus stabilize and assign internal losses
     losses_lower = np.maximum(0, s_track_lower - S1["s_lower"])
     losses_upper = np.maximum(0, s_track_upper - S1["s_upper"])
     losses += losses_lower + losses_upper
