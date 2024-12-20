@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - config file documentation expanded ([#398](https://github.com/WAM2layers/WAM2layers/pull/398)).
 - support for preprocessing ARCO-ERA5 data ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
 - longitude shifter to preprocessing that ensures all longitude values are in the range (-180, 180) ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+- support for passing a shapefile as tagging_region, instead of a netCDF/bounding box ([#431](https://github.com/WAM2layers/WAM2layers/pull/431)).
 
 ### Changed
 - input data to the tracking code is now assumed to have longitude values between -180 and 180 degrees ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
@@ -19,10 +20,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Patch for bug in meridional advection not accounting for decreasing grid cell size towards poles ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
-
-### Fixed
-
 - In simulations with periodic boundaries, stagger the flux to the exterior edges as well ([#426](https://github.com/WAM2layers/WAM2layers/pull/426)).
+- support for ERA5 data from new CDS ([#429](https://github.com/WAM2layers/WAM2layers/pull/429)).
 
 ## Release v3.1.0 (2024-06-21)
 
