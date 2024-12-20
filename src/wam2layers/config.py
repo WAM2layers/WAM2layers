@@ -133,8 +133,8 @@ class Config(BaseModel):
 
     You can either specify a path that contains a netcdf file, a shapefile, or
     a bounding box of the form [west, south, east, north]:
-    - The netcdf file should consist of ones (tagging region) and zeros 
-      (non-tagging region). 
+    - The netcdf file should consist of ones (tagging region) and zeros
+      (non-tagging region).
       Values between 0 and 1 are possible as well and can be used in case the
       region of interest overlaps with part of a grid cell.
     - The shapefile should contain only one polygon. The mask generated from the

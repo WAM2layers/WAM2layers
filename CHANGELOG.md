@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## Release v3.2.0 (2024-12-20)
+
 ### Added
 
 - Windows instruction to the installation guide ([#392](https://github.com/WAM2layers/WAM2layers/pull/392)).
@@ -15,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - support for passing a shapefile as tagging_region, instead of a netCDF/bounding box ([#431](https://github.com/WAM2layers/WAM2layers/pull/431)).
 
 ### Changed
+
 - input data to the tracking code is now assumed to have longitude values between -180 and 180 degrees ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
 - Update README: add reference to v3 paper preprint, add quickstart, and update flowchart for getting help.
 

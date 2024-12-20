@@ -45,7 +45,7 @@ downloaded but "thrown away". For this reason you should generally pre-process
 all pressure levels, as they are aggregated to two levels anyway.
 
 ```{tip}
-If you and other people in your group/institute make use of this data, it could be 
+If you and other people in your group/institute make use of this data, it could be
 useful to store it somewhere where all of you can have shared access, and preprocess
 the entire globe once.
 ```
@@ -73,7 +73,7 @@ which you have to set in your configuration file:
 calendar: proleptic_gregorian
 ```
 
-### CMIP6 
+### CMIP6
 
 The WAM2layers preprocessor supports some input data from [CMIP6](https://pcmdi.llnl.gov/CMIP6/).
 Data currently needs to come from the following MIP tables:
@@ -114,7 +114,7 @@ output_frequency: "1D"
 ```
 
 If the data you use is not on a standard calendar (which is often the case
-for future scenario runs), you will also have to configure the calendar 
+for future scenario runs), you will also have to configure the calendar
 in the configuration file:
 
 ```yml
