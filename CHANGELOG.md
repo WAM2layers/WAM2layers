@@ -19,10 +19,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Patch for bug in meridional advection not accounting for decreasing grid cell size towards poles ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
-
-### Fixed
-
 - In simulations with periodic boundaries, stagger the flux to the exterior edges as well ([#426](https://github.com/WAM2layers/WAM2layers/pull/426)).
+- support for ERA5 data from new CDS ([#429](https://github.com/WAM2layers/WAM2layers/pull/429)).
 
 ## Release v3.1.0 (2024-06-21)
 

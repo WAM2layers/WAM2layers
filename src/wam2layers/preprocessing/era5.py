@@ -72,7 +72,17 @@ def open_da(filepath) -> xr.DataArray:
     number of times the files need to be accessed, making the preprocessing slightly
     more efficient.
     """
-    return xr.open_dataarray(filepath, use_cftime=True)
+    da = xr.open_dataarray(filepath, use_cftime=True)
+
+    # Rename new-cds to old cds netCDF4 names
+    if "valid_time" in da.coords and "time" not in da.coords:
+        da = da.rename({"valid_time": "time"})
+    if "model_level" in da.coords and "level" not in da.coords:
+        da = da.rename({"model_level": "level"})
+    if "pressure_level" in da.coords and "level" not in da.coords:
+        da = da.rename({"pressure_level": "level"})
+
+    return da
 
 
 def load_data(variable: str, datetime: CfDateTime, config: Config) -> xr.DataArray:
