@@ -13,6 +13,7 @@ from wam2layers.config import BoundingBox, Config
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.reference.variables import DATA_ATTRIBUTES
 from wam2layers.utils.calendar import CfDateTime, round_cftime
+from wam2layers.utils.shapefile_mask import create_mask
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,17 @@ def load_data(t: CfDateTime, config: Config, subset: str = "fluxes") -> xr.Datas
 
 
 def load_tagging_region(config: Config, t: Optional[CfDateTime] = None):
-    tagging_region = xr.open_dataarray(config.tagging_region)
+    if config.tagging_region.suffix == ".shp":
+        logger.info("Generating mask from shapefile...")
+        ds = xr.open_dataset(next(config.preprocessed_data_folder.glob("*.nc")))
+        tagging_region = create_mask(ds, config.tagging_region)
+        logger.info("Writing mask to debug folder.")
+        (config.output_folder / "debug").mkdir(exist_ok=True)
+        tagging_region.to_dataset().to_netcdf(
+            config.output_folder / "debug" / "tagging_region.nc"
+        )
+    else:
+        tagging_region = xr.open_dataarray(config.tagging_region)
 
     if config.tracking_domain is not None:
         tagging_region = select_subdomain(tagging_region, config.tracking_domain)

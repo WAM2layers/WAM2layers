@@ -17,7 +17,7 @@ tracking_start_date: "2020-01-01T00:00"
 tracking_end_date: "2020-01-01T23:00"
 
 # Tagging
-tagging_region: tests/test_data/region_rhine.nc
+tagging_region: tests/test_data/shape/Rhine.shp
 # tagging_region: [0, 50, 10, 55]  # alternative to mask file
 tagging_start_date: "2020-01-01T12:00"
 tagging_end_date: "2020-01-01T23:00"
