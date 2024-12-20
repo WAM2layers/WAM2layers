@@ -1,6 +1,7 @@
 """Utils to create a tagging region mask from a shapefile on the fly."""
 from collections import namedtuple
 from pathlib import Path
+from typing import Union
 import numpy as np
 import shapely.geometry
 import shapefile
@@ -11,8 +12,8 @@ Resolution = namedtuple("Resolution", ["lat", "lon"])
 
 
 def ensure_monotonic(
-    obj: xr.DataArray | xr.Dataset,
-) -> xr.DataArray | xr.Dataset:
+    obj: Union[xr.DataArray, xr.Dataset],
+) -> Union[xr.DataArray, xr.Dataset]:
     """Ensure that both latitude and longitude are both monotonically increasing."""
     for coord in ("latitude", "longitude"):
         if not obj.indexes[coord].is_monotonic_increasing:
@@ -22,7 +23,7 @@ def ensure_monotonic(
     return obj
 
 
-def load_shapefile(file: str | Path):
+def load_shapefile(file: Union[str, Path]):
     """"Load the first polygon from a shapefile."""
     sf = shapefile.Reader(file)
     return shapely.geometry.shape(sf.shape(0))
@@ -53,7 +54,7 @@ def generate_boxes(
     return boxes
 
 
-def create_mask(ds: xr.Dataset, shape: str | Path):
+def create_mask(ds: xr.Dataset, shape: Union[str, Path]):
     """Create a tagging region mask from a shapefile."""
     poly = load_shapefile(shape)
     minx, miny, maxx, maxy = poly.bounds

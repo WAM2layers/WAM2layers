@@ -17,7 +17,7 @@ from pathlib import Path
 import cdsapi
 import pandas as pd
 
-target_dir = "."
+target_dir = ".download_pl"
 skip_exist = True
 
 datelist = pd.date_range("20200101", "20200103")
