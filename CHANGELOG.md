@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - input data to the tracking code is now assumed to have longitude values between -180 and 180 degrees ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
+- Update README: add reference to v3 paper preprint, add quickstart, and update flowchart for getting help.
 
 ### Fixed
 
