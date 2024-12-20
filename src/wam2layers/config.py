@@ -137,8 +137,9 @@ class Config(BaseModel):
     and 1 are possible as well and can be used in case the region of interest
     overlaps with part of a grid cell
 
-    The bounding box should be inside -180, -80, 180, 80; if west > south, the
-    coordinates will be rolled to retain a continous longitude.
+    The bounding box should be inside -180, -80, 180, 80. 
+    Note that if west > south, the coordinates will be rolled to retain a continous
+    longitude, this can be used for studies crossing the antimeridian.
 
     The file should exist. If it has a time dimension, the nearest field will be
     used as tagging region, and the time should still be between
