@@ -10,7 +10,7 @@
 # first be sure it's bash... anything out of bash or sh will break
 # and the test will assure we are not using sh instead of bash
 if [ $BASH ] && [ `basename $BASH` != bash ]; then
-    echo "######## This is a bash script! ##############" 
+    echo "######## This is a bash script! ##############"
     echo "Change the execution bit 'chmod u+x $0' or start with 'bash $0' instead of sh."
     echo "Trying to recover automatically..."
     sleep 1
@@ -140,12 +140,12 @@ clean_work=1
 while getopts ':c:pfF:o:w:isuUndvqhHI:T' OPT; do
     case $OPT in
         H) skip_security=1 && use_http_sec=1;; #       : Authenticate with OpenID (username,) and password, without the need for a certificate.
-        T) force_TLSv1=1;;              #       : Forces wget to use TLSv1. 
+        T) force_TLSv1=1;;              #       : Forces wget to use TLSv1.
         c) ESG_CREDENTIALS="$OPTARG";;  #<cert> : use this certificate for authentication.
         f) force=1;;                    #       : force certificate retrieval (defaults to only once per day); for certificate-less authentication (see -H option), this flag will force login and refresh cookies.
         F) input_file="$OPTARG";;       #<file> : read input from file instead of the embedded one (use - to read from stdin)
         o) openId="$OPTARG";;           #<openid>: Provide OpenID instead of interactively asking for it.
-        I) username_supplied="$OPTARG";;    #<user_id> : Explicitly set user ID.  By default, the user ID is extracted from the last component of the OpenID URL.  Use this flag to override this behaviour.                   
+        I) username_supplied="$OPTARG";;    #<user_id> : Explicitly set user ID.  By default, the user ID is extracted from the last component of the OpenID URL.  Use this flag to override this behaviour.
         w) output="$OPTARG";;           #<file> : Write embedded files into a file and exit
         i) insecure=1;;                 #       : set insecure mode, i.e. don't check server certificate
         s) skip_security=1 && use_cookies_for_http_basic_auth_start=1;;            #       : completely skip security. It will only work if the accessed data is not secured at all. -- works only if the accessed data is unsecured or a certificate exists or cookies are saved (latter applies to -H option only).
@@ -201,7 +201,7 @@ if ((update)); then
         mv $0 $0.old.$counter
         echo "$new_wget" > $0
     fi
-    exit 0      
+    exit 0
 fi
 
 
@@ -226,7 +226,7 @@ check_java() {
             return 1
         fi
     else
-    
+
         if ((mVer<5)); then
             echo "Java version 1.5+ is required for retrieving the certificate." >&2
             echo "Current version seems older: $(java -version | head -n1) " >&2
@@ -252,7 +252,7 @@ proxy_to_java() {
     eval $(sed 's#^\(https\?://\)\?\(\([^:@]*\)\(:\([^@]*\)\)\?@\)\?\([^:/]*\)\(:\([0-9]*\)\)\?.*#proxy_user=\3;proxy_pass=\5;proxy_server=\6;proxy_port=\8#'<<<$https_proxy)
     [[ "$proxy_server" ]] && JAVA_PROXY=$JAVA_PROXY" -Dhttps.proxyHost=$proxy_server"
     [[ "$proxy_port" ]] && JAVA_PROXY=$JAVA_PROXY" -Dhttps.proxyPort=$proxy_port"
-    
+
     echo "$JAVA_PROXY"
 }
 
@@ -266,14 +266,14 @@ get_certificates() {
         echo "Could not fetch esg-truststore";
         return 1
     fi
-    
+
     if ! wget --no-check-certificate https://raw.githubusercontent.com/ESGF/esgf-dist/master/installer/certs/esg_trusted_certificates.tar -O - -q | tar x -C $ESG_HOME; then
         #certificates tarred into esg_trusted_certificates. (if it breaks, let the user know why
         wget --no-check-certificate https://raw.githubusercontent.com/ESGF/esgf-dist/master/installer/certs/esg_trusted_certificates.tar
         echo "Could't update certs!" >&2
         return 1
     else
-        #if here everythng went fine. Replace old cert with this ones    
+        #if here everythng went fine. Replace old cert with this ones
         [[ -d $ESG_CERT_DIR ]] && rm -r $ESG_CERT_DIR || mkdir -p $(dirname $ESG_CERT_DIR)
         mv $ESG_HOME/esg_trusted_certificates $ESG_CERT_DIR
         touch $ESG_CERT_DIR
@@ -288,7 +288,7 @@ get_credentials() {
     if check_java
     then
 	use_java=1
-    else	
+    else
 	use_java=0
 	echo "No suitable java for obtaining certificate - checking for myproxy-logon instead" >&2
 	check_myproxy_logon || exit 1
@@ -330,7 +330,7 @@ get_credentials() {
         read -e
         [[ "$REPLY" ]] && username="$REPLY"
     fi
-    
+
 
 
     if [ $use_java -eq 1 ]
@@ -341,9 +341,9 @@ get_credentials() {
         [[ "$openId" ]] && args=$args" --oid $openId"
         [[ "$pass" ]] && args=$args" -P $pass"
         [[ "$username" ]] && args=$args" -l $username"
-        
+
         echo -n $'\nRetrieving Credentials...' >&2
-        if ! java $(proxy_to_java) -jar $MYPROXY_GETCERT $args --ca-directory $ESG_CERT_DIR --output $ESG_CREDENTIALS ; then        
+        if ! java $(proxy_to_java) -jar $MYPROXY_GETCERT $args --ca-directory $ESG_CERT_DIR --output $ESG_CREDENTIALS ; then
             echo "Certificate could not be retrieved"
             exit 1
         fi
@@ -355,7 +355,7 @@ get_credentials() {
             echo "Certificate could not be retrieved"
 	    exit 1
         fi
-	cp $HOME/.globus/certificates/* $ESG_CERT_DIR/	
+	cp $HOME/.globus/certificates/* $ESG_CERT_DIR/
     fi
 }
 
@@ -420,7 +420,7 @@ find_credentials() {
         ESG_CERT="$X509_USER_CERT"
         ESG_KEY="$X509_USER_KEY"
     else
-        # If credentials are not present, just point to where they should go 
+        # If credentials are not present, just point to where they should go
         echo "No ESG Credentials found in $ESG_CREDENTIALS" >&2
             ESG_CERT="$ESG_CREDENTIALS"
             ESG_KEY="$ESG_CREDENTIALS"
@@ -435,7 +435,7 @@ find_credentials() {
         fi
         check_cert || { (($?==1)); exit 1; }
     fi
-    
+
     if [[ $CHECK_SERVER_CERT == "Yes" ]]; then
         [[ -d "$ESG_CERT_DIR" ]] || { echo "CA certs not found. Aborting."; exit 1; }
         PKI_WGET_OPTS="--ca-directory=$ESG_CERT_DIR"
@@ -510,36 +510,36 @@ download_http_sec()
 {
   #The data to be downloaded.
   data=" $url"
-  filename="$file"  
+  filename="$file"
 
   #Wget args.
-  if ((insecure)) 
+  if ((insecure))
   then
-   wget_args=" --no-check-certificate --cookies=on  --keep-session-cookies --save-cookies $COOKIES_FOLDER/wcookies.txt " 
+   wget_args=" --no-check-certificate --cookies=on  --keep-session-cookies --save-cookies $COOKIES_FOLDER/wcookies.txt "
   else
-   wget_args=" --ca-directory=$WGET_TRUSTED_CERTIFICATES --cookies=on --keep-session-cookies --save-cookies $COOKIES_FOLDER/wcookies.txt "  
-  fi 
-
-  if ((use_cookies_for_http_basic_auth_start)) || ((use_cookies_for_http_basic_auth)) 
-  then
-   wget_args=" $wget_args"" --load-cookies $COOKIES_FOLDER/wcookies.txt"    
+   wget_args=" --ca-directory=$WGET_TRUSTED_CERTIFICATES --cookies=on --keep-session-cookies --save-cookies $COOKIES_FOLDER/wcookies.txt "
   fi
-  
+
+  if ((use_cookies_for_http_basic_auth_start)) || ((use_cookies_for_http_basic_auth))
+  then
+   wget_args=" $wget_args"" --load-cookies $COOKIES_FOLDER/wcookies.txt"
+  fi
+
   if((force_TLSv1))
   then
    wget_args=" $wget_args"" --secure-protocol=TLSv1 "
   fi
-  
-  
+
+
   if [[ ! -z "$ESGF_WGET_OPTS" ]]
   then
     wget_args="$wget_args $ESGF_WGET_OPTS"
-  fi  
-  
+  fi
+
 
   #use cookies for the next downloads
   use_cookies_for_http_basic_auth=1;
-   
+
   #Debug message.
   if  ((debug))
   then
@@ -548,29 +548,29 @@ download_http_sec()
   fi
 
 
-  #Try to download the data. 
+  #Try to download the data.
   command="wget $wget_args -O $filename $data"
-  http_resp=$(eval $command  2>&1) 
+  http_resp=$(eval $command  2>&1)
   cmd_exit_status="$?"
-  
+
   if ((debug))
   then
    echo -e "\nHTTP response:\n $http_resp\n"
   fi
-      
+
   #Extract orp service from url ?
   #Evaluate response.
   #redirects=$(echo "$http_resp" | egrep -c ' 302 ')
-  #(( "$redirects" == 1 )) && 
-  if  echo "$http_resp" | grep -q "/esg-orp/"      
+  #(( "$redirects" == 1 )) &&
+  if  echo "$http_resp" | grep -q "/esg-orp/"
   then
    urls=$(echo "$http_resp" | egrep -o 'https://[^ ]+' | cut -d'/' -f 3)
    orp_service=$(echo "$urls" | tr '\n' ' ' | cut -d' ' -f 2)
 
 
    #Use cookies for transaction with orp.
-   wget_args=" $wget_args"" --load-cookies $COOKIES_FOLDER/wcookies.txt"    
-   
+   wget_args=" $wget_args"" --load-cookies $COOKIES_FOLDER/wcookies.txt"
+
    #Download data using either http basic auth or http login form.
    if [[ "$openid_c" == */openid/  || "$openid_c" == */openid ]]
    then
@@ -578,13 +578,13 @@ download_http_sec()
    else
     download_http_sec_decide_service
    fi
-  else  
+  else
    if    echo "$http_resp" | grep -q "401 Unauthorized"  \
       || echo "$http_resp" | grep -q "403: Forbidden"  \
       || echo "$http_resp" | grep -q "Connection timed out."  \
       || echo "$http_resp" | grep -q "no-check-certificate"  \
-      || (( $cmd_exit_status != 0 ))      
-   then 
+      || (( $cmd_exit_status != 0 ))
+   then
     echo "ERROR : http request to OpenID Relying Party service failed."
     failed=1
    fi
@@ -608,38 +608,38 @@ download_http_sec_decide_service()
   then
    openid_c_tmp="https://""$host""/openid/"
   else
-   openid_c_tmp="https://""$host""/esgf-idp/openid/" 
+   openid_c_tmp="https://""$host""/esgf-idp/openid/"
   fi
 
   command="wget "$openid_c_tmp" --no-check-certificate ${force_TLSv1:+--secure-protocol=TLSv1} -O-"
-        
+
   if [[ ! -z "$ESGF_WGET_OPTS" ]]
   then
    command="$command $ESGF_WGET_OPTS"
-  fi  
-          
+  fi
+
   #Debug message.
   if  ((debug))
   then
    echo -e "\nExecuting:\n"
    echo -e "$command\n"
   fi
-            
+
 
   #Execution of command.
   http_resp=$(eval $command  2>&1)
   cmd_exit_status="$?"
-  
-  
+
+
   if ((debug))
   then
    echo -e "\nHTTP response:\n $http_resp\n"
-  fi 
-  
+  fi
+
 
   if    echo "$http_resp" | grep -q "[application/xrds+xml]"  \
      && echo "$http_resp" | grep -q "200 OK"  \
-     && (( cmd_exit_status == 0 ))       
+     && (( cmd_exit_status == 0 ))
   then
    openid_c=$openid_c_tmp
    download_http_sec_open_id
@@ -660,28 +660,28 @@ download_http_sec_retry()
   echo -e "\nRetrying....\n"
   #Retry in case that last redirect did not work, this happens with older version of wget.
   command="wget $wget_args $data"
-      
+
   #Debug message.
   if  ((debug))
   then
    echo -e "Executing:\n"
    echo -e "$command\n"
-  fi   
-   
-  http_resp=$(eval $command  2>&1) 
+  fi
+
+  http_resp=$(eval $command  2>&1)
   cmd_exit_status="$?"
 
   if ((debug))
   then
    echo -e "\nHTTP response:\n $http_resp\n"
   fi
-   
+
   if    echo "$http_resp" | grep -q "401 Unauthorized"  \
      || echo "$http_resp" | grep -q "403: Forbidden"  \
      || echo "$http_resp" | grep -q "Connection timed out."  \
      || echo "$http_resp" | grep -q "no-check-certificate"  \
-     || (( $cmd_exit_status != 0 ))      
-  then 
+     || (( $cmd_exit_status != 0 ))
+  then
    echo -e "\nERROR : Retry failed.\n"
    #rm "$filename"
    failed=1
@@ -699,64 +699,64 @@ download_http_sec_cl_id()
   then
    echo -e "Executing:\n"
    echo -e "wget $command\n"
-  fi 
-  
-  
+  fi
+
+
   #Execution of command.
   http_resp=$(eval $command  2>&1)
   cmd_exit_status="$?"
 
-  
+
   if ((debug))
   then
    echo -e "\nHTTP response:\n $http_resp\n"
-  fi 
-    
-  
+  fi
+
+
   #Extract orp service from openid ?
   #Evaluate response.If redirected to idp service send the credentials.
   #redirects=$(echo "$http_resp" | egrep -c ' 302 ')
-  #(( redirects == 2  )) && 
-  if  echo "$http_resp" | grep -q "login.htm"  && (( cmd_exit_status == 0 ))   
-  then 
-  
+  #(( redirects == 2  )) &&
+  if  echo "$http_resp" | grep -q "login.htm"  && (( cmd_exit_status == 0 ))
+  then
+
    urls=$(echo "$http_resp" | egrep -o 'https://[^ ]+' | cut -d'/' -f 3)
-   idp_service=$(echo "$urls"  | tr '\n' ' ' | cut -d' ' -f 2) 
-      
+   idp_service=$(echo "$urls"  | tr '\n' ' ' | cut -d' ' -f 2)
+
    command="wget --post-data  password=\"$password_c\" $wget_args ${quiet:+-q} ${quiet:--v} -O $filename https://$idp_service/esgf-idp/idp/login.htm"
-   
+
 
    #Debug message.
    if  ((debug))
    then
     echo -e "Executing:\n"
     echo -e "wget $command\n"
-   fi 
+   fi
 
    #Execution of command.
    http_resp=$(eval $command  2>&1)
    cmd_exit_status="$?"
-      
+
    if ((debug))
    then
     echo -e "\nHTTP response:\n $http_resp\n"
-   fi 
-        
-   #Evaluate response. 
+   fi
+
+   #Evaluate response.
    #redirects=$(echo "$http_resp" | egrep -c ' 302 ')
-   #(( "$redirects" != 5 )) \ 
+   #(( "$redirects" != 5 )) \
    if    echo "$http_resp" | grep -q "text/html"  \
       || echo "$http_resp" | grep -q "403: Forbidden"  \
-      || (( cmd_exit_status != 0 ))        
-   then 
+      || (( cmd_exit_status != 0 ))
+   then
     rm "$filename"
     download_http_sec_retry
    fi
- 
+
   else
    echo "ERROR : HTTP request to OpenID Provider service failed."
    failed=1
-  fi #if redirected to idp.  
+  fi #if redirected to idp.
 }
 
 
@@ -772,33 +772,33 @@ download_http_sec_open_id()
   then
    echo -e "Executing:\n"
    echo -e "$command\n"
-  fi 
+  fi
 
   #Execution of command.
   http_resp=$(eval $command  2>&1)
   cmd_exit_status="$?"
-  
-  
+
+
   if ((debug))
   then
    echo -e "\nHTTP response:\n $http_resp\n"
-  fi 
+  fi
 
   #Evaluate response.
   #redirects=$(echo "$http_resp" | egrep -c ' 302 ')
   #(( "$redirects" != 7 )) ||
-  if   echo "$http_resp" | grep -q "text/html"  ||  (( $cmd_exit_status != 0 ))   
+  if   echo "$http_resp" | grep -q "text/html"  ||  (( $cmd_exit_status != 0 ))
   then
    rm "$filename"
-   download_http_sec_retry     
-  fi #if error during http basic authentication. 
-  
+   download_http_sec_retry
+  fi #if error during http basic authentication.
+
 }
 
 
 download() {
     wget="wget ${insecure:+--no-check-certificate} ${quiet:+-q} ${quiet:--v} -c ${force_TLSv1:+--secure-protocol=TLSv1} $PKI_WGET_OPTS"
-    
+
     while read line
     do
         # read csv here document into proper variables
@@ -809,14 +809,14 @@ download() {
 
         #get the cached entry if any.
         cached="$(grep -e "^$file" "$CACHE_FILE")"
-        
+
         #if we have the cache entry but no file, clean it.
         if [[ ! -f $file && "$cached" ]]; then
             #the file was removed, clean the cache
             remove_from_cache "$file"
             unset cached
         fi
-        
+
         #check it wasn't modified
         if [[ -n "$cached" && "$(get_mod_time_ $file)" == $(echo "$cached" | cut -d ' ' -f2) ]]; then
                     if [[ "$chksum" == "$(echo "$cached" | cut -d ' ' -f3)" ]]; then
@@ -828,13 +828,13 @@ download() {
                 remove_from_cache "$file"
                 unset cached
             else
-                #file on server is different from what we have. 
+                #file on server is different from what we have.
                 echo "WARNING: The remote file was changed (probably a new version is available). Use -U to Update/overwrite"
                 continue
             fi
         fi
         unset chksum_err_value chksum_err_count
-        
+
         while : ; do
             # (if we had the file size, we could check before trying to complete)
             echo "Downloading"
@@ -852,8 +852,8 @@ download() {
                   break
                  fi
                 else
-                 $wget -O "$file" $url || { failed=1; break; }  
-                fi                
+                 $wget -O "$file" $url || { failed=1; break; }
+                fi
             fi
 
             #check if file is there
@@ -884,7 +884,7 @@ download() {
                                 sleep 1
                                 break
                             fi
-                        
+
                             rm $file
                             #try again
                             echo -n "  re-trying..."
@@ -900,7 +900,7 @@ download() {
             #done!
             break
         done
-        
+
         if ((failed)); then
             echo "download failed"
             # most common failure is certificate expiration, so check this
@@ -908,7 +908,7 @@ download() {
             ((!skip_security)) && [[ "$pass" ]] && check_cert
             unset failed
         fi
-        
+
 done <<<"$download_files"
 
 }
@@ -944,7 +944,7 @@ http_basic_auth_func_info_message()
 #
 
 if ((!use_http_sec))
-then 
+then
  http_basic_auth_func_info_message
 fi
 
@@ -975,30 +975,30 @@ check_os
 ((!skip_security)) && find_credentials
 
 if ((use_http_sec))
-then 
-     
+then
+
  if (( ! insecure))
- then 
+ then
   get_certificates
  fi
 
  #Cookies folder.
  COOKIES_FOLDER="$ESG_HOME/wget_cookies"
- 
+
  if (( force ))
  then
-  if [ -d $COOKIES_FOLDER ] 
+  if [ -d $COOKIES_FOLDER ]
   then
    rm -rf $COOKIES_FOLDER
   fi
  fi
 
- #Create cookies folder. 
- if [[ ! -d $COOKIES_FOLDER ]] 
+ #Create cookies folder.
+ if [[ ! -d $COOKIES_FOLDER ]]
  then
   mkdir $COOKIES_FOLDER
  fi
- 
+
  if((! use_cookies_for_http_basic_auth_start))
  then
 
@@ -1006,14 +1006,14 @@ then
   if [[ ! -z "$openId" ]]
   then
    openid_c="$openId"
-  elif ( (("$#" > 1)) || (("$#" == 1)) ) 
+  elif ( (("$#" > 1)) || (("$#" == 1)) )
   then
    openid_c=$1
   else
    read -p    "Enter your openid : " openid_c
   fi
-  
-  
+
+
   #Read username.
   if [[ ! -z "$username_supplied" ]]
   then
@@ -1025,14 +1025,14 @@ then
   then
    read -p    "Enter username : " username_c
   fi
-  
+
   #Read password.
   read -s -p "Enter password : " password_c
   echo -e "\n"
 
  fi #use cookies
 
-fi #use_http_sec 
+fi #use_http_sec
 
 
 #do we have old results? Create the file if not

@@ -11,7 +11,7 @@ To run WAM2Layers you need a computer and some kind of command line, such as the
 default terminal included in Mac or Linux. On Windows you can either use Ubuntu
 through [WSL](https://learn.microsoft.com/en-us/windows/wsl/install),
 or use Powershell (which comes with Windows) as terminal.
-If you're using existing infrastructure such as an managed JupyterLab environment 
+If you're using existing infrastructure such as an managed JupyterLab environment
 or a supercomputer you will also typically have access to a terminal.
 
 You also need an existing Python environment with pip (the default installer for

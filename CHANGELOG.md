@@ -4,8 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-### Added
+## Release v3.2.0 (2024-12-20)
 
+### Added
 - Windows instruction to the installation guide ([#392](https://github.com/WAM2layers/WAM2layers/pull/392)).
 - support for preprocessing CMIP data ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
 - experimental support for parallel preprocessing ([#401](https://github.com/WAM2layers/WAM2layers/pull/401)).
@@ -19,7 +20,6 @@ All notable changes to this project will be documented in this file.
 - Update README: add reference to v3 paper preprint, add quickstart, and update flowchart for getting help.
 
 ### Fixed
-
 - Patch for bug in meridional advection not accounting for decreasing grid cell size towards poles ([#320](https://github.com/WAM2layers/WAM2layers/pull/320)).
 - In simulations with periodic boundaries, stagger the flux to the exterior edges as well ([#426](https://github.com/WAM2layers/WAM2layers/pull/426)).
 - support for ERA5 data from new CDS ([#429](https://github.com/WAM2layers/WAM2layers/pull/429)).
