@@ -13,11 +13,13 @@ Every tracking experiment requires data, which you might need to download.
 
 * **Tracking region**
 
+```{eval-rst}
     In addition to the time-dependent forcing data, WAM2layers also needs a
     tagging region. This is used to define the tagging region from where to 
     track moisture.
     The region can be described by a netCDF file, shapefile, or simple
-    bounding box. For more info see [the configuration section](./config.html#wam2layers.config.Config.tagging_region).
+    bounding box. For more info see :class:`wam2layers.config.Config.tagging_region`
+```
 
 At this stage, the format of the data is not very strict yet. In the
 [pre-processing step](./preprocess) we make sure that the data is ready for
