@@ -26,21 +26,24 @@ DATA_ATTRIBUTES: dict[str, dict[str, str]] = {
         "long_name": "tracked precipitation in upper layer",
         "units": "kg m-2 accumulated per output time step",
         "description": (
-            "precipitation in the upper layer that originates from tagged evaporation"
+            "surface precipitation from the upper layer that originates from tagged "
+            "evaporation. p_track = p_track_lower + p_track_upper"
         ),
     },
     "p_track_lower": {
         "long_name": "tracked precipitation in lower layer ",
         "units": "kg m-2 accumulated per output time step",
         "description": (
-            "precipitation in the lower layer that originates from tagged evaporation"
+            "surface precipitation from the lower layer that originates from tagged "
+            "evaporation. p_track = p_track_lower + p_track_upper"
         ),
     },
     "tagged_evap": {
         "long_name": "tagged evaporation ",
         "units": "kg m-2 accumulated per output time step",
         "description": (
-            "tagged evaporation in the tagging region, i.e., input for the tracking"
+            "tagged surface evaporation in the tagging region, i.e., input for the "
+            "tracking"
         ),
     },
     "tagged_precip": {
