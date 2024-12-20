@@ -1,8 +1,9 @@
+
+# WAM2layers
+
 [![DOI](https://zenodo.org/badge/471007521.svg)](https://zenodo.org/badge/latestdoi/471007521)
 [![Documentation Status](https://readthedocs.org/projects/wam2layers/badge/?version=latest)](https://wam2layers.readthedocs.io/en/latest/?badge=latest)
 [![PyPI](https://img.shields.io/pypi/v/wam2layers)](https://pypi.org/project/wam2layers/)
-
-# WAM2layers
 
 WAM2layers is an atmospheric moisture tracking model. It can be used to determine where
 precipitation originally evaporated (backtracking), or where evaporated moisture
@@ -71,3 +72,9 @@ If you use the code for a publication, please cite it using the [DOI of the
 appropriate release](https://doi.org/10.5281/zenodo.7010594) and the
 following paper (currently in preprint):
 [Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/egusphere-2024-3401)
+
+<p align='right'>
+<img src="https://github.com/user-attachments/assets/6d553165-88d5-40d3-8def-2aec45cb695b" width="100"/>
+<img src="https://github.com/user-attachments/assets/99617790-ae0c-484c-971d-d9a7e0d8da5a" width="100"/>
+<img src="https://github.com/user-attachments/assets/fb29f5ab-bdb5-4008-b6a7-3b44c6b1f5a1" width="100"/>
+</p>
