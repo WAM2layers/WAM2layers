@@ -141,6 +141,7 @@ class Config(BaseModel):
 
     The shapefile should contain only one polygon. The mask generated from the
     shapefile is also written to the debug directory in the output folder.
+    The entire shapefile polygon needs to be inside -180, -80, 180, 80.
     
     The bounding box should be inside -180, -80, 180, 80; if west > south, the
     coordinates will be rolled to retain a continous longitude.
