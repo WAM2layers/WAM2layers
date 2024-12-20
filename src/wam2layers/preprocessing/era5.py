@@ -72,7 +72,7 @@ def open_da(filepath) -> xr.DataArray:
     number of times the files need to be accessed, making the preprocessing slightly
     more efficient.
     """
-    da = xr.open_dataarray(filepath, use_cftime=True, chunks="auto")
+    da = xr.open_dataarray(filepath, use_cftime=True)
 
     # Rename new-cds to old cds netCDF4 names
     if "valid_time" in da.coords and "time" not in da.coords:
