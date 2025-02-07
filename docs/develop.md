@@ -230,8 +230,7 @@ publications.
 These instructions are intended for core developers.
 
 - Create a new branch, e.g. `prep_release_vXXX`
-- Update "version" in `src/wam2layers/__init__.py` and in `citation.cff` (use [semantic
-  versioning](https://semver.org/))
+- Update "version" in `src/wam2layers/__init__.py` (use [semantic versioning](https://semver.org/))
 - Make sure the code is neatly formatted (see above)
 - Make sure the changelog is up to date; update the "Unreleased" header with the
   new version, and add a new "Unreleased" header above
