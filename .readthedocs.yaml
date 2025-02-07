@@ -4,11 +4,13 @@
 
 version: 2
 
+sphinx:
+  configuration: docs/conf.py
+
 build:
   os: ubuntu-20.04
   tools:
     python: "3.11"
-
 
 python:
    install:

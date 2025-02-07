@@ -38,10 +38,10 @@ def backtrack(
     a, dy, dx = get_grid_info(F)
 
     # Unpack input data
-    fx_upper = stagger_x(F["fx_upper"].values)
-    fy_upper = stagger_y(F["fy_upper"].values)
-    fx_lower = stagger_x(F["fx_lower"].values)
-    fy_lower = stagger_y(F["fy_lower"].values)
+    fx_upper = stagger_x(F["fx_upper"].values, config.periodic_boundary)
+    fy_upper = stagger_y(F["fy_upper"].values, config.periodic_boundary)
+    fx_lower = stagger_x(F["fx_lower"].values, config.periodic_boundary)
+    fy_lower = stagger_y(F["fy_lower"].values, config.periodic_boundary)
     evap = F["evap"].values
     precip = F["precip"].values
     f_vert = F["f_vert"].values
