@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ## Release v3.2.1 (2024-12-20)
-- bugfix periodic boundaries ([#443](https://github.com/WAM2layers/WAM2layers/pull/443)).
+- Fix for incorrect staggering of periodic boundaries ([#443](https://github.com/WAM2layers/WAM2layers/pull/443)).
 
 ## Release v3.2.0 (2024-12-20)
 
