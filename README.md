@@ -14,8 +14,9 @@ Reference paper: [Atmospheric moisture tracking with WAM2layers v3](https://doi.
 https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
 
 The animation above illustrates the concept of backward tracking: you first see the water
-content and fluxes move forward in time (left panel). Midway through, the animation
-reverses and the moisture from the "tagging region" is tracked backward in time (right panel).
+content and fluxes in the tracking domain move forward in time (left panel). 
+Midway through, the animation reverses and the moisture from the "tagging region" 
+is tracked backward in time (right panel).
 
 ## How does it work
 
