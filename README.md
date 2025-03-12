@@ -6,16 +6,17 @@
 [![PyPI](https://img.shields.io/pypi/v/wam2layers)](https://pypi.org/project/wam2layers/)
 
 WAM2layers is an atmospheric moisture tracking model. It can be used to determine where
-precipitation originally evaporated (backtracking), or where evaporated moisture
+precipitation originally evaporated (backward tracking), or where evaporated moisture
 eventually ends up (forward tracking).
 
 Reference paper: [Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/egusphere-2024-3401)
 
 https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
 
-The animation above illustrates the concept of backtracking: you first see the water
-content and fluxes move forward in time (left panel). Midway through, the animation
-reverses and the moisture from the "source region" is tracked backward in time (right panel).
+The animation above illustrates the concept of backward tracking: you first see the water
+content and fluxes in the tracking domain move forward in time (left panel). 
+Midway through, the animation reverses and the moisture from the "tagging region" 
+is tracked backward in time (right panel).
 
 ## How does it work
 
