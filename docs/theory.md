@@ -41,11 +41,10 @@ precipitation contribution is distributed across the two layers.
 
 ## Sensitivity analysis time and vertical resolution
 In WAM2layers (and in most other moisture tracking mdodels) several settings are
-optional regarding resolutions in time and space. It is fair to say that 
-systematic testing of these options has received little attention in literature.
-We, therefore, recommend to at least critically think about these settings
+optional regarding resolutions in time and space. 
+We recommend to at least critically think about these settings
 in the light of your research question rather than just applying the default 
 values from the config file. A recommended sensitivity study is [this
 thesis](http://resolver.tudelft.nl/uuid:b6b356f1-d182-4877-b228-32541574a159),
 for which the underlying data can be found 
-[here](https://doi.org/10.4121/8491b1ea-9964-4db6-9c64-93382945eb24)
+[here](https://doi.org/10.4121/8491b1ea-9964-4db6-9c64-93382945eb24).
