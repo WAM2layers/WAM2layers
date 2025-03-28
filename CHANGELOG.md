@@ -4,7 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## Release v3.2.2 (2025-03-28)
+
+### Fixed
+- publish to PyPI fixed ([#451](https://github.com/WAM2layers/WAM2layers/pull/451))
+
+### Added
+- reference to relevant study on WAM2layers sensitivity to various settings. ([#449](https://github.com/WAM2layers/WAM2layers/pull/449))
+- small documentation/readme changes ([#448](https://github.com/WAM2layers/WAM2layers/pull/448))
+
 ## Release v3.2.1 (2025-03-14)
+
+### Fixed
 - Fix for incorrect staggering of periodic boundaries ([#443](https://github.com/WAM2layers/WAM2layers/pull/443)).
 
 ## Release v3.2.0 (2024-12-20)
