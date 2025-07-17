@@ -41,6 +41,7 @@ authors:
     orcid: 'https://orcid.org/0000-0002-6004-3884'
   - given-names: Vincent
     family-names: de Feiter
+    affiliation: Wageningen University
     orcid: 'https://orcid.org/0009-0006-6363-7932'
   - given-names: Peter
     family-names: Kalverla
@@ -50,7 +51,7 @@ repository-code: 'https://github.com/WAM2layers/WAM2layers'
 abstract: >-
   WAM2layers is an atmospheric moisture-tracking
   model that can be used to determine where
-  precipitation originally evaporated (backtracking),
+  precipitation originally evaporated (backward tracking),
   or where evaporated moisture eventually ends up
   (forward tracking).
 keywords:
@@ -60,6 +61,7 @@ keywords:
   - python
   - moisture recycling
   - atmospheric rivers
+  - Eulerian
 license: Apache-2.0
 identifiers:
   - description: Latest version of software
