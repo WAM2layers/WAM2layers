@@ -28,47 +28,45 @@ def output_path(date: CfDateTime, config: Config):
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
-@lru_cache(maxsize=4)  # cache for speedup
-def read_data_at_date(
-    date: CfDateTime, input_dir: Path, tracking_domain: Optional[BoundingBox]
-):
-    """Load input data for given date.
+@lru_cache(maxsize=4)
+def read_input_file(filename, tracking_domain: str | None = None):
+    logging.debug(f"Reading input data from {filename}")
 
-    This function is accessed every time step. By caching the result we reduce the
-    number of times the files need to be accessed.
-    """
-    file = input_path(date, input_dir)
-    ds = xr.open_dataset(file, cache=False, use_cftime=True)
+    ds = xr.open_dataset(filename, cache=False, use_cftime=True)
+
     if tracking_domain is not None:
-        return select_subdomain(ds, tracking_domain)
+        ds = select_subdomain(ds, tracking_domain)
+
     return ds
 
 
 def read_data_at_time(datetime: CfDateTime, config: Config) -> xr.Dataset:
     """Get a single time slice from input data."""
-    ds = read_data_at_date(
-        datetime, config.preprocessed_data_folder, config.tracking_domain
-    )
+    filename = input_path(datetime, config.preprocessed_data_folder)
+
+    ds = read_input_file(filename, str(config.tracking_domain))
+
     return ds.sel(time=datetime, drop=True)
 
 
-def select_subdomain(ds: xr.Dataset, bbox: BoundingBox):
+def select_subdomain(ds: xr.Dataset, bbox: str):
     """Limit the data to a subdomain."""
-    if bbox.west < bbox.east:
+    west, south, east, north = bbox.split(", ")
+    if west < east:
         return ds.sel(
-            longitude=slice(bbox.west, bbox.east),  # -180 to 180
-            latitude=slice(bbox.north, bbox.south),  # 90 - -90 (decreasing)
+            longitude=slice(west, east),  # -180 to 180
+            latitude=slice(north, south),  # 90 - -90 (decreasing)
             drop=True,
         )
     else:
         # Need to roll coordinates to maintain a continuous longitude
         # Roll the first lon that's NOT in the bbox to the front of the array
         # That way, all values that ARE in the bbox, must be contiguous.
-        in_bbox = (ds.longitude < bbox.east) | (ds.longitude > bbox.west)
+        in_bbox = (ds.longitude < east) | (ds.longitude > west)
         n_roll = in_bbox.argmin().item()  # first false value
         ds_rolled = ds.roll(longitude=-n_roll, roll_coords=True)
-        in_bbox = (ds_rolled.longitude < bbox.east) | (ds_rolled.longitude > bbox.west)
-        return ds_rolled.sel(longitude=in_bbox, latitude=slice(bbox.north, bbox.south))
+        in_bbox = (ds_rolled.longitude < east) | (ds_rolled.longitude > west)
+        return ds_rolled.sel(longitude=in_bbox, latitude=slice(north, south))
 
 
 def load_data(t: CfDateTime, config: Config, subset: str = "fluxes") -> xr.Dataset:
@@ -106,7 +104,7 @@ def load_tagging_region(config: Config, t: Optional[CfDateTime] = None):
         tagging_region = xr.open_dataarray(config.tagging_region)
 
     if config.tracking_domain is not None:
-        tagging_region = select_subdomain(tagging_region, config.tracking_domain)
+        tagging_region = select_subdomain(tagging_region, str(config.tracking_domain))
 
     if t is not None:
         return tagging_region.sel(time=t, method="nearest")

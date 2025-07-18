@@ -40,6 +40,9 @@ class BoundingBox(NamedTuple):
     east: Annotated[float, Field(ge=-180, le=180)]
     north: Annotated[float, Field(ge=-80, le=80)]
 
+    def __str__(self):
+        return f"{self.west}, {self.south}, {self.east}, {self.north}"
+
 
 def validate_region(region):
     """Check if region is existing path or valid bbox."""
