@@ -10,6 +10,7 @@ from pydantic import (
     ConfigDict,
     Field,
     FilePath,
+    HttpUrl,
     field_validator,
     model_validator,
 )
@@ -85,7 +86,7 @@ class Config(BaseModel):
     for date 2022-07-15, variable u, and levtype "_ml" (note the underscore).
     """
 
-    preprocessed_data_folder: Path
+    preprocessed_data_folder: HttpUrl | Path
     """Location where the pre-processed data should be stored.
 
     If it does not exist, it will be created during pre-processing.
@@ -516,13 +517,15 @@ class Config(BaseModel):
     @classmethod
     def _expanduser(cls, path):
         """Resolve ~ in input paths."""
-        return path.absolute()
+        if isinstance(path, Path):
+            return path.absolute()
+        return path  # Leave URLs untouched
 
     @field_validator("preprocessed_data_folder", "output_folder")
     @classmethod
     def _make_dir(cls, path):
         """Create output dirs if they don't exist yet."""
-        if not path.exists():
+        if isinstance(path, Path) and not path.exists():
             logger.info(f"Creating output folder {path}")
             path.mkdir(parents=True)
         return path
