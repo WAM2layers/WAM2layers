@@ -9,7 +9,7 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers import __version__
-from wam2layers.config import BoundingBox, Config
+from wam2layers.config import Config
 from wam2layers.preprocessing.utils import add_bounds
 from wam2layers.reference.variables import DATA_ATTRIBUTES
 from wam2layers.utils.calendar import CfDateTime, round_cftime
@@ -28,6 +28,18 @@ def output_path(date: CfDateTime, config: Config):
     return f"{output_dir}/{mode}_{date.strftime('%Y-%m-%dT%H-%M')}.nc"
 
 
+def fully_load_and_detach(ds: xr.Dataset) -> xr.Dataset:
+    """Force all variables into memory and detach from OPeNDAP/netCDF backend."""
+    # Extract data variables with explicit dimension names
+    loaded_vars = {var: (ds[var].dims, ds[var].values) for var in ds.data_vars}
+
+    # Extract coords similarly (some coords are multi-dimensional)
+    loaded_coords = {
+        coord: (ds.coords[coord].dims, ds.coords[coord].values) for coord in ds.coords
+    }
+    return xr.Dataset(data_vars=loaded_vars, coords=loaded_coords, attrs=ds.attrs)
+
+
 @lru_cache(maxsize=4)
 def read_input_file(filename, tracking_domain: str | None = None):
     logging.debug(f"Reading input data from {filename}")
@@ -37,7 +49,9 @@ def read_input_file(filename, tracking_domain: str | None = None):
     if tracking_domain is not None:
         ds = select_subdomain(ds, tracking_domain)
 
-    return ds
+    # return ds
+    # Force full memory load and detach from remote backend
+    return fully_load_and_detach(ds)
 
 
 def read_data_at_time(datetime: CfDateTime, config: Config) -> xr.Dataset:
