@@ -9,7 +9,7 @@ WAM2layers is an atmospheric moisture tracking model. It can be used to determin
 precipitation originally evaporated (backward tracking), or where evaporated moisture
 eventually ends up (forward tracking).
 
-Reference paper: [Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/egusphere-2024-3401)
+Reference paper: [Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/gmd-18-4335-2025)
 
 https://user-images.githubusercontent.com/17080502/233834536-a82ca96d-e303-4592-a588-472097ebe6c5.mp4
 
@@ -71,8 +71,8 @@ We are proudly part of [open-sustainable-technology](https://github.com/protonty
 
 If you use the code for a publication, please cite it using the [DOI of the
 appropriate release](https://doi.org/10.5281/zenodo.7010594) and the
-following paper (currently in preprint):
-[Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/egusphere-2024-3401)
+following paper :
+[Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/gmd-18-4335-2025)
 
 <p align='right'>
 <img src="https://github.com/user-attachments/assets/6d553165-88d5-40d3-8def-2aec45cb695b" width="100"/>
