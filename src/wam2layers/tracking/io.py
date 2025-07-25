@@ -83,7 +83,8 @@ def _load_slice_with_cache(filename, time, subset: str, bbox: Optional[str] = No
 def load_slice(t: CfDateTime, subset: str, config: Config) -> xr.Dataset:
     filename = input_path(t, config.preprocessed_data_folder)
     time = t.strftime("%Y-%m-%dT%H:%M:%S")
-    return _load_slice_with_cache(filename, time, subset, str(config.tracking_domain))
+    domain = str(config.tracking_domain) if config.tracking_domain else None
+    return _load_slice_with_cache(filename, time, subset, domain)
 
 
 def load_data(t: CfDateTime, config: Config, subset: str = "fluxes") -> xr.Dataset:
