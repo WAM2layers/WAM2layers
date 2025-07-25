@@ -1,4 +1,6 @@
 import logging
+import time
+import traceback
 from copy import deepcopy
 from datetime import datetime as pydt
 from functools import lru_cache
@@ -61,6 +63,34 @@ def select_subdomain(ds: xr.Dataset, bbox: str):
         return ds_rolled.sel(longitude=in_bbox, latitude=slice(north, south))
 
 
+def read_or_retry(filename: str) -> xr.Dataset:
+    """Read a file, retrying if it fails.
+
+    Avoids spurious errors in decoding time when using OpenDAP
+
+    Retry behaviour copied from xarray.backends.common.robust_getitem
+    """
+    max_retries = 5
+    initial_delay = 500  # milliseconds
+
+    for n in range(max_retries + 1):
+        try:
+            return xr.open_dataset(
+                filename, engine="netcdf4", cache=False, use_cftime=True
+            )
+        except IndexError:
+            if n == max_retries:
+                raise
+            base_delay = initial_delay * 2**n
+            next_delay = base_delay + np.random.randint(base_delay)
+            msg = (
+                f"file read failed, waiting {next_delay} ms before trying again "
+                f"({max_retries - n} tries remaining). {traceback.format_exc(limit=2, chain=False)}"
+            )
+            logger.debug(msg)
+            time.sleep(1e-3 * next_delay)
+
+
 @lru_cache(maxsize=6)
 def _load_slice_with_cache(filename, time, subset: str, bbox: Optional[str] = None):
     """Load data slice from file."""
@@ -71,7 +101,7 @@ def _load_slice_with_cache(filename, time, subset: str, bbox: Optional[str] = No
 
     logger.debug(f"Loading {subset} at time {time} from {filename}")
 
-    ds = xr.open_dataset(filename, engine="netcdf4", cache=False, use_cftime=True)
+    ds = read_or_retry(filename)
     ds = ds.sel(time=time).drop("time").squeeze()
     ds = ds[variables]
 
