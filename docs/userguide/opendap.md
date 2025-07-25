@@ -1,6 +1,6 @@
 
 (opendap)=
-# Using remote input data
+# Remote input data
 
 WAM2layers now supports using remote input via OpenDAP. 40 (??) years of pre-processed ERA5 data are available at the 4TU data repository.
 
