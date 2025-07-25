@@ -89,7 +89,7 @@ class Config(BaseModel):
     for date 2022-07-15, variable u, and levtype "_ml" (note the underscore).
     """
 
-    preprocessed_data_folder: HttpUrl | Path
+    preprocessed_data_folder: Union[HttpUrl, Path]
     """Location where the pre-processed data should be stored.
 
     If it does not exist, it will be created during pre-processing.
