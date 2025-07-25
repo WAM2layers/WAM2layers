@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+- support for using pre-processed data via OpenDAP ([#475](https://github.com/WAM2layers/WAM2layers/pull/451))
+
+
 ## Release v3.2.2 (2025-03-28)
 
 ### Fixed
