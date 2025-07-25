@@ -40,29 +40,6 @@ def fully_load_and_detach(ds: xr.Dataset) -> xr.Dataset:
     return xr.Dataset(data_vars=loaded_vars, coords=loaded_coords, attrs=ds.attrs)
 
 
-@lru_cache(maxsize=4)
-def read_input_file(filename, tracking_domain: str | None = None):
-    logging.debug(f"Reading input data from {filename}")
-
-    ds = xr.open_dataset(filename, cache=False, use_cftime=True)
-
-    if tracking_domain is not None:
-        ds = select_subdomain(ds, tracking_domain)
-
-    # return ds
-    # Force full memory load and detach from remote backend
-    return fully_load_and_detach(ds)
-
-
-def read_data_at_time(datetime: CfDateTime, config: Config) -> xr.Dataset:
-    """Get a single time slice from input data."""
-    filename = input_path(datetime, config.preprocessed_data_folder)
-
-    ds = read_input_file(filename, str(config.tracking_domain))
-
-    return ds.sel(time=datetime, drop=True)
-
-
 def select_subdomain(ds: xr.Dataset, bbox: str):
     """Limit the data to a subdomain."""
     west, south, east, north = bbox.split(", ")
@@ -83,24 +60,42 @@ def select_subdomain(ds: xr.Dataset, bbox: str):
         return ds_rolled.sel(longitude=in_bbox, latitude=slice(north, south))
 
 
-def load_data(t: CfDateTime, config: Config, subset: str = "fluxes") -> xr.Dataset:
-    """Load variable at t, interpolate if needed."""
+@lru_cache(maxsize=6)
+def _load_slice_with_cache(filename, time, subset: str, bbox: Optional[str] = None):
+    """Load data slice from file."""
     variables = {
         "fluxes": ["fx_upper", "fx_lower", "fy_upper", "fy_lower", "evap", "precip"],
         "states": ["s_upper", "s_lower"],
-    }
+    }[subset]
 
-    t1 = round_cftime(t, config.input_frequency, "ceil")
-    da1 = read_data_at_time(t1, config)[variables[subset]]
-    if t == t1:
-        # this saves a lot of work if times are aligned with input
-        return da1
+    logger.debug(f"Loading {subset} at time {time} from {filename}")
 
+    ds = xr.open_dataset(filename, engine="netcdf4", cache=False, use_cftime=True)
+    ds = ds.sel(time=time).drop("time").squeeze()
+    ds = ds[variables]
+
+    if bbox is not None:
+        ds = select_subdomain(ds, bbox)
+
+    return fully_load_and_detach(ds)
+
+
+def load_slice(t: CfDateTime, subset: str, config: Config) -> xr.Dataset:
+    filename = input_path(t, config.preprocessed_data_folder)
+    time = t.strftime("%Y-%m-%dT%H:%M:%S")
+    return _load_slice_with_cache(filename, time, subset, str(config.tracking_domain))
+
+
+def load_data(t: CfDateTime, config: Config, subset: str = "fluxes") -> xr.Dataset:
+    """Load variable at t, interpolate if needed."""
     t0 = round_cftime(t, config.input_frequency, "floor")
-    da0 = read_data_at_time(t0, config)[variables[subset]]
-    if t == t0:
-        return da0
+    t1 = round_cftime(t, config.input_frequency, "ceil")
 
+    if t == t0 or t == t1:
+        return load_slice(t, subset, config)
+
+    da0 = load_slice(t0, subset, config)
+    da1 = load_slice(t1, subset, config)
     return da0 + (t - t0) / (t1 - t0) * (da1 - da0)
 
 
