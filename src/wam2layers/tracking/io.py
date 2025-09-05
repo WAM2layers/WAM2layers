@@ -70,7 +70,7 @@ def read_or_retry(filename: str) -> xr.Dataset:
 
     Retry behaviour copied from xarray.backends.common.robust_getitem
     """
-    max_retries = 5
+    max_retries = 8  # ~ 4 minutes maximum, so far always worked within 6 tries.
     initial_delay = 500  # milliseconds
 
     for n in range(max_retries + 1):
