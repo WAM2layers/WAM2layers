@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 - updated reference to WAM2layers v3 paper
+- release instructions template
 
 ## Release v3.2.2 (2025-03-28)
 
