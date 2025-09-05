@@ -4,8 +4,7 @@
 
 WAM2layers supports loading input data directly from **OpenDAP**, allowing you to skip downloading and preprocessing steps and move straight to running tracking experiments.
 
-As a basis, [73 years of preprocessed ERA5 data are available via the 4TU ResearchData repository](https://doi.org/10.4121/00f7fa45-899e-4573-ae23-234f6c5193d0.v1?utm_source=chatgpt.com), provided by **Lucie Bakels**.
-This dataset:
+As a basis, [Bakels et al. (2025)](https://doi.org/10.4121/00f7fa45-899e-4573-ae23-234f6c5193d0.v1) provides 73 years of preprocessed ERA5 data available via the 4TU ResearchData repository. This dataset:
 
 * covers the period **1941–2014**
 * is regridded to a resolution of **0.5° × 0.5°**
