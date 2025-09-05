@@ -45,7 +45,7 @@ def fully_load_and_detach(ds: xr.Dataset) -> xr.Dataset:
 
 def select_subdomain(ds: xr.Dataset, bbox: str):
     """Limit the data to a subdomain."""
-    west, south, east, north = [int(p) for p in bbox.split(", ")]
+    west, south, east, north = [float(p) for p in bbox.split(", ")]
     if west < east:
         return ds.sel(
             longitude=slice(west, east),  # -180 to 180
