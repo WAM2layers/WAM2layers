@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 - updated reference to WAM2layers v3 paper
 
+### Fixed
+- Invalid "correction" for deprecated frequencies in pandas which erroneously also changes monthly frequencies like MS to ms. ([#490](https://github.com/WAM2layers/WAM2layers/pull/490))
+
 ## Release v3.2.2 (2025-03-28)
 
 ### Fixed
