@@ -47,7 +47,7 @@ following commands, depending on your requirements:
 pip install wam2layers
 pip install wam2layers[viz]  # includes packages required for visualization
 pip install wam2layers[dev]  # include all packages needed for working on the code
-pip install wam2layers=3.1.0  # install a specific version (e.g. to reproduce previous results)
+pip install wam2layers=3.2.2  # install a specific version (e.g. to reproduce previous results)
 ```
 
 The available versions are listed
@@ -63,7 +63,7 @@ To set up a dedicated environment for your moisture tracking experiments do:
 
 ```sh
 # Create a fresh conda environment with cartopy, and activate it
-conda create --name wamenv -c conda-forge python=3.11 cartopy
+conda create --name wamenv -c conda-forge python=3.13 cartopy
 conda activate wamenv
 ```
 
