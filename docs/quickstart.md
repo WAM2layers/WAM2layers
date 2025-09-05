@@ -15,7 +15,7 @@ example cases.
 
 ```sh
 # Optional: Create a new conda environment for WAM2layers and activate it
-conda create --name wamenv python=3.11
+conda create --name wamenv python=3.13
 conda activate wamenv
 
 # Install wam2layers in your current python environment
