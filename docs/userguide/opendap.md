@@ -10,8 +10,6 @@ This dataset:
 * covers the period **1941–2014**
 * is regridded to a resolution of **0.5° × 0.5°**
 
----
-
 ## Example Configuration
 
 The example below shows how to set up a configuration file that uses the remote dataset:
@@ -50,7 +48,6 @@ kvf: 3
 
 👉 **Note:** `preprocessed_data_folder` points to a **remote URL** instead of a local directory.
 
----
 
 ## Running the Experiment
 
@@ -60,7 +57,12 @@ Save the configuration as `watersnoodramp.yaml` and run:
 wam2layers track watersnoodramp.yaml
 ```
 
----
+
+```{Admonition} Convenience vs performance
+:class: tip
+
+Fetching data on the fly is slower. In our test case, running with local files was about 5× faster (excluding the initial download time). Performance will vary with your internet connection, so weigh the convenience of remote access against speed when choosing your setup.
+```
 
 ## Citation
 
