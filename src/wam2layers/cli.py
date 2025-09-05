@@ -307,4 +307,10 @@ def download(ctx, case):
 
 
 if __name__ == "__main__":
-    cli()
+    # To debug the program, invoke with `python -m wam2layers.cli track config.yaml`
+    import ipdb
+
+    try:
+        cli()  # or whatever function your CLI runs
+    except Exception:
+        ipdb.post_mortem()

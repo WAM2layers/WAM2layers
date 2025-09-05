@@ -26,7 +26,7 @@ def ds():
 def test_select_subdomain(ds):
     """Check subdomain that fits in [-180, 180]."""
     bbox = BoundingBox(0, -20, 90, 60)
-    sub = select_subdomain(ds, bbox)
+    sub = select_subdomain(ds, str(bbox))
     assert np.array_equal(sub.latitude, [60, 30, 0])
     assert np.array_equal(sub.longitude, [0, 30, 60, 90])
 
@@ -34,5 +34,5 @@ def test_select_subdomain(ds):
 def test_rolling_subdomain(ds):
     """Check subdomain that does not fit in [-180, 180] or [0, 360]."""
     bbox = BoundingBox(130, -20, 40, 60)
-    sub = select_subdomain(ds, bbox)
+    sub = select_subdomain(ds, str(bbox))
     assert np.array_equal(sub.longitude, [150, -180, -150, -120, -90, -60, -30, 0, 30])
