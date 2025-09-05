@@ -1,4 +1,5 @@
 """Functionality related to (non-standard) calendars."""
+import re
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Union
@@ -81,15 +82,38 @@ def template_to_files(config: "Config", var: str) -> list[Path]:
     return list(template.parent.glob(template.name))
 
 
+def fix_deprecated_frequency(freq: str) -> str:
+    """Auto-correct deprecated pandas frequencies for backward compatibility.
+
+    Pandas some time ago deprecated some frequencies:
+
+    > Deprecated since version 2.2.0: Aliases H, BH, CBH, T, S, L, U, and N are
+    > deprecated in favour of the aliases h, bh, cbh, min, s, ms, us, and ns.
+
+    This fix recognizes the old format and converts it to the new one.
+    """
+    deprecated_map = {
+        r"(?i)^(\d*)CBH$": r"\1cbh",
+        r"(?i)^(\d*)BH$": r"\1bh",
+        r"(?i)^(\d*)H$": r"\1h",
+        r"(?i)^(\d*)T$": r"\1min",
+        r"(?i)^(\d*)S$": r"\1s",
+        r"(?i)^(\d*)L$": r"\1ms",
+        r"(?i)^(\d*)U$": r"\1us",
+        r"(?i)^(\d*)N$": r"\1ns",
+    }
+
+    for pattern, repl in deprecated_map.items():
+        if re.fullmatch(pattern, freq):
+            return re.sub(pattern, repl, freq)
+    return freq
+
+
 def round_cftime(
     date: CfDateTime, freq: str, how: Literal["nearest", "floor", "ceil"]
 ) -> CfDateTime:
     """Round a CF datetime index to a nearest frequency."""
-    # make freq argument comply with https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
-    if any(freq.lower().endswith(_f) for _f in ("h", "s", "min")):
-        freq = freq.lower()
-    else:
-        freq = freq.upper()
+    freq = fix_deprecated_frequency(freq)
 
     if how == "nearest":
         return xr.CFTimeIndex([date], calendar=date.calendar).round(freq)[0]
