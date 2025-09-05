@@ -113,8 +113,6 @@ def round_cftime(
     date: CfDateTime, freq: str, how: Literal["nearest", "floor", "ceil"]
 ) -> CfDateTime:
     """Round a CF datetime index to a nearest frequency."""
-    freq = fix_deprecated_frequency(freq)
-
     if how == "nearest":
         return xr.CFTimeIndex([date], calendar=date.calendar).round(freq)[0]
     if how == "ceil":

@@ -15,7 +15,11 @@ from pydantic import (
 )
 from typing_extensions import Annotated
 
-from wam2layers.utils.calendar import CfDateTime, cftime_from_iso
+from wam2layers.utils.calendar import (
+    CfDateTime,
+    cftime_from_iso,
+    fix_deprecated_frequency,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -317,8 +321,9 @@ class Config(BaseModel):
 
     """
 
-    input_frequency: str
+    input_frequency: Annotated[str, AfterValidator(fix_deprecated_frequency)]
     """Time frequency of the raw input data.
+
     This refers to the time frequency of the climate or weather model data
     data. Primarily used during the preprocessing, but the setting does carry
     over to the tracking as well.
@@ -349,7 +354,7 @@ class Config(BaseModel):
 
     """
 
-    output_frequency: str
+    output_frequency: Annotated[str, AfterValidator(fix_deprecated_frequency)]
     """Frequency at which to write output to file.
     TODO: clarify if this is used during preprocessing, tracking or both
 
