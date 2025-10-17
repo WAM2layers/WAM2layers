@@ -1,0 +1,31 @@
+# Output
+preprocessed_data_folder: https://opendap.4tu.nl/thredds/dodsC/data2/djht/00f7fa45-899e-4573-ae23-234f6c5193d0/1
+output_folder: ./output/volta
+output_frequency: "1D"
+
+# Preprocessing
+filename_template: ./ERA5_{year}-{month:02d}-{day:02d}{levtype}_{variable}.nc
+preprocess_start_date: "1998-07-01T00:00"
+preprocess_end_date: "1998-08-31T23:50"
+level_type: model_levels
+levels: [20,40,60,80,90,95,100,105,110,115,120,123,125,128,130,131,132,133,134,135,136,137]
+input_frequency: "1h"
+
+# Tracking
+tracking_direction: forward # forward or backward
+#tracking_domain: null  # use full domain of preprocessed data
+tracking_domain: [-30, 0, 40, 40]  # use subdomain of preprocessed data [west, south, east, north]
+periodic_boundary: false # use true when having 360 degrees of longitude data in the tracking domain
+tracking_start_date: "1998-07-01T00:00"
+tracking_end_date: "1998-08-31T23:50"
+
+# Tracking parameters important for numerical stability and vertical mixing
+timestep: 600 # timestep in seconds
+kvf: 3
+
+# Tagging
+#tagging_region: ./tagging-region-volta.nc # does not work, because this nc-file has 0.25 degree, use box instead
+tagging_region: [-1, 6.5, 1, 8]  # alternative to mask file # west, south, east, north
+tagging_start_date: "1998-07-01T00:00"
+tagging_end_date: "1998-08-01T00:00"
+restart: False # use true if tagging state from a previous run is used
