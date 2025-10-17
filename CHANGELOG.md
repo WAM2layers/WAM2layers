@@ -5,8 +5,9 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
-- updated reference to WAM2layers v3 paper
+- OpenDAP example cases added ([#496](https://github.com/WAM2layers/WAM2layers/pull/496))
 - support for using pre-processed data via OpenDAP ([#475](https://github.com/WAM2layers/WAM2layers/pull/451))
+- updated reference to WAM2layers v3 paper
 - release instructions template
 
 ### Fixed
