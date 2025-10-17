@@ -91,3 +91,32 @@ class TestValidateRegion:
             config.tagging_region = BoundingBox(10, 50, -10, 55)
         assert "coordinates will be rolled" in caplog.text
         assert config.tagging_region.west == 10
+
+
+@pytest.mark.parametrize(
+    "field,value,expected",
+    [
+        ("input_frequency", "H", "h"),
+        ("input_frequency", "5H", "5h"),
+        ("input_frequency", "MS", "MS"),  # should not be changed
+        ("output_frequency", "T", "min"),
+        ("output_frequency", "10T", "10min"),
+        ("output_frequency", "ms", "ms"),  # already valid
+    ],
+)
+def test_frequency_validators(field, value, expected, tmp_path):
+    """Test that input/output_frequency fields are normalized by validators."""
+    # Start from a valid config file
+    cfg = Config.from_yaml("tests/test_data/config_rhine.yaml")
+
+    # Update the field with a deprecated/valid alias
+    setattr(cfg, field, value)
+
+    # The validator should normalize on assignment
+    assert getattr(cfg, field) == expected
+
+    # Check that roundtripping through file keeps the normalized version
+    out_path = tmp_path / "config.yaml"
+    cfg.to_file(out_path)
+    cfg_roundtrip = Config.from_yaml(out_path)
+    assert getattr(cfg_roundtrip, field) == expected
