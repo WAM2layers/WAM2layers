@@ -82,7 +82,7 @@ def _plot_input(config: Config, ax):
     # Load data
     start = config.tagging_start_date
     end = config.tagging_end_date
-    dates = xr.cftime_range(
+    dates = pd.date_range(
         start=start,
         end=end,
         freq=config.output_frequency,
@@ -91,7 +91,7 @@ def _plot_input(config: Config, ax):
 
     input_files = []
     for date in dates[:-1]:
-        input_files.append(input_path(date, config))
+        input_files.append(input_path(date, config.preprocessed_data_folder))#takes current directory but needs a better fix
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
     if config.tracking_direction == "backward":
         subset = ds.precip.sel(time=slice(start, end))
