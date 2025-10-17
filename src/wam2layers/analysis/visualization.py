@@ -10,6 +10,14 @@ import xarray as xr
 
 from wam2layers.config import Config
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
+from wam2layers.tracking.shared import initialize_tagging_region
+from wam2layers.tracking.io import (
+    load_data,
+    load_tagging_region,
+    output_path,
+    write_output,
+)
+from wam2layers.utils.grid import get_boundary, get_grid_info
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +65,24 @@ def _plot_input(config: Config, ax):
     forwardtrack = evaporation
     """
     # Load config and some useful stuf.
-    region = load_tagging_region(config)
+    if isinstance(config.tagging_region, Path):
+        region = load_tagging_region(config)
+        #tagging_region_stationary = tagging_region.ndim == 2
+    else:
+        t = config.tracking_end_date
+        grid = load_data(t, config, "states").coords
+        lat, lon = grid["latitude"], grid["longitude"]
+        bbox = config.tagging_region
+        region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
+                             coords={'latitude': lat, 'longitude': lon},
+                             dims=['latitude', 'longitude'])
+        #region = initialize_tagging_region(bbox, lat, lon)
+        #tagging_region_stationary = True
 
     # Load data
     start = config.tagging_start_date
     end = config.tagging_end_date
-    dates = pd.date_range(
+    dates = xr.cftime_range(
         start=start,
         end=end,
         freq=config.output_frequency,
@@ -93,7 +113,22 @@ def _plot_output(config: Config, ax):
     forwardtrack = precipitation
     backtrack = evaporation
     """
-    region = load_tagging_region(config)
+    if isinstance(config.tagging_region, Path):
+        region = load_tagging_region(config)
+        #tagging_region_stationary = tagging_region.ndim == 2
+    else:
+       t = config.tracking_end_date
+       grid = load_data(t, config, "states").coords
+       lat, lon = grid["latitude"], grid["longitude"]
+       bbox = config.tagging_region
+       region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
+                             coords={'latitude': lat, 'longitude': lon},
+                             dims=['latitude', 'longitude'])
+       #region = initialize_tagging_region(bbox, lat, lon)
+    #tagging_region_stationary = True
+
+    #original code    
+    #region = load_tagging_region(config)
 
     # Load data
     dates = xr.cftime_range(
