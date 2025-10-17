@@ -60,6 +60,7 @@ dev = [
     "black",
     "cffconvert",
     "isort",
+    "ipdb",
     "pytest",
     "pre-commit",
     "flake8",
