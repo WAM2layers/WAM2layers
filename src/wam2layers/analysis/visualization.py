@@ -10,6 +10,14 @@ import xarray as xr
 
 from wam2layers.config import Config
 from wam2layers.tracking.io import input_path, load_tagging_region, output_path
+from wam2layers.tracking.shared import initialize_tagging_region
+from wam2layers.tracking.io import (
+    load_data,
+    load_tagging_region,
+    output_path,
+    write_output,
+)
+from wam2layers.utils.grid import get_boundary, get_grid_info
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +65,17 @@ def _plot_input(config: Config, ax):
     forwardtrack = evaporation
     """
     # Load config and some useful stuf.
-    region = load_tagging_region(config)
+    if isinstance(config.tagging_region, Path):
+        region = load_tagging_region(config)
+
+    else:
+        t = config.tracking_end_date
+        grid = load_data(t, config, "states").coords
+        lat, lon = grid["latitude"], grid["longitude"]
+        bbox = config.tagging_region
+        region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
+                             coords={'latitude': lat, 'longitude': lon},
+                             dims=['latitude', 'longitude'])
 
     # Load data
     start = config.tagging_start_date
@@ -71,7 +89,7 @@ def _plot_input(config: Config, ax):
 
     input_files = []
     for date in dates[:-1]:
-        input_files.append(input_path(date, config))
+        input_files.append(input_path(date, config.preprocessed_data_folder))#takes current directory but needs a better fix
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
     if config.tracking_direction == "backward":
         subset = ds.precip.sel(time=slice(start, end))
@@ -93,7 +111,18 @@ def _plot_output(config: Config, ax):
     forwardtrack = precipitation
     backtrack = evaporation
     """
-    region = load_tagging_region(config)
+    if isinstance(config.tagging_region, Path):
+        region = load_tagging_region(config)
+    else:
+       t = config.tracking_end_date
+       grid = load_data(t, config, "states").coords
+       lat, lon = grid["latitude"], grid["longitude"]
+       bbox = config.tagging_region
+       region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
+                             coords={'latitude': lat, 'longitude': lon},
+                             dims=['latitude', 'longitude'])
+    #original code    
+    #region = load_tagging_region(config)
 
     # Load data
     dates = xr.cftime_range(
@@ -130,9 +159,8 @@ def _plot_output(config: Config, ax):
 
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
-    # Add source region outline
-    # TODO: fix this, because no region contours are shown
-    region.plot.contour(ax=ax, levels=[1], colors="k")
+    # Add source/tagged region outline
+    region.plot.contour(ax=ax, levels=[0.5], colors="k")
     polish(ax, region)
 
 
@@ -175,7 +203,7 @@ def visualize_output_data(config_file):
     out_dir.mkdir(exist_ok=True, parents=True)
     path_to_fig = out_dir / "cumulative_sources.png"
     fig.savefig(path_to_fig, dpi=200)
-    logger.info(f"Figure of cumulative moisture origins written to {path_to_fig}.")
+    logger.info(f"Figure of cumulative moisture sources written to {path_to_fig}.")
 
 
 def visualize_both(config_file):
