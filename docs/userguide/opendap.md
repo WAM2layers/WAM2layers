@@ -51,7 +51,7 @@ If you use this dataset, please cite it as:
 Differences between the **0.5° × 0.5°** and **0.25° × 0.25°** data were found to lead only to small differences for the example cases. 
 Note, that the differences can be caused by an interplay between differences in ERA5 data, resolution and internal time step of the tracking as well as slightly different tagging regions as original 0.25° mask could not perfectly be mimicked with the 0.5° data.
 
-![0.25° backward Eiffel case](_static/eiffel_new.png)
-![0.5° backward Eiffel case](_static/eiffel_opendap.png)
-![0.25° forward Volta case](_static/volta_new.png)
-![0.5° forward Volta case](_static/volta_opendap.png)
+![0.25° backward Eiffel case](../_static/eiffel_new.png)
+![0.5° backward Eiffel case](../_static/eiffel_opendap.png)
+![0.25° forward Volta case](../_static/volta_new.png)
+![0.5° forward Volta case](../_static/volta_opendap.png)
