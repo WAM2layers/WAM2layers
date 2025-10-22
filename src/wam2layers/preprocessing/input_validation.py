@@ -1,12 +1,12 @@
 """Preprocessing input data validation."""
+
 import numpy as np
 import xarray as xr
 
 from wam2layers.config import Config
 
 
-class ValidationError(Exception):
-    ...
+class ValidationError(Exception): ...
 
 
 def validate_input(data: xr.Dataset, config: Config) -> None:

@@ -1,4 +1,5 @@
 """Functionality related to (non-standard) calendars."""
+
 import re
 import warnings
 from pathlib import Path

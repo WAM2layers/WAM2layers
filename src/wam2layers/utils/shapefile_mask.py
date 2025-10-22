@@ -1,4 +1,5 @@
 """Utils to create a tagging region mask from a shapefile on the fly."""
+
 from collections import namedtuple
 from pathlib import Path
 from typing import Union

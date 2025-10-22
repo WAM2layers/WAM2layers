@@ -1,8 +1,12 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-
 ## Unreleased
+### Added
+
+### Fixed
+
+## Release v3.3.0 (2025-10-22)
 
 ### Added
 - OpenDAP example cases added ([#496](https://github.com/WAM2layers/WAM2layers/pull/496))
@@ -12,6 +16,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Invalid "correction" for deprecated frequencies in pandas which erroneously also changes monthly frequencies like MS to ms. ([#490](https://github.com/WAM2layers/WAM2layers/pull/490))
+- Plot bounding box of tagged precipitation in output visualization cumulative sources file [#494]
 
 ## Release v3.2.2 (2025-03-28)
 

@@ -9,14 +9,14 @@ import pandas as pd
 import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.tracking.io import input_path, load_tagging_region, output_path
-from wam2layers.tracking.shared import initialize_tagging_region
 from wam2layers.tracking.io import (
+    input_path,
     load_data,
     load_tagging_region,
     output_path,
     write_output,
 )
+from wam2layers.tracking.shared import initialize_tagging_region
 from wam2layers.utils.grid import get_boundary, get_grid_info
 
 logger = logging.getLogger(__name__)
@@ -73,9 +73,11 @@ def _plot_input(config: Config, ax):
         grid = load_data(t, config, "states").coords
         lat, lon = grid["latitude"], grid["longitude"]
         bbox = config.tagging_region
-        region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
-                             coords={'latitude': lat, 'longitude': lon},
-                             dims=['latitude', 'longitude'])
+        region = xr.DataArray(
+            initialize_tagging_region(bbox, lat, lon),
+            coords={"latitude": lat, "longitude": lon},
+            dims=["latitude", "longitude"],
+        )
 
     # Load data
     start = config.tagging_start_date
@@ -89,7 +91,9 @@ def _plot_input(config: Config, ax):
 
     input_files = []
     for date in dates[:-1]:
-        input_files.append(input_path(date, config.preprocessed_data_folder))#takes current directory but needs a better fix
+        input_files.append(
+            input_path(date, config.preprocessed_data_folder)
+        )  # takes current directory but needs a better fix
     ds = xr.open_mfdataset(input_files, combine="nested", concat_dim="time")
     if config.tracking_direction == "backward":
         subset = ds.precip.sel(time=slice(start, end))
@@ -114,15 +118,17 @@ def _plot_output(config: Config, ax):
     if isinstance(config.tagging_region, Path):
         region = load_tagging_region(config)
     else:
-       t = config.tracking_end_date
-       grid = load_data(t, config, "states").coords
-       lat, lon = grid["latitude"], grid["longitude"]
-       bbox = config.tagging_region
-       region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
-                             coords={'latitude': lat, 'longitude': lon},
-                             dims=['latitude', 'longitude'])
-    #original code    
-    #region = load_tagging_region(config)
+        t = config.tracking_end_date
+        grid = load_data(t, config, "states").coords
+        lat, lon = grid["latitude"], grid["longitude"]
+        bbox = config.tagging_region
+        region = xr.DataArray(
+            initialize_tagging_region(bbox, lat, lon),
+            coords={"latitude": lat, "longitude": lon},
+            dims=["latitude", "longitude"],
+        )
+    # original code
+    # region = load_tagging_region(config)
 
     # Load data
     dates = xr.cftime_range(
