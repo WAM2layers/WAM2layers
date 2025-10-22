@@ -160,7 +160,7 @@ def _plot_output(config: Config, ax):
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
     # Add source/tagged region outline
-    region.plot.contour(ax=ax, levels=[0.5], colors="k")
+    region.plot.contour(ax=ax, levels=[1], colors="k")
     polish(ax, region)
 
 
@@ -203,7 +203,7 @@ def visualize_output_data(config_file):
     out_dir.mkdir(exist_ok=True, parents=True)
     path_to_fig = out_dir / "cumulative_sources.png"
     fig.savefig(path_to_fig, dpi=200)
-    logger.info(f"Figure of cumulative moisture origins written to {path_to_fig}.")
+    logger.info(f"Figure of cumulative moisture sources written to {path_to_fig}.")
 
 
 def visualize_both(config_file):
