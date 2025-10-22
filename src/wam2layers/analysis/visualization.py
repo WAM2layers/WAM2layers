@@ -67,7 +67,7 @@ def _plot_input(config: Config, ax):
     # Load config and some useful stuf.
     if isinstance(config.tagging_region, Path):
         region = load_tagging_region(config)
-        #tagging_region_stationary = tagging_region.ndim == 2
+
     else:
         t = config.tracking_end_date
         grid = load_data(t, config, "states").coords
@@ -76,8 +76,6 @@ def _plot_input(config: Config, ax):
         region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
                              coords={'latitude': lat, 'longitude': lon},
                              dims=['latitude', 'longitude'])
-        #region = initialize_tagging_region(bbox, lat, lon)
-        #tagging_region_stationary = True
 
     # Load data
     start = config.tagging_start_date
@@ -115,7 +113,6 @@ def _plot_output(config: Config, ax):
     """
     if isinstance(config.tagging_region, Path):
         region = load_tagging_region(config)
-        #tagging_region_stationary = tagging_region.ndim == 2
     else:
        t = config.tracking_end_date
        grid = load_data(t, config, "states").coords
@@ -124,9 +121,6 @@ def _plot_output(config: Config, ax):
        region = xr.DataArray(initialize_tagging_region(bbox, lat, lon),
                              coords={'latitude': lat, 'longitude': lon},
                              dims=['latitude', 'longitude'])
-       #region = initialize_tagging_region(bbox, lat, lon)
-    #tagging_region_stationary = True
-
     #original code    
     #region = load_tagging_region(config)
 
@@ -165,9 +159,8 @@ def _plot_output(config: Config, ax):
 
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
-    # Add source region outline
-    # TODO: fix this, because no region contours are shown
-    region.plot.contour(ax=ax, levels=[1], colors="k")
+    # Add source/tagged region outline
+    region.plot.contour(ax=ax, levels=[0.5], colors="k")
     polish(ax, region)
 
 
