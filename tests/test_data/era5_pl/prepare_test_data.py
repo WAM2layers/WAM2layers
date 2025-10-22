@@ -19,8 +19,8 @@ for variable in variable_list:
     print("Cropping", f"{era5_name_pattern}_{variable}")
     ds = xr.open_dataset(path_to_data / f"{era5_name_pattern}_{variable}.nc")
     cutout = ds.sel(latitude=slice(55, 45), longitude=slice(0, 10))
-    cutout.attrs[
-        "Licence"
-    ] = "Generated using Copernicus Climate Change Service information [2023]."
+    cutout.attrs["Licence"] = (
+        "Generated using Copernicus Climate Change Service information [2023]."
+    )
     encoding = {var: ds[var].encoding.update(zlib=True) for var in ds.data_vars}
     cutout.to_netcdf(f"{era5_name_pattern}_{variable}.nc")

@@ -172,9 +172,9 @@ def get_main_attrs(attrs: dict, config: Config):
     )
     new_attrs = {
         "title": f"WAM2Layers {config.tracking_direction}tracking output file",
-        "history": new_history + attrs["history"]
-        if "history" in attrs
-        else new_history,
+        "history": (
+            new_history + attrs["history"] if "history" in attrs else new_history
+        ),
         "source": (
             "Moisture tracking applied to original data; "
             f"{attrs['source'] if 'source' in attrs else 'UNKNOWN'}"
