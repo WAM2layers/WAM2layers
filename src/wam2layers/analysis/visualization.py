@@ -160,7 +160,7 @@ def _plot_output(config: Config, ax):
     ax.set_title("Accumulated tracked moisture [mm]", loc="left")
 
     # Add source/tagged region outline
-    region.plot.contour(ax=ax, levels=[1], colors="k")
+    region.plot.contour(ax=ax, levels=[0.5], colors="k")
     polish(ax, region)
 
 
