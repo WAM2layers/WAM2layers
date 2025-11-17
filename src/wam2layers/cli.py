@@ -21,6 +21,7 @@ from wam2layers import __version__
 from wam2layers.analysis import visualization
 from wam2layers.config import Config
 from wam2layers.download import download_from_doi
+from wam2layers.download_preprocessed import download_from_config
 from wam2layers.example_cases import AVAILABLE_CASES
 from wam2layers.preprocessing.shared import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
@@ -304,6 +305,14 @@ def download(ctx, case):
         )
 
     download_from_doi(doi, name=case)
+
+
+@cli.command()
+@click.pass_context
+@click.argument("config_file", type=click.Path(exists=True))
+def download_preprocessed(ctx, config_file):
+    logging.basicConfig(level=logging.INFO)
+    download_from_config(config_file)
 
 
 if __name__ == "__main__":
