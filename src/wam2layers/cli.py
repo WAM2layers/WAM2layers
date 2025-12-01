@@ -310,9 +310,23 @@ def download(ctx, case):
 @cli.command()
 @click.pass_context
 @click.argument("config_file", type=click.Path(exists=True))
-def download_preprocessed(ctx, config_file):
+@click.option(
+    "--protocol",
+    type=click.Choice(["http", "dap4"]),
+    default="http",
+    help="""http is simpler but downloads full file;
+            dap4 can subselect on the server but is less stable (default: http)""",
+)
+@click.option(
+    "--crop/--no-crop",
+    default=True,
+    help="""Whether to crop the domain or keep the global extent.
+            If crop is true and protocol is http, cropping happens after download;
+            with dap4 it happens on the server (default: crop)""",
+)
+def download_preprocessed(ctx, config_file, protocol, crop):
     logging.basicConfig(level=logging.INFO)
-    download_from_config(config_file)
+    download_from_config(config_file, protocol, crop)
 
 
 if __name__ == "__main__":

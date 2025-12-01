@@ -13,57 +13,85 @@ where you replace "example-config.yaml" with your own configuration.
 
 import subprocess
 from datetime import timedelta
-from pathlib import Path
+
+import xarray as xr
 
 from wam2layers.config import Config
-from wam2layers.tracking.io import input_path
+from wam2layers.tracking.io import select_subdomain
 
-# use HTTP endpoint with curl? But can't subset in that case.
-OPENDAP_ENDPOINT_HTTP = "https://opendap.4tu.nl/thredds/fileServer/data2/djht/00f7fa45-899e-4573-ae23-234f6c5193d0/1"
-
-# TODO: make it work with DAP endpoint so we can do the spatial subset. However
-# requires complex subsetting that is exactly why it would be so much easier
-# with xarray. And then we might as well do it on the fly.
-OPENDAP_ENDPOINT_DAP4 = "dap4://opendap.4tu.nl/thredds/dap4/data2/djht/00f7fa45-899e-4573-ae23-234f6c5193d0/1"
+ENDPOINT_HTTP = "https://opendap.4tu.nl/thredds/fileServer/data2/djht/00f7fa45-899e-4573-ae23-234f6c5193d0/1"
+ENDPOINT_DAP4 = "dap4://opendap.4tu.nl/thredds/dap4/data2/djht/00f7fa45-899e-4573-ae23-234f6c5193d0/1"
 
 
-def download_file_http(url: str, output_path: Path):
-    """Download a file using curl."""
-    cmd = ["curl", "-L", "-o", str(output_path), url]
-    print(f"Downloading {url} -> {output_path}")
+def get_filename(date):
+    return f"{date.strftime('%Y-%m-%d')}_fluxes_storages.nc"
+
+
+def download_http(date, output_dir, bbox: str | None = None):
+    """Download a file using curl.
+
+    This downloads the entire domain, then crops the domain.
+    """
+    filename = get_filename(date)
+    url = f"{ENDPOINT_HTTP}/{filename}"
+    output_file = output_dir / filename
+
+    cmd = ["curl", "-L", "-o", str(output_file), url]
     subprocess.run(cmd, check=True)
 
+    if bbox is not None:
+        print("Cropping tracking region...", end=" ", flush=True)
+        with xr.open_dataset(output_file) as ds_full:
+            # This automatically closes the file after reading the data
+            ds_cropped = select_subdomain(ds_full, bbox).load()
 
-def read_file_with_opendap(url):
+        # Overwrite the original output file
+        ds_cropped.to_netcdf(output_file)
+        print("Done")
+
+
+def download_dap4(date, output_dir, bbox: str | None = None):
     """Download a file using opendap workaround.
 
-    Uses pydap with DAP4 backend seems to work okayish with recent version of xarray
-    perhaps due to https://github.com/pydata/xarray/pull/10482 ??
+    This can subset the domain on the server, resulting in smaller data
+    transfers, but the protocol is less stable.
     """
-    import xarray as xr
+    # DAP4 works now, but returns garbage data.
+    # Specifically, e.g. looking at ds.precip.values, initial chunks look good,
+    # but later ones filled with rubbish.
+    raise UserWarning(
+        "DAP4 download seems unreliable and should not be used at the moment."
+    )
 
-    from wam2layers.tracking.io import select_subdomain
+    filename = get_filename(date)
+    url = f"{ENDPOINT_DAP4}/{filename}"
+    output_file = output_dir / filename
 
-    ds = xr.open_dataset(url, engine="netcdf4", decode_cf=False)
+    ds = xr.open_dataset(url, engine="pydap", decode_times=False)
 
-    # 2. Drop string vars to avoid segfault # TODO: check if necessary
-    string_vars = [v for v in ds.data_vars if ds[v].dtype.kind in ("O", "S", "U")]
-    ds = ds.drop_vars(string_vars)
-
-    # 3. Sanitize attributes
+    # Sanitize attributes
     for attr in list(ds.attrs):
         if attr.startswith("_dap4") or attr == "_NCProperties":
             del ds.attrs[attr]
 
-    # TODO insert bounding box
-    bbox = ...
-    ds = select_subdomain(ds, bbox)
+    if bbox:
+        ds = select_subdomain(ds, bbox)
 
-    # TODO update filename
-    ds.to_netcdf("local_copy.nc")
+    ds.to_netcdf(output_file)
 
 
-def download_from_config(config_file: str):
+def download_from_config(config_file: str, protocol="http", crop=True):
+    """Download pre-processed data from 4TU server to local directory.
+
+    - reads dates from input config file
+    - downloads the corresponding data
+    - crops the data to the tracking domain (optional)
+    - stores data in `preprocessed_data_path`
+
+    Choose between `http` and `dap4` backends.
+    - http is more stable but downloads the full file and (optionally) crops afterwards.
+    - dap4 can subset on the server, saving on data transfers, but is less stable.
+    """
     # Load the WAM2layers config
     cfg = Config.from_yaml(config_file)
 
@@ -71,29 +99,25 @@ def download_from_config(config_file: str):
     start_date = cfg.preprocess_start_date
     end_date = cfg.preprocess_end_date
 
-    # Get the tracking region if needed
-    tracking_domain = cfg.tracking_domain
-    print(f"Tracking region: {tracking_domain}")
-
     # Directory to save files
     output_dir = cfg.preprocessed_data_folder
     output_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading WAM2layers data to {output_dir}")
 
-    # Generate list of dates
+    # Get the tracking region if needed
+    if crop:
+        bbox = str(cfg.tracking_domain)
+        print(f"Tracking region: {bbox}")
+    else:
+        bbox = None
+
     current_date = start_date
     while current_date <= end_date:
-        # Construct the URL
-        url = input_path(current_date, OPENDAP_ENDPOINT_HTTP)
-        output_file = output_dir / url.split("/")[-1]  # save with filename only
-        download_file_http(url, output_file)
+        print(f"Downloading data for {current_date}")
+
+        if protocol == "http":
+            download_http(current_date, output_dir, bbox)
+        else:  # protocol == "dap4"
+            download_dap4(current_date, output_dir, bbox)
+
         current_date += timedelta(days=1)
-
-
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) != 2:
-        print("Usage: python download_wam2layers.py <config.yaml>")
-        sys.exit(1)
-
-    main(sys.argv[1])
