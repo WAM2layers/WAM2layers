@@ -21,7 +21,7 @@ from wam2layers import __version__
 from wam2layers.analysis import visualization
 from wam2layers.config import Config
 from wam2layers.download import download_from_doi
-from wam2layers.download_preprocessed import download_from_config
+from wam2layers.download_preprocessed import download_from_config as download_bakels25
 from wam2layers.example_cases import AVAILABLE_CASES
 from wam2layers.preprocessing.shared import prep_experiment
 from wam2layers.tracking.backtrack import run_experiment as run_backtrack_experiment
@@ -295,7 +295,7 @@ cli.add_command(visualize_cli, name="visualize")
 @click.pass_context
 @click.argument("case", type=click.Choice(AVAILABLE_CASES.keys()))
 def download(ctx, case):
-    """Download input data for (example) cases."""
+    """Download input data for named (example) cases."""
     logging.basicConfig(level=logging.INFO)
     doi = AVAILABLE_CASES.get(case, None)
 
@@ -324,9 +324,13 @@ def download(ctx, case):
             If crop is true and protocol is http, cropping happens after download;
             with dap4 it happens on the server (default: crop)""",
 )
-def download_preprocessed(ctx, config_file, protocol, crop):
+def download_from_config(ctx, config_file, protocol, crop):
+    """Download input data WAM2layers based on config file.
+
+    Downloads input data from Bakels '25 based on the provided wam2layers configuration file.
+    """
     logging.basicConfig(level=logging.INFO)
-    download_from_config(config_file, protocol, crop)
+    download_bakels25(config_file, protocol, crop)
 
 
 if __name__ == "__main__":
