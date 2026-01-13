@@ -14,7 +14,7 @@ dataset:
 WAM2layers provides two ways to download this data specifically for your experiment:
 
 * ["Two-step approach"](#two-step-approach): download all required pre-processed data as specified in your config file then track it.
-* ["On the fly"](#on-the-fly-configuration): ingest data during the tracking routine using OpenDAP.
+* ["On the fly"](#on-the-fly-configuration): ingest data during the tracking routine using OPeNDAP.
 
 ## Two-step approach
 
@@ -27,7 +27,11 @@ wam2layers download-from-config <your-config.yaml>
 wam2layers track <your-config.yaml>
 ```
 
-Data will be downloaded to the `preprocessed_data_folder` in your config file.
+Data will be downloaded to the `preprocessed_data_folder` in your config file. By default cropping is applied using `tracking_domain`. If you want to retain the full domain of the data, you can use the `--no-crop` option to skip the cropping step.
+
+```bash
+wam2layers download-from-config --no-crop <your-config.yaml>
+```
 
 We implemented two protocols, `http` and `dap4`. HTTP is the most stable protocol, but unlike DAP4, it does not allow subsetting data on the server side. This means data will first be downloaded to your machine, and then the tracking domain is cropped. DAP4 allows server-side subsetting, so you will have reduced data transfers. However, DAP4 is unstable (producing garbage data), and we have disabled it until further notice.
 
@@ -42,9 +46,9 @@ Advantages of the two-step approach:
 
 ## On-the-fly configuration
 
-Instead of downloading the data beforehand, OpenDAP also supports reading data on the fly. This eliminates the storage of intermediate files, but can be slower and potentially unstable.
+Instead of downloading the data beforehand, OPeNDAP also supports reading data on the fly. This eliminates the storage of intermediate files, but can be slower and potentially unstable.
 
-To use this feature, you will need to create a modified config file that points to the OpenDAP server. Example configuration files that work with OpenDAP can be found [here](https://github.com/WAM2layers/WAM2layers/tree/main/configs).
+To use this feature, you will need to create a modified config file that points to the OPeNDAP server. Example configuration files that work with OPeNDAP can be found [here](https://github.com/WAM2layers/WAM2layers/tree/main/configs).
 
 Notice that the `preprocessed_data_folder` points to a **remote URL** instead of a local directory:
 
@@ -65,9 +69,9 @@ wam2layers track opendap-config-volta.yaml
 ```{Admonition} Performance is unstable
 :class: warning
 
-Despite our rigourous testing, it appears that the OpenDAP data access can be unstable (https://github.com/WAM2layers/WAM2layers/discussions/504).
+Despite our rigourous testing, it appears that the OPeNDAP data access can be unstable (https://github.com/WAM2layers/WAM2layers/discussions/504).
 
-If you're facing difficulties with reading the OpenDAP data on the fly, we recommend trying the two-step approach instead.
+If you're facing difficulties with reading the OPeNDAP data on the fly, we recommend trying the two-step approach instead.
 
 ```
 
