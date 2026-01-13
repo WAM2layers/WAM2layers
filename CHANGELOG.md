@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 ## Unreleased
 ### Added
+- Downloading preprocessed data based on config file ([#507](https://github.com/WAM2layers/WAM2layers/pull/507))
 
 ### Fixed
 
