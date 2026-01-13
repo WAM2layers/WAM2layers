@@ -40,7 +40,7 @@ def download_http(date, output_dir, bbox: str | None = None):
     subprocess.run(cmd, check=True)
 
     if bbox is not None:
-        print("Cropping tracking region...", end=" ", flush=True)
+        print("Cropping tracking domain...", end=" ", flush=True)
         with xr.open_dataset(output_file) as ds_full:
             # This automatically closes the file after reading the data
             ds_cropped = select_subdomain(ds_full, bbox).load()
@@ -104,10 +104,10 @@ def download_from_config(config_file: str, protocol="http", crop=True):
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Downloading WAM2layers data to {output_dir}")
 
-    # Get the tracking region if needed
+    # Get the tracking domain if needed
     if crop:
         bbox = str(cfg.tracking_domain)
-        print(f"Tracking region: {bbox}")
+        print(f"Tracking domain: {bbox}")
     else:
         bbox = None
 
