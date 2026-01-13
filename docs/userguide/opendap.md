@@ -27,15 +27,15 @@ wam2layers download-from-config <your-config.yaml>
 wam2layers track <your-config.yaml>
 ```
 
-Data will be downloaded to the `preprocessed_data_folder` in your config file. By default cropping is applied using `tracking_domain`. If you want to retain the full domain of the data, you can use the `--no-crop` option to skip the cropping step.
+Data will be downloaded to the `preprocessed_data_folder` in your config file. By default cropping is applied using `tracking_domain`. 
+
+If you want to retain the full domain of the data, you can use the `--no-crop` option to skip the cropping step.
 
 ```bash
 wam2layers download-from-config --no-crop <your-config.yaml>
 ```
 
 We implemented two protocols, `http` and `dap4`. HTTP is the most stable protocol, but unlike DAP4, it does not allow subsetting data on the server side. This means data will first be downloaded to your machine, and then the tracking domain is cropped. DAP4 allows server-side subsetting, so you will have reduced data transfers. However, DAP4 is unstable (producing garbage data), and we have disabled it until further notice.
-
-If you want to retain the full domain of the data, you can use the `--no-crop` option to skip the cropping step.
 
 Advantages of the two-step approach:
 
