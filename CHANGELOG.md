@@ -2,10 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 ## Unreleased
+
 ### Added
-- Downloading preprocessed data based on config file ([#507](https://github.com/WAM2layers/WAM2layers/pull/507))
 
 ### Fixed
+
+## Release v3.3.1 (2026-03-20)
+
+### Added
+- Downloading preprocessed data based on config file ([#507](https://github.com/WAM2layers/WAM2layers/pull/507))
 
 ## Release v3.3.0 (2025-10-22)
 
