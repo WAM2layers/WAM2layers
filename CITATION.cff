@@ -28,9 +28,17 @@ authors:
     family-names: Liu
     affiliation: Netherlands eScience Center
     orcid: 'https://orcid.org/0000-0002-1966-8460'
+  - given-names: Lucie
+    family-names: Bakels
+    affiliation: Stockholm University
+    orcid: 'https://orcid.org/0000-0003-2262-591X'
+  - given-names: Patrick W
+    family-names: Keys
+    affiliation: Boston University
+    orcid: 'https://orcid.org/0000-0002-7250-1563' 
   - given-names: Elizabeth
     family-names: Barnes
-    affiliation: Colorado State University
+    affiliation: Boston University
     orcid: 'https://orcid.org/0000-0001-7471-9980'
   - given-names: Tolga
     family-names: Cömert
