@@ -47,35 +47,44 @@ graph TD
     classDef startStep fill:#f9f,stroke:#333,stroke-width:4px,font-size:16px;
 ```
 
-# Other versions
-
-This is the official codebase for the WAM-2layers moisture tracking model as of
-18/03/2022, but there are still several other (older) versions around:
-
-- [Original Python code for ERA-Interim by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython)
-- [Adapted version for EC-Earth by Imme Benedict](https://github.com/Imme1992/moisture_tracking_mississippi)
-- [Adapted version for MERRA2 by Pat Keys](https://github.com/pkeys/WAM2layersPythonMerra2)
-- [Adapted version for ERA5 pressure levels by Mingzhong Xiao](https://zenodo.org/record/4796962#.Y25d1-TMIVA)
-- [Adapted version for ERA5 by Theo Carr](https://github.com/ktcarr/WAM2layers_ERA5)
-
-# Reuse and acknowledgement
+## Reuse and acknowledgement
 
 This code is currently developed by a core team:
-Ruud van der Ent (Delft University of Technology)
 Imme Benedict (Wageningen University)
-Chris Weijenborg (Wageningen University)
+Ruud van der Ent (Delft University of Technology)
 Peter Kalverla (Netherlands eScienceCenter)
-Bart Schilperoort (Netherlands eScience Center)
+Lucie Bakels (Stockholm University)
+Lan Wang-Erlandsson (Stockholm University)
+Pat Keys (Boston University)
 
 We are proudly part of [open-sustainable-technology](https://github.com/protontypes/open-sustainable-technology).
 
-If you use the code for a publication, please cite it using the [DOI of the
-appropriate release](https://doi.org/10.5281/zenodo.7010594) and the
-following paper :
-[Atmospheric moisture tracking with WAM2layers v3](https://doi.org/10.5194/gmd-18-4335-2025)
+If you use the code for a publication, please cite it using the [**DOI of the
+appropriate release instead of the generic link**](https://doi.org/10.5281/zenodo.7010594) 
+and the following paper: **Kalverla et al., (2025)**:
+[**Atmospheric moisture tracking with WAM2layers v3**](https://doi.org/10.5194/gmd-18-4335-2025)
 
 <p align='right'>
 <img src="https://github.com/user-attachments/assets/6d553165-88d5-40d3-8def-2aec45cb695b" width="100"/>
 <img src="https://github.com/user-attachments/assets/99617790-ae0c-484c-971d-d9a7e0d8da5a" width="100"/>
 <img src="https://github.com/user-attachments/assets/fb29f5ab-bdb5-4008-b6a7-3b44c6b1f5a1" width="100"/>
 </p>
+
+## Publications and datasets
+Please help us keep track of publications and datasets that are created with WAM2layers. 
+- TODO: insert link to publications in docs [Publications](link)
+- TODO: insert link to datasets in docs [Datasets](link)
+
+## Other versions (depricated or not maintained by us)
+
+This is the **"official"** codebase for the WAM-2layers moisture tracking model as of
+18/03/2022, but there are still several other (older) versions around, which could have
+interesting features that could be integrated into this codebase at some point:
+
+- [Original Python code for ERA-Interim by Ruud van der Ent](https://github.com/ruudvdent/WAM2layersPython) 
+(includes time tracking)
+- [Adapted version for EC-Earth by Imme Benedict](https://github.com/Imme1992/moisture_tracking_mississippi) 
+(includes advanced vertical moisture profile interpolation given limited pressure levels)
+- [Adapted version for MERRA2 by Pat Keys](https://github.com/pkeys/WAM2layersPythonMerra2)
+- [Adapted version for ERA5 pressure levels by Mingzhong Xiao](https://zenodo.org/record/4796962#.Y25d1-TMIVA)
+- [Adapted version for ERA5 by Theo Carr](https://github.com/ktcarr/WAM2layers_ERA5)

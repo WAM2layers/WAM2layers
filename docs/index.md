@@ -26,4 +26,5 @@ theory
 quickstart
 userguide/index
 develop
+science
 ```
