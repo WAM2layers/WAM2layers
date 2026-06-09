@@ -6,8 +6,8 @@ on GitHub adding your publication or dataset.
 
 ## Publications
 This is an overview of 'primary WAM2layers' publications.
-[Download publications.bib](misc\publications.bib)
+[Download publications.bib](misc/publications.bib)
 
-## Dataset 
+## Datasets 
 This is an overview of 'primary WAM2layers' publications
-[Download datasets.bib](misc\datasets.bib)
+[Download datasets.bib](misc/datasets.bib)
