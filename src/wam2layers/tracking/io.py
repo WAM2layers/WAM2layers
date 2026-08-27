@@ -76,7 +76,10 @@ def read_or_retry(filename: str) -> xr.Dataset:
     for n in range(max_retries + 1):
         try:
             return xr.open_dataset(
-                filename, engine="netcdf4", cache=False, use_cftime=True
+                filename,
+                engine="netcdf4",
+                cache=False,
+                decode_times=xr.coders.CFDatetimeCoder(use_cftime=True),
             )
         except IndexError:
             if n == max_retries:
@@ -102,7 +105,7 @@ def _load_slice_with_cache(filename, time, subset: str, bbox: Optional[str] = No
     logger.debug(f"Loading {subset} at time {time} from {filename}")
 
     ds = read_or_retry(filename)
-    ds = ds.sel(time=time).drop("time").squeeze()
+    ds = ds.sel(time=time).drop_vars("time").squeeze()
     ds = ds[variables]
 
     if bbox is not None:
