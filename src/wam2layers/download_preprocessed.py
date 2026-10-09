@@ -108,6 +108,8 @@ def download_from_config(config_file: str, protocol="http", crop=True):
     if crop:
         bbox = str(cfg.tracking_domain)
         print(f"Tracking domain: {bbox}")
+        if bbox == "None":
+            bbox = None
     else:
         bbox = None
 
